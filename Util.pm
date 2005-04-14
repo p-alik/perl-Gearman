@@ -8,30 +8,31 @@ use strict;
 # C: client of job server
 # J : jobserver
 our %cmd = (
-            1 =>  [ 'I', "can_do" ],     # from W
-            2 =>  [ 'I', "cant_do" ],    # from W
-            3 =>  [ 'I', "reset_abilities" ],  # from W
-            4 =>  [ 'I', "pre_sleep" ],  # from W
-            5 =>  [ 'I', "disconnect" ], # from W
+            1 =>  [ 'I', "can_do" ],     # from W:  [FUNC]
+            2 =>  [ 'I', "cant_do" ],    # from W:  [FUNC]
+            3 =>  [ 'I', "reset_abilities" ],  # from W:  ---
+            4 =>  [ 'I', "pre_sleep" ],  # from W: --- 
 
-            6 =>  [ 'O', "noop" ],        # J->W (wakeup)
-            7 =>  [ 'I', "submit_job" ],  # C->J
-            18 => [ 'I', "submit_job_bg" ],  # C->J  FUNC[0]UNIQ[0]ARGS
+            6 =>  [ 'O', "noop" ],        # J->W  ---
+            7 =>  [ 'I', "submit_job" ],    # C->J  FUNC[0]UNIQ[0]ARGS
+            18 => [ 'I', "submit_job_bg" ], # C->J     " "   "  " "
 
-            8 =>  [ 'O', "job_created" ], # J->C
-            9 =>  [ 'I', "grab_job" ],    # W->J
-            10 => [ 'O', "no_job" ],      # J->W
-            11 => [ 'O', "job_assign" ],  # J->W
+            8 =>  [ 'O', "job_created" ], # J->C HANDLE
+            9 =>  [ 'I', "grab_job" ],    # W->J --
+            10 => [ 'O', "no_job" ],      # J->W --
+            11 => [ 'O', "job_assign" ],  # J->W HANDLE[0]FUNC[0]ARG
 
             12 => [ 'IO',  "work_status" ],   # W->J/C: HANDLE[0]NUMERATOR[0]DENOMINATOR
             13 => [ 'IO',  "work_complete" ], # W->J/C: HANDLE[0]RES
             14 => [ 'IO',  "work_fail" ],     # W->J/C: HANDLE
 
-            15 => [ 'I',  "get_status" ],  # C->J
-            16 => [ 'I',  "echo_req" ],    # ?->J
-            17 => [ 'O',  "echo_res" ],    # J->?
+            15 => [ 'I',  "get_status" ],  # C->J: HANDLE
+            20 => [ 'O',  "status_res" ],  # C->J: HANDLE[0]KNOWN[0]RUNNING[0]NUM[0]DENOM
 
-            19 => [ 'O',  "error" ],       # J->?
+            16 => [ 'I',  "echo_req" ],    # ?->J TEXT
+            17 => [ 'O',  "echo_res" ],    # J->? TEXT
+
+            19 => [ 'O',  "error" ],       # J->? ERRCODE[0]ERR_TEXT
             );
 
 our %num;  # name -> num
