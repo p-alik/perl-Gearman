@@ -15,6 +15,7 @@ our %cmd = (
 
             6 =>  [ 'O', "noop" ],        # J->W  ---
             7 =>  [ 'I', "submit_job" ],    # C->J  FUNC[0]UNIQ[0]ARGS
+            21 =>  [ 'I', "submit_job_high" ],    # C->J  FUNC[0]UNIQ[0]ARGS
             18 => [ 'I', "submit_job_bg" ], # C->J     " "   "  " "
 
             8 =>  [ 'O', "job_created" ], # J->C HANDLE
