@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+#TODO: TCP_NODELAY
+#TODO: retries
+
 use strict;
 use Gearman::Util;
 use Carp ();
@@ -36,6 +39,81 @@ use fields (
             'client',
             'need_handle',  # arrayref
             );
+
+
+package Gearman::Task;
+
+use fields (
+            # from client:
+            'func',
+            'argref',
+            # opts from client:
+            'uniq',
+            'on_complete',
+            'on_fail',
+            'on_status',
+            'retry_count',
+            'fail_after_idle',
+            'high_priority',
+
+            # from server:
+            'handle',
+
+            # maintained by this module:
+            'retries_done',
+            );
+
+sub new {
+    my $class = shift;
+
+    my $self = $class;
+    $self = fields::new($class) unless ref $self;
+
+    $self->{func} = shift;
+    $self->{argref} = shift;
+    my $opts = shift || {};
+    for my $k (qw( uniq on_complete on_fail on_status retry_count fail_after_idle high_priority )) {
+        $self->{$k} = delete $opts->{$k};
+    }
+    if (%{$opts}) {
+        Carp::croak("Unknown option(s): " . join(", ", sort keys %$opts));
+    }
+    return $self;
+}
+
+sub submit_job_args_ref {
+    my Gearman::Task $task = shift;
+    return \ join("\0", $task->{func}, $task->{uniq}, ${ $task->{argref} });
+}
+
+sub fail {
+    my Gearman::Task $task = shift;
+    return unless $task->{on_fail};
+    $task->{on_fail}->();
+}
+
+sub complete {
+    my Gearman::Task $task = shift;
+    return unless $task->{on_complete};
+    my $result_ref = shift;
+    $task->{on_complete}->($result_ref);
+}
+
+sub status {
+    my Gearman::Task $task = shift;
+    return unless $task->{on_status};
+    my ($nu, $de) = @_;
+    $task->{on_status}->($nu, $de);
+}
+
+sub handle {
+    my Gearman::Task $task = shift;
+    return $task->{handle} unless @_;
+    return $task->{handle} = shift;
+}
+
+package Gearman::Taskset;
+
 sub new {
     my $class = shift;
     my Gearman::Client $client = shift;
@@ -56,7 +134,7 @@ sub new {
 sub wait {
     my Gearman::Taskset $ts = shift;
 
-    while (@{$ts->{need_handle}} || keys %{$ts->{waiting}}) {
+    while (keys %{$ts->{waiting}}) {
         print "Waiting for packet.\n";
         $ts->_process_packet();
     }
@@ -73,22 +151,20 @@ sub add_task {
         $opts = { uniq => $opts };
     }
 
-    my $req = Gearman::Util::pack_req_command("submit_job",
-                                              join("\0",
-                                                   $func,
-                                                   $opts->{uniq},
-                                                   $$arg_p));
-    my $len = length($req);
-    my $rv = $jss->write($req, $len);
-    die unless $rv == $len;
+    my $task = Gearman::Task->new($func, $argref, $opts);
 
-    my $task = [ $func, $argref, $opts, undef ];
+    my $req = Gearman::Util::pack_req_command("submit_job",
+                                              ${ $task->submit_job_args_ref });
+    my $len = length($req);
+    my $rv = $ts->{sock}->syswrite($req, $len);
+    die "Wrote $rv but expected to write $len" unless $rv == $len;
+
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
         print "Waiting for handle packet.\n";
         $ts->_process_packet;
     }
-    return $task->[3];
+    return $task->handle;
 }
 
 sub _process_packet {
@@ -99,17 +175,45 @@ sub _process_packet {
     return 0 unless $res;
 
     if ($res->{type} eq "job_created") {
-        my $job = shift @{ $ts->{need_handle} };
-        die "Um, got an unexpeted job_created notification" unless $job;
+        my Gearman::Task $task = shift @{ $ts->{need_handle} } or
+            die "Um, got an unexpeted job_created notification";
+
         my $handle = ${ $res->{'blobref'} };
-        $job->[3] = $handle;
-        $ts->{waiting}{$handle} = $job;
+        $task->handle($handle);
+        $ts->{waiting}{$handle} = $task;
         return;
     }
 
-    #TODO: fails
-    #TODO: completes
-    #TODO: status
+    if ($res->{type} eq "work_fail") {
+        my $handle = ${ $res->{'blobref'} };
+        my Gearman::Task $task = $ts->{waiting}{$handle} or
+            die "Uhhhh:  got work_fail for unknown handle: $handle\n";
+
+        $task->fail;
+        delete $ts->{waiting}{$handle};
+        return;
+    }
+
+    if ($res->{type} eq "work_complete") {
+        ${ $res->{'blobref'} } =~ s/^(.+?)\0//
+            or die "Bogus work_complete from server";
+        my $handle = $1;
+        my Gearman::Task $task = $ts->{waiting}{$handle} or
+            die "Uhhhh:  got work_complete for unknown handle: $handle\n";
+
+        $task->complete($res->{'blobref'});
+        delete $ts->{waiting}{$handle};
+        return;
+    }
+
+    if ($res->{type} eq "work_status") {
+        my ($handle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
+        my Gearman::Task $task = $ts->{waiting}{$handle} or
+            die "Uhhhh:  got work_status for unknown handle: $handle\n";
+
+        $task->status($nu, $de);
+        return;
+    }
 
     die "Unknown/unimplemented packet type: $res->{type}";
 
@@ -132,7 +236,7 @@ sub new {
     return $self;
 }
 
-sub new_taskset {
+sub new_task_set {
     my Gearman::Client $self = shift;
     return Gearman::Taskset->new($self);
 }
