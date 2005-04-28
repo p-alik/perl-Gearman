@@ -39,6 +39,7 @@ use fields (
 sub new {
     my $class = shift;
     my Gearman::Client $client = shift;
+
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
@@ -47,6 +48,7 @@ sub new {
     $self->{client} = $client;
 
     ($self->{sockaddr}, $self->{sock}) = $client->_get_random_js_sock;
+    return undef unless $self->{sock};
 
     return $self;
 }
@@ -130,6 +132,11 @@ sub new {
     return $self;
 }
 
+sub new_taskset {
+    my Gearman::Client $self = shift;
+    return Gearman::Taskset->new($self);
+}
+
 # getter/setter
 sub job_servers {
     my Gearman::Client $self = shift;
@@ -149,8 +156,8 @@ sub dispatch_background {
     Carp::croak("Function argument must be scalar or scalarref")
         unless ref $argref eq "SCALAR";
 
-    my ($jst, $jss) = $self->_get_random_js_sock
-        or return 0;
+    my ($jst, $jss) = $self->_get_random_js_sock;
+    return 0 unless $jss;
 
     my $req = Gearman::Util::pack_req_command("submit_job_bg",
                                               "$func\0$uniq\0$$argref");
