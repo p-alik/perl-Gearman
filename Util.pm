@@ -11,7 +11,7 @@ our %cmd = (
             1 =>  [ 'I', "can_do" ],     # from W:  [FUNC]
             2 =>  [ 'I', "cant_do" ],    # from W:  [FUNC]
             3 =>  [ 'I', "reset_abilities" ],  # from W:  ---
-            4 =>  [ 'I', "pre_sleep" ],  # from W: --- 
+            4 =>  [ 'I', "pre_sleep" ],  # from W: ---
 
             6 =>  [ 'O', "noop" ],        # J->W  ---
             7 =>  [ 'I', "submit_job" ],    # C->J  FUNC[0]UNIQ[0]ARGS
@@ -96,6 +96,20 @@ sub read_res_packet {
         'len' => $len,
         'blobref' => \$buf,
     };
+}
+
+# given a file descriptor number and a timeout, wait for that descriptor to
+# become readable; returns 0 or 1 on if it did or not
+sub wait_for_readability {
+    my ($fileno, $timeout) = @_;
+    return 0 unless $fileno && $timeout;
+
+    my $rin;
+    vec($rin, $fileno, 1) = 1;
+    my $nfound = select($rin, undef, undef, $timeout);
+
+    # nfound can be undef or 0, both failures, or 1, a success
+    return $nfound ? 1 : 0;
 }
 
 1;
