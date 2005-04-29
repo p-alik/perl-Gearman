@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 #TODO: TCP_NODELAY
-#TODO: retries
+#TODO: priorities
 
 use strict;
 use Gearman::Util;
@@ -61,23 +61,32 @@ use fields (
 
             # maintained by this module:
             'retries_done',
+            'taskset',
             );
 
+# ->new(Gearman::Taskset, $func, $argref, $opts);
 sub new {
     my $class = shift;
 
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
+    my $ts = shift;
     $self->{func} = shift;
     $self->{argref} = shift;
+
     my $opts = shift || {};
     for my $k (qw( uniq on_complete on_fail on_status retry_count fail_after_idle high_priority )) {
         $self->{$k} = delete $opts->{$k};
     }
+
+
     if (%{$opts}) {
         Carp::croak("Unknown option(s): " . join(", ", sort keys %$opts));
     }
+
+    $self->{retries_done} = 0;
+    $self->{taskset} = $ts;
     return $self;
 }
 
@@ -88,6 +97,16 @@ sub submit_job_args_ref {
 
 sub fail {
     my Gearman::Task $task = shift;
+
+    # try to retry, if we can
+    if ($task->{retries_done} < $task->{retry_count}) {
+        $task->{retries_done}++;
+        print "retry:  $task->{retries_done} <= $task->{retry_count}\n";
+        $task->handle(undef);
+        $task->{taskset}->add_task($task);
+        return;
+    }
+
     return unless $task->{on_fail};
     $task->{on_fail}->();
 }
@@ -135,23 +154,40 @@ sub wait {
     my Gearman::Taskset $ts = shift;
 
     while (keys %{$ts->{waiting}}) {
-        print "Waiting for packet.\n";
         $ts->_process_packet();
     }
 }
 
+# ->add_task($func, <$scalar | $scalarref>, <$uniq | $opts_hashref>
+#      opts:
+#        -- uniq
+#        -- on_complete
+#        -- on_fail
+#        -- on_status
+#        -- retry_count
+#        -- fail_after_idle
+#        -- high_priority
+# ->add_task(Gearman::Task)
+#
+
 sub add_task {
     my Gearman::Taskset $ts = shift;
-    my $func = shift;
-    my $arg_p = shift;   # scalar or scalarref
-    my $opts = shift;    # $uniq or hashref of opts
+    my $task;
 
-    my $argref = ref $arg_p ? $arg_p : \$arg_p;
-    unless (ref $opts eq "HASH") {
-        $opts = { uniq => $opts };
+    if (ref $_[0]) {
+        $task = shift;
+    } else {
+        my $func = shift;
+        my $arg_p = shift;   # scalar or scalarref
+        my $opts = shift;    # $uniq or hashref of opts
+
+        my $argref = ref $arg_p ? $arg_p : \$arg_p;
+        unless (ref $opts eq "HASH") {
+            $opts = { uniq => $opts };
+        }
+
+        $task = Gearman::Task->new($ts, $func, $argref, $opts);
     }
-
-    my $task = Gearman::Task->new($func, $argref, $opts);
 
     my $req = Gearman::Util::pack_req_command("submit_job",
                                               ${ $task->submit_job_args_ref });
@@ -161,9 +197,9 @@ sub add_task {
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
-        print "Waiting for handle packet.\n";
         $ts->_process_packet;
     }
+
     return $task->handle;
 }
 
@@ -189,8 +225,8 @@ sub _process_packet {
         my Gearman::Task $task = $ts->{waiting}{$handle} or
             die "Uhhhh:  got work_fail for unknown handle: $handle\n";
 
-        $task->fail;
         delete $ts->{waiting}{$handle};
+        $task->fail;
         return;
     }
 

@@ -98,6 +98,16 @@ sub read_res_packet {
     };
 }
 
+sub send_req {
+    my ($sock, $reqref) = @_;
+
+    my $len = length($$reqref);
+    #TODO: catch SIGPIPE
+    my $rv = $sock->syswrite($$reqref, $len);
+    return 0 unless $rv == $len;
+    return 1;
+}
+
 # given a file descriptor number and a timeout, wait for that descriptor to
 # become readable; returns 0 or 1 on if it did or not
 sub wait_for_readability {

@@ -8,31 +8,38 @@ use Gearman::Util;
 use Carp ();
 use IO::Socket::INET;
 
-
+# this is the object that's handed to the worker subrefs
 package Gearman::Job;
 
 use fields (
             'func',
             'argref',
             'handle',
+
+            'jss', # job server's socket
             );
 
 sub new {
-    my ($class, $func, $argref, $handle) = @_;
+    my ($class, $func, $argref, $handle, $jss) = @_;
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
     $self->{func} = $func;
     $self->{handle} = $handle;
     $self->{argref} = $argref;
+    $self->{jss} = $jss;
     return $self;
 }
 
+# ->set_status($numerator, $denominator) : $bool_sent_to_jobserver
 sub set_status {
     my Gearman::Job $self = shift;
     my ($nu, $de) = @_;
     print "status of $self->{handle}: $nu/$de\n";
-    # TODO: send to jobserver
+
+    my $req = Gearman::Util::pack_req_command("work_status",
+                                              join("\0", $self->{handle}, $nu, $de));
+    return Gearman::Util::send_req($self->{jss}, \$req);
 }
 
 sub argref {
@@ -117,22 +124,12 @@ sub _get_js_sock {
     return $sock;
 }
 
-sub _send_req {
-    my ($sock, $reqref) = @_;
-
-    my $len = length($$reqref);
-    #TODO: catch SIGPIPE
-    my $rv = $sock->syswrite($$reqref, $len);
-    return 0 unless $rv == $len;
-    return 1;
-}
-
 sub _set_capability {
     my ($sock, $func, $can) = @_;
 
     my $req = Gearman::Util::pack_req_command($can ? "can_do" : "cant_do",
                                               $func);
-    return _send_req($sock, \$req);
+    return Gearman::Util::send_req($sock, \$req);
 }
 
 # tell all the jobservers that this worker can't do anything
@@ -141,7 +138,7 @@ sub reset_abilities {
     my $req = Gearman::Util::pack_req_command("reset_abilities");
     foreach my $js (@{ $self->{job_servers} }) {
         my $jss = $self->_get_js_sock($js);
-        unless (_send_req($jss, \$req)) {
+        unless (Gearman::Util::send_req($jss, \$req)) {
             delete $self->{sock_cache}{$js};
         }
     }
@@ -162,7 +159,7 @@ sub work {
 
         foreach my $js (@{ $self->{job_servers} }) {
             my $jss = $self->_get_js_sock($js);
-            unless (_send_req($jss, \$grab_req) &&
+            unless (Gearman::Util::send_req($jss, \$grab_req) &&
                     Gearman::Util::wait_for_readability($jss->fileno, 0.25)) {
                 delete $self->{sock_cache}{$js};
                 next;
@@ -189,7 +186,7 @@ sub work {
             ${ $res->{'blobref'} } =~ s/^(.+?)\0(.+?)\0//
                 or die "Uh, regexp on job_assign failed";
             my ($handle, $func) = ($1, $2);
-            my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle);
+            my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle, $jss);
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
             print "For func: $func, handler=$handler, ret=$ret: errors=[$@]\n";
@@ -200,7 +197,7 @@ sub work {
                 $work_req = Gearman::Util::pack_req_command("work_fail", $handle);
             }
 
-            unless (_send_req($jss, \$work_req)) {
+            unless (Gearman::Util::send_req($jss, \$work_req)) {
                 delete $self->{sock_cache}{$js};
             }
             return;
@@ -210,7 +207,7 @@ sub work {
             my $wake_vec;
             foreach my $j (@jss) {
                 my ($js, $jss) = @$j;
-                unless (_send_req($jss, \$presleep_req)) {
+                unless (Gearman::Util::send_req($jss, \$presleep_req)) {
                     delete $self->{sock_cache}{$js};
                     next;
                 }
@@ -233,7 +230,7 @@ sub register_function {
 
     foreach my $js (@{ $self->{job_servers} }) {
         my $jss = $self->_get_js_sock($js);
-        unless (_send_req($jss, \$req)) {
+        unless (Gearman::Util::send_req($jss, \$req)) {
             delete $self->{sock_cache}{$js};
         }
     }
