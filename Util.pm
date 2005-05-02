@@ -78,13 +78,11 @@ sub read_res_packet {
         return undef;
     };
 
-    $rv = read($sock, $buf, 4);
-    return $err->("malformed_magic") unless $rv == 4 && $buf eq "\0RES";
+    return $err->("malformed_header") unless sysread($sock, $buf, 12) == 12;
+    my ($magic, $type, $len) = unpack("a4NN", $buf);
+    return $err->("malformed_magic") unless $magic eq "\0RES";
 
-    return $err->("malformed_typelen") unless read($sock, $buf, 8) == 8;
-    my ($type, $len) = unpack("NN", $buf);
-
-    $rv = read($sock, $buf, $len);
+    $rv = sysread($sock, $buf, $len);
     return $err->("short_body") unless $rv == $len;
 
     my $type = $cmd{$type};
@@ -100,6 +98,7 @@ sub read_res_packet {
 
 sub send_req {
     my ($sock, $reqref) = @_;
+    return 0 unless $sock;
 
     my $len = length($$reqref);
     #TODO: catch SIGPIPE
