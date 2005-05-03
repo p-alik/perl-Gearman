@@ -63,6 +63,7 @@ use fields (
             'down_since',        # host:port -> unixtime
             'connecting',        # host:port -> unixtime connect started at
             'can',               # func -> subref
+	    'client_id',         # random identifer string, no whitespace
             );
 
 sub new {
@@ -76,6 +77,7 @@ sub new {
     $self->{last_connect_fail} = {};
     $self->{down_since} = {};
     $self->{can} = {};
+    $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
 
     $self->job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
@@ -123,6 +125,9 @@ sub _get_js_sock {
     setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
 
     $self->{sock_cache}{$ipport} = $sock;
+
+    my $cid_req = Gearman::Util::pack_req_command("set_client_id", $self->{client_id});
+    Gearman::Util::send_req($sock, \$cid_req);
 
     # get this socket's state caught-up
     foreach my $func (keys %{$self->{can}}) {

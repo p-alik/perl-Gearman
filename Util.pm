@@ -11,6 +11,7 @@ our %cmd = (
             1 =>  [ 'I', "can_do" ],     # from W:  [FUNC]
             2 =>  [ 'I', "cant_do" ],    # from W:  [FUNC]
             3 =>  [ 'I', "reset_abilities" ],  # from W:  ---
+	    22 => [ 'I', "set_client_id" ],    # W->J: [RANDOM_STRING_NO_WHITESPACE]
             4 =>  [ 'I', "pre_sleep" ],  # from W: ---
 
             6 =>  [ 'O', "noop" ],        # J->W  ---
