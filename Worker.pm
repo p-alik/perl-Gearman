@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
-#TODO: TCP_NODELAY
-#TODO: retries
+#TODO: retries?
 
 use strict;
 use Gearman::Util;
@@ -54,12 +53,15 @@ sub arg {
 
 
 package Gearman::Worker;
+use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
+
 use fields (
             'job_servers',
             'js_count',
             'sock_cache',        # host:port -> IO::Socket::INET
             'last_connect_fail', # host:port -> unixtime
             'down_since',        # host:port -> unixtime
+            'connecting',        # host:port -> unixtime connect started at
             'can',               # func -> subref
             );
 
@@ -83,40 +85,49 @@ sub new {
 
 sub _get_js_sock {
     my Gearman::Worker $self = shift;
-    my $ip = shift;
+    my $ipport = shift;
 
-    if (my $sock = $self->{sock_cache}{$ip}) {
-        return $sock if $sock->connected;
-        delete $self->{sock_cache}{$ip};
+    if (my $sock = $self->{sock_cache}{$ipport}) {
+        return $sock if getpeername($sock);
+        delete $self->{sock_cache}{$ipport};
     }
 
     my $now = time;
-    my $down_since = $self->{down_since}{$ip};
+    my $down_since = $self->{down_since}{$ipport};
     if ($down_since) {
         my $down_for = $now - $down_since;
         my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
-        if ($self->{last_connect_fail}{$ip} > $now - $retry_period) {
+        if ($self->{last_connect_fail}{$ipport} > $now - $retry_period) {
             return undef;
         }
     }
 
-    my $sock = IO::Socket::INET->new(PeerAddr => $ip,
-                                     Timeout => 1);
+    return undef unless $ipport =~ /(^\d+\..+):(\d+)/;
+    my ($ip, $port) = ($1, $2);
+
+    my $sock;
+    socket $sock, PF_INET, SOCK_STREAM, IPPROTO_TCP;
+    #IO::Handle::blocking($sock, 0);
+    connect $sock, Socket::sockaddr_in($port, Socket::inet_aton($ip));
+
+    #my $sock = IO::Socket::INET->new(PeerAddr => $ip,
+    #                                 Timeout => 1);
     unless ($sock) {
-        $self->{down_since}{$ip} ||= $now;
-        $self->{last_connect_fail}{$ip} = $now;
+        $self->{down_since}{$ipport} ||= $now;
+        $self->{last_connect_fail}{$ipport} = $now;
         return undef;
     }
-    delete $self->{last_connect_fail}{$ip};
-    delete $self->{down_since}{$ip};
+    delete $self->{last_connect_fail}{$ipport};
+    delete $self->{down_since}{$ipport};
     $sock->autoflush(1);
+    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
 
-    $self->{sock_cache}{$ip} = $sock;
+    $self->{sock_cache}{$ipport} = $sock;
 
     # get this socket's state caught-up
     foreach my $func (keys %{$self->{can}}) {
         unless (_set_capability($sock, $func, 1)) {
-            delete $self->{sock_cache}{$ip};
+            delete $self->{sock_cache}{$ipport};
             return undef;
         }
     }
@@ -151,6 +162,7 @@ sub work {
     my Gearman::Worker $self = shift;
     my $grab_req = Gearman::Util::pack_req_command("grab_job");
     my $presleep_req = Gearman::Util::pack_req_command("pre_sleep");
+    my %fd_map;
 
     while (1) {
 
@@ -158,26 +170,24 @@ sub work {
         my $need_sleep = 1;
 
         foreach my $js (@{ $self->{job_servers} }) {
-            my $jss = $self->_get_js_sock($js);
+            my $jss = $self->_get_js_sock($js)
+                or next;
+
             unless (Gearman::Util::send_req($jss, \$grab_req) &&
-                    Gearman::Util::wait_for_readability($jss->fileno, 0.25)) {
+                    Gearman::Util::wait_for_readability($jss->fileno, 0.50)) {
                 delete $self->{sock_cache}{$js};
                 next;
             }
             push @jss, [$js, $jss];
 
-            my $err;
-            my $res = Gearman::Util::read_res_packet($jss, \$err);
+            my ($res, $err);
+            do {
+                $res = Gearman::Util::read_res_packet($jss, \$err);
+            } while ($res && $res->{type} eq "noop");
+
             next unless $res;
 
             if ($res->{type} eq "no_job") {
-                next;
-            }
-
-            # if we get a noop packet, we should do another pass quickly to
-            # ask for the job, because they probably have one for us now.
-            elsif ($res->{type} eq "noop") {
-                $need_sleep = 0;
                 next;
             }
 
@@ -204,14 +214,15 @@ sub work {
         }
 
         if ($need_sleep) {
-            my $wake_vec;
+            my $wake_vec = undef;
             foreach my $j (@jss) {
                 my ($js, $jss) = @$j;
                 unless (Gearman::Util::send_req($jss, \$presleep_req)) {
                     delete $self->{sock_cache}{$js};
                     next;
                 }
-                vec($wake_vec, $jss->fileno, 1) = 1;
+                my $fd = $jss->fileno;
+                vec($wake_vec, $fd, 1) = 1;
             }
 
             # chill for some arbitrary time until we're woken up again

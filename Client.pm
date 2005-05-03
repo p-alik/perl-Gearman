@@ -1,17 +1,18 @@
 #!/usr/bin/perl
 
-#TODO: TCP_NODELAY
 #TODO: priorities
 
 use strict;
 use Gearman::Util;
 use Carp ();
 use IO::Socket::INET;
+use String::CRC32 ();
 
 package Gearman::Client;
 use fields (
             'job_servers',
             'js_count',
+            'sock_cache',  # hostport -> socket
             );
 
 package Gearman::JobStatus;
@@ -34,10 +35,14 @@ package Gearman::Taskset;
 
 use fields (
             'waiting',  # { handle => }
-            'sock',     # socket
-            'sockaddr', # socket's IP:
-            'client',
+            'client',   # Gearman::Client
             'need_handle',  # arrayref
+
+            'default_sock',     # default socket (non-merged requests)
+            'default_sockaddr', # default socket's ip/port
+
+            'loaned_sock',      # { hostport => socket }
+
             );
 
 
@@ -62,6 +67,8 @@ use fields (
             # maintained by this module:
             'retries_done',
             'taskset',
+            'jssock',  # jobserver socket.  shared by other tasks in the same taskset,
+                       # but not w/ tasks in other tasksets using the same Gearman::Client
             );
 
 # ->new(Gearman::Taskset, $func, $argref, $opts);
@@ -87,7 +94,21 @@ sub new {
 
     $self->{retries_done} = 0;
     $self->{taskset} = $ts;
+
+    my $merge_on = $self->{uniq} eq "-" ? $self->{argref} : \ $self->{uniq};
+    if ($$merge_on) {
+        my $hash_num = _hashfunc($merge_on);
+        $self->{jssock} = $ts->_get_hashed_sock($hash_num);
+    } else {
+        $self->{jssock} = $ts->_get_default_sock;
+    }
+
     return $self;
+}
+
+# returns number in range [0,32767] given a scalarref
+sub _hashfunc {
+    return (String::CRC32::crc32(${ shift() }) >> 16) & 0x7fff;
 }
 
 sub submit_job_args_ref {
@@ -101,14 +122,13 @@ sub fail {
     # try to retry, if we can
     if ($task->{retries_done} < $task->{retry_count}) {
         $task->{retries_done}++;
-        print "retry:  $task->{retries_done} <= $task->{retry_count}\n";
         $task->handle(undef);
-        $task->{taskset}->add_task($task);
-        return;
+        return $task->{taskset}->add_task($task);
     }
 
-    return unless $task->{on_fail};
+    return undef unless $task->{on_fail};
     $task->{on_fail}->();
+    return undef;
 }
 
 sub complete {
@@ -143,18 +163,42 @@ sub new {
     $self->{waiting} = {};
     $self->{need_handle} = [];
     $self->{client} = $client;
-
-    ($self->{sockaddr}, $self->{sock}) = $client->_get_random_js_sock;
-    return undef unless $self->{sock};
+    $self->{loaned_sock} = {};
 
     return $self;
+}
+
+sub DESTROY {
+    my Gearman::Taskset $ts = shift;
+
+    if ($ts->{default_sock}) {
+        $ts->{client}->_put_js_sock($ts->{default_sockaddr}, $ts->{default_sock});
+    }
+
+    while (my ($hp, $sock) = each %{ $ts->{loaned_sock} }) {
+        $ts->{client}->_put_js_sock($hp, $sock);
+    }
+}
+
+sub _get_loaned_sock {
+    my Gearman::Taskset $ts = shift;
+    my $hostport = shift;
+    if (my $sock = $ts->{loaned_sock}{$hostport}) {
+        return $sock if $sock->connected;
+        delete $ts->{loaned_sock}{$hostport};
+    }
+
+    my $sock = $ts->{client}->_get_js_sock($hostport);
+    return $ts->{loaned_sock}{$hostport} = $sock;
 }
 
 sub wait {
     my Gearman::Taskset $ts = shift;
 
     while (keys %{$ts->{waiting}}) {
-        $ts->_process_packet();
+        $ts->_wait_for_packet();
+        # TODO: timeout jobs that have been running too long.  the _wait_for_packet
+        # loop only waits 0.5 seconds.
     }
 }
 
@@ -192,23 +236,99 @@ sub add_task {
     my $req = Gearman::Util::pack_req_command("submit_job",
                                               ${ $task->submit_job_args_ref });
     my $len = length($req);
-    my $rv = $ts->{sock}->syswrite($req, $len);
+    my $rv = $task->{jssock}->syswrite($req, $len);
     die "Wrote $rv but expected to write $len" unless $rv == $len;
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
-        $ts->_process_packet;
+        my $rv = $ts->_wait_for_packet($task->{jssock});
+        if (! $rv) {
+            shift @{ $ts->{need_handle} };  # ditch it, it failed.
+            # this will resubmit it if it failed.
+            print " INITIAL SUBMIT FAILED\n";
+            return $task->fail;
+        }
     }
 
     return $task->handle;
 }
 
+sub _get_default_sock {
+    my Gearman::Taskset $ts = shift;
+    return $ts->{default_sock} if $ts->{default_sock};
+
+    my $getter = sub {
+        my $hostport = shift;
+        return
+            $ts->{loaned_sock}{$hostport} ||
+            $ts->{client}->_get_js_sock($hostport);
+    };
+
+    my ($jst, $jss) = $ts->{client}->_get_random_js_sock($getter);
+    $ts->{loaned_sock}{$jst} ||= $jss;
+
+    $ts->{default_sock} = $jss;
+    $ts->{default_sockaddr} = $jst;
+    return $jss;
+}
+
+sub _get_hashed_sock {
+    my Gearman::Taskset $ts = shift;
+    my $hv = shift;
+
+    my Gearman::Client $cl = $ts->{client};
+
+    for (my $off = 0; $off < $cl->{js_count}; $off++) {
+        my $idx = ($hv + $off) % ($cl->{js_count});
+        my $sock = $ts->_get_loaned_sock($cl->{job_servers}[$idx]);
+        return $sock if $sock;
+    }
+
+    return undef;
+}
+
+# returns boolean when given a sock to wait on.
+# otherwise, return value is undefined.
+sub _wait_for_packet {
+    my Gearman::Taskset $ts = shift;
+    my $sock = shift;  # optional socket to singularly read from
+
+    my ($res, $err);
+    if ($sock) {
+        $res = Gearman::Util::read_res_packet($sock, \$err);
+        return 0 unless $res;
+        return $ts->_process_packet($res);
+    } else {
+        # TODO: cache this vector?
+        my ($rin, $rout, $eout);
+        my %watching;
+
+        for my $sock ($ts->{default_sock}, values %{ $ts->{loaned_sock} }) {
+            next unless $sock;
+            my $fd = $sock->fileno;
+
+            vec($rin, $fd, 1) = 1;
+            $watching{$fd} = $sock;
+        }
+
+        my $nfound = select($rout=$rin, undef, $eout=$rin, 0.5);
+        return 0 if ! $nfound;
+
+        foreach my $fd (keys %watching) {
+            next unless vec($rout, $fd, 1);
+            # TODO: deal with error vector
+            my $sock = $watching{$fd};
+            $res = Gearman::Util::read_res_packet($sock, \$err);
+            $ts->_process_packet($res) if $res;
+        }
+        return 1;
+
+    }
+}
+
 sub _process_packet {
     my Gearman::Taskset $ts = shift;
-
-    my $err;
-    my $res = Gearman::Util::read_res_packet($ts->{sock}, \$err);
-    return 0 unless $res;
+    my $res = shift;
 
     if ($res->{type} eq "job_created") {
         my Gearman::Task $task = shift @{ $ts->{need_handle} } or
@@ -217,7 +337,7 @@ sub _process_packet {
         my $handle = ${ $res->{'blobref'} };
         $task->handle($handle);
         $ts->{waiting}{$handle} = $task;
-        return;
+        return 1;
     }
 
     if ($res->{type} eq "work_fail") {
@@ -227,7 +347,7 @@ sub _process_packet {
 
         delete $ts->{waiting}{$handle};
         $task->fail;
-        return;
+        return 1;
     }
 
     if ($res->{type} eq "work_complete") {
@@ -239,7 +359,7 @@ sub _process_packet {
 
         $task->complete($res->{'blobref'});
         delete $ts->{waiting}{$handle};
-        return;
+        return 1;
     }
 
     if ($res->{type} eq "work_status") {
@@ -248,7 +368,7 @@ sub _process_packet {
             die "Uhhhh:  got work_status for unknown handle: $handle\n";
 
         $task->status($nu, $de);
-        return;
+        return 1;
     }
 
     die "Unknown/unimplemented packet type: $res->{type}";
@@ -256,6 +376,7 @@ sub _process_packet {
 }
 
 package Gearman::Client;
+use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
 
 sub new {
     my ($class, %opts) = @_;
@@ -264,6 +385,7 @@ sub new {
 
     $self->{job_servers} = [];
     $self->{js_count} = 0;
+    $self->{sock_cache} = {};
 
     $self->job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
@@ -311,26 +433,52 @@ sub dispatch_background {
     return "$jst//${$res->{blobref}}";
 }
 
+# returns a socket from the cache.  it should be returned to the
+# cache with _put_js_sock.  the hostport isn't verified. the caller
+# should verify that $hostport is in the set of jobservers.
 sub _get_js_sock {
+    my Gearman::Client $self = shift;
     my $hostport = shift;
+
+    if (my $sock = delete $self->{sock_cache}{$hostport}) {
+        return $sock if $sock->connected;
+    }
+
     # TODO: cache, and verify with ->connected
     my $sock = IO::Socket::INET->new(PeerAddr => $hostport,
-                                 Timeout => 1)
+                                     Timeout => 1)
         or return undef;
+
+    Carp::cluck("connected");
+
+    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
     $sock->autoflush(1);
+    # TODO: tcp_nodelay?
     return $sock;
+}
+
+# way for a caller to give back a socket it previously requested.
+# the $hostport isn't verified, so the caller should verify the
+# $hostport is still in the set of jobservers.
+sub _put_js_sock {
+    my Gearman::Client $self = shift;
+    my ($hostport, $sock) = @_;
+
+    $self->{sock_cache}{$hostport} ||= $sock;
 }
 
 sub _get_random_js_sock {
     my Gearman::Client $self = shift;
+    my $getter = shift;
     return undef unless $self->{js_count};
+
+    $getter ||= sub { my $hostport = shift; return $self->_get_js_sock($hostport); };
 
     my $ridx = int(rand($self->{js_count}));
     for (my $try = 0; $try < $self->{js_count}; $try++) {
         my $aidx = ($ridx + $try) % $self->{js_count};
         my $hostport = $self->{job_servers}[$aidx];
-        my $sock = _get_js_sock($hostport)
-            or next;
+        my $sock = $getter->($hostport) or next;
         return ($hostport, $sock);
     }
     return ();
@@ -343,7 +491,7 @@ sub get_status {
     print "  hostport=[$hostport], shandle=[$shandle]\n";
     return undef unless grep { $hostport eq $_ } @{ $self->{job_servers} };
 
-    my $sock = _get_js_sock($hostport)
+    my $sock = $self->_get_js_sock($hostport)
         or return undef;
 
     my $req = Gearman::Util::pack_req_command("get_status",
@@ -358,6 +506,7 @@ sub get_status {
     my @args = split(/\0/, ${ $res->{blobref} });
     return undef unless $args[0];
     shift @args;
+    $self->_put_js_sock($hostport, $sock);
     return Gearman::JobStatus->new(@args);
 }
 
