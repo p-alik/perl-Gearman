@@ -83,8 +83,10 @@ sub read_res_packet {
     my ($magic, $type, $len) = unpack("a4NN", $buf);
     return $err->("malformed_magic") unless $magic eq "\0RES";
 
-    $rv = sysread($sock, $buf, $len);
-    return $err->("short_body") unless $rv == $len;
+    if ($len) {
+        $rv = sysread($sock, $buf, $len);
+        return $err->("short_body") unless $rv == $len;
+    }
 
     my $type = $cmd{$type};
     return $err->("bogus_command") unless $type;
