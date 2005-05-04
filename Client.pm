@@ -34,7 +34,7 @@ sub percent { my $self = shift; return (defined $self->[2] && $self->[3]) ? ($se
 package Gearman::Taskset;
 
 use fields (
-            'waiting',  # { handle => }
+            'waiting',  # { handle => [Task, ...] }
             'client',   # Gearman::Client
             'need_handle',  # arrayref
 
@@ -336,17 +336,22 @@ sub _process_packet {
 
         my $handle = ${ $res->{'blobref'} };
         $task->handle($handle);
-        $ts->{waiting}{$handle} = $task;
+        push @{ $ts->{waiting}{$handle} ||= [] }, $task;
+
         return 1;
     }
 
     if ($res->{type} eq "work_fail") {
         my $handle = ${ $res->{'blobref'} };
-        my Gearman::Task $task = $ts->{waiting}{$handle} or
+        my $task_list = $ts->{waiting}{$handle} or
             die "Uhhhh:  got work_fail for unknown handle: $handle\n";
 
-        delete $ts->{waiting}{$handle};
+        my Gearman::Task $task = shift @$task_list or
+            die "UHhhh:  task_list is empty on work_fail for handle $handle\n";
+
         $task->fail;
+
+        delete $ts->{waiting}{$handle} unless @$task_list;
         return 1;
     }
 
@@ -354,20 +359,33 @@ sub _process_packet {
         ${ $res->{'blobref'} } =~ s/^(.+?)\0//
             or die "Bogus work_complete from server";
         my $handle = $1;
-        my Gearman::Task $task = $ts->{waiting}{$handle} or
+
+        my $task_list = $ts->{waiting}{$handle} or
             die "Uhhhh:  got work_complete for unknown handle: $handle\n";
 
+        my Gearman::Task $task = shift @$task_list or
+            die "Uhhhh:  task_list is empty on work_complete for handle $handle\n";
+
         $task->complete($res->{'blobref'});
-        delete $ts->{waiting}{$handle};
+        delete $ts->{waiting}{$handle} unless @$task_list;
+
         return 1;
     }
 
     if ($res->{type} eq "work_status") {
         my ($handle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
-        my Gearman::Task $task = $ts->{waiting}{$handle} or
+
+        my $task_list = $ts->{waiting}{$handle} or
             die "Uhhhh:  got work_status for unknown handle: $handle\n";
 
-        $task->status($nu, $de);
+        # FIXME: the server is (probably) sending a work_status packet for each
+        # interested client, even if the clients are the same, so probably need
+        # to fix the server not to do that.  just put this FIXME here for now,
+        # though really it's a server issue.
+        foreach my Gearman::Task $task (@$task_list) {
+            $task->status($nu, $de);
+        }
+
         return 1;
     }
 
