@@ -45,52 +45,52 @@ sub job_servers {
     return $self->{job_servers} = $list;
 }
 
+sub get_task_from_args {
+    my Gearman::Task $task;
+    if (ref $_[0]) {
+	$task = $_[0];
+	Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
+    } else {
+	my ($func, $arg_p, $opts) = @_;
+	my $argref = ref $arg_p ? $arg_p : \$arg_p;
+	Carp::croak("Function argument must be scalar or scalarref")
+	    unless ref $argref eq "SCALAR";
+	$task = Gearman::Task->new($func, $argref, $opts);
+    }
+    return $task;
+
+}
+
 # given a (func, arg_p, opts?), returns either undef (on fail) or scalarref of result
 sub do_task {
     my Gearman::Client $self = shift;
-    my ($func, $arg_p, $opts) = @_;
-    my $argref = ref $arg_p ? $arg_p : \$arg_p;
-    Carp::croak("Function argument must be scalar or scalarref")
-        unless ref $argref eq "SCALAR";
+    my Gearman::Task $task = &_get_task_from_args;
 
     my $ret = undef;
     my $did_err = 0;
 
-    $opts ||= {};
-
-    $opts->{on_complete} = sub {
+    $task->{on_complete} = sub {
 	$ret = shift;
     };
 
-    $opts->{on_fail} = sub {
+    $task->{on_fail} = sub {
 	$did_err = 1;
     };
     
     my $ts = $self->new_task_set;
-    $ts->add_task($func, $arg_p, $opts);
+    $ts->add_task($task);
     $ts->wait;
 
     return $did_err ? undef : $ret;
 
 }
 
-# given a (func, arg_p, uniq) or
+# given a (func, arg_p, opts?) or
 # Gearman::Task, dispatches job in background.  returns the handle from the jobserver, or false if any failure
 sub dispatch_background {
     my Gearman::Client $self = shift;
     my $task = shift;
-
-    if (ref $_[0]) {
-	$task = $_[0];
-	Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
-    } else {
-	my ($func, $arg_p, $uniq) = @_;
-	my $opts = ref $uniq ? $uniq : { uniq => $uniq || "" };
-	my $argref = ref $arg_p ? $arg_p : \$arg_p;
-	Carp::croak("Function argument must be scalar or scalarref")
-	    unless ref $argref eq "SCALAR";
-	$task = Gearman::Task->new($func, $argref, $opts);
-    }
+    my Gearman::Task $task = &_get_task_from_args;
 
     my ($jst, $jss) = $self->_get_random_js_sock;
     return 0 unless $jss;
@@ -241,100 +241,40 @@ numbers. For example:
 
 If the port number is not provided, C<7003> is used as the default.
 
-=head2 $client->do_task($funcname, $arg, \%options)
+=head2 $client-E<gt>do_task($task)
 
-Dispatches a task and waits on the results.  I<$funcname> is the name
-of the task, I<$arg> is a scalar or scalarref representing the
-arguments to pass to the task (an opaque scalar, not interpretted by
-the library or server, just your worker).  I<\%options> can be undef,
-or contain keys:
+=head2 $client-E<gt>do_task($funcname, $arg, \%options)
 
-=over 4
+Dispatches a task and waits on the results.  May either provide a
+L<Gearman::Task> object, or the 3 arguments that the Gearman::Task
+constructor takes.
 
-=item * uniq
+Returns a scalar reference to the result, or undef on failure.
 
-A key which indicates to the server that other tasks with the same
-function name and key will be merged into one.  That is, the task
-will be run just once, but all the listeners waiting on that job
-will get the response multiplexed back to them.
+If you provide on_complete and on_fail handlers, they're ignored, as
+this function currently overrides them.
 
-Uniq may also contain the magic value "-" (a single hyphen) which
-means the uniq key is the contents of the args.
+=head2 $client-E<gt>dispatch_background($task)
 
-=item * on_status
+=head2 $client-E<gt>dispatch_background($funcname, $arg, \%options)
 
-A subroutine reference to be invoked if the task emits status updates.
-Arguments passed to the subref are ($numerator, $denominator), where those
-are left up to the client and job to determine.
+Dispatches a task and doesn't wait for the result.  Return value
+is 
 
-=item * retry_count
-
-Number of times job will be retried if there are failures.  Defaults to 0.
-
-=item * high_priority
-
-Boolean, whether this job should take priority over other jobs already
-enqueued.
-
-=item * fail_after_idle
-
-Automatically fail after this many seconds have elapsed.  Defaults to 0,
-which means never.
-
-=back
-
-=head2 $client->new_task_set
+=head2 $taskset = $client-E<gt>new_task_set
 
 Creates and returns a new I<Gearman::Taskset> object.
 
-=head2 Gearman::Taskset->add_task($funcname, $arg, \%options)
+=head2 $taskset-E<gt>add_task($task)
 
-Sends a task to the job server. I<$funcname> is the name of the task, and
-I<$arg> should be either a scalar of reference to a scalar representing
-the arguments for the task.
+=head2 $taskset-E<gt>add_task($funcname, $arg, $uniq)
 
-I<%options> can contain:
+=head2 $taskset-E<gt>add_task($funcname, $arg, \%options)
 
-=over 4
+Adds a task to a taskset.  Three different calling conventions are
+available.
 
-=item * uniq
-
-=item * on_complete
-
-A subroutine reference to be invoked when the task is completed. The
-subroutine will be passed a reference to the return value from the worker
-process.
-
-=item * on_fail
-
-A subroutine reference to be invoked when the task fails (or fails for
-the last time, if retries were specified).  No arguments are
-passed to this callback.  This callback won't be called after a failure
-if more retries are still possible.
-
-=item * on_status
-
-A subroutine reference to be invoked if the task emits status updates.
-Arguments passed to the subref are ($numerator, $denominator), where those
-are left up to the client and job to determine.
-
-=item * retry_count
-
-Number of times job will be retried if there are failures.  Defaults to 0.
-
-=item * high_priority
-
-Boolean, whether this job should take priority over other jobs already
-enqueued.
-
-=item * fail_after_idle
-
-Automatically fail after this many seconds have elapsed.  Defaults to 0,
-which means never.
-
-=back
-
-=head2 Gearman::Taskset->wait
+=head2 $taskset-E<gt>wait
 
 Waits for a response from the job server for any of the tasks listed
 in the taskset. Will call the I<on_*> handlers for each of the tasks
