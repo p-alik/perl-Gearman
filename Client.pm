@@ -1,8 +1,6 @@
 #!/usr/bin/perl
 
-#TODO: priorities
 #TODO: fail_after_idle
-#TODO: hashing onto job servers?
 
 package Gearman::Client;
 
@@ -76,23 +74,30 @@ sub do_task {
 
 }
 
-# given a (func, arg_p, uniq)
+# given a (func, arg_p, uniq) or
+# Gearman::Task, dispatches job in background.  returns the handle from the jobserver, or false if any failure
 sub dispatch_background {
     my Gearman::Client $self = shift;
-    my ($func, $arg_p, $uniq) = @_;
-    my $argref = ref $arg_p ? $arg_p : \$arg_p;
-    Carp::croak("Function argument must be scalar or scalarref")
-        unless ref $argref eq "SCALAR";
-    $uniq ||= "";
+    my $task = shift;
+
+    if (ref $_[0]) {
+	$task = $_[0];
+	Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
+    } else {
+	my ($func, $arg_p, $uniq) = @_;
+	my $opts = ref $uniq ? $uniq : { uniq => $uniq || "" };
+	my $argref = ref $arg_p ? $arg_p : \$arg_p;
+	Carp::croak("Function argument must be scalar or scalarref")
+	    unless ref $argref eq "SCALAR";
+	$task = Gearman::Task->new($func, $argref, $opts);
+    }
 
     my ($jst, $jss) = $self->_get_random_js_sock;
     return 0 unless $jss;
 
-    my $req = Gearman::Util::pack_req_command("submit_job_bg",
-                                              "$func\0$uniq\0$$argref");
+    my $req = $task->pack_submit_packet("background");
     my $len = length($req);
     my $rv = $jss->write($req, $len);
-    print "dispatch_background:  len=$len, rv=$rv\n";
 
     my $err;
     my $res = Gearman::Util::read_res_packet($jss, \$err);
@@ -104,7 +109,6 @@ sub get_status {
     my Gearman::Client $self = shift;
     my $handle = shift;
     my ($hostport, $shandle) = split(m!//!, $handle);
-    print "  hostport=[$hostport], shandle=[$shandle]\n";
     return undef unless grep { $hostport eq $_ } @{ $self->{job_servers} };
 
     my $sock = $self->_get_js_sock($hostport)
@@ -114,7 +118,6 @@ sub get_status {
                                               $shandle);
     my $len = length($req);
     my $rv = $sock->write($req, $len);
-    print "get_status:  len=$len, rv=$rv\n";
 
     my $err;
     my $res = Gearman::Util::read_res_packet($sock, \$err);
@@ -137,14 +140,12 @@ sub _get_js_sock {
         return $sock if $sock->connected;
     }
 
-    # TODO: cache, and verify with ->connected
     my $sock = IO::Socket::INET->new(PeerAddr => $hostport,
                                      Timeout => 1)
         or return undef;
 
     setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
     $sock->autoflush(1);
-    # TODO: tcp_nodelay?
     return $sock;
 }
 

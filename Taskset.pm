@@ -85,8 +85,7 @@ sub add_task {
     }
     $task->taskset($ts);
 
-    my $req = Gearman::Util::pack_req_command("submit_job",
-                                              ${ $task->submit_job_args_ref });
+    my $req = $task->pack_submit_packet;
     my $len = length($req);
     my $rv = $task->{jssock}->syswrite($req, $len);
     die "Wrote $rv but expected to write $len" unless $rv == $len;

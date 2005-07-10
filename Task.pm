@@ -42,8 +42,6 @@ sub taskset {
 
     # setter
     my Gearman::Taskset $ts = shift;
-    Carp::croak("Can't replace a task's taskset once assigned\n") if $task->{taskset};
-
     $task->{taskset} = $ts;
 
     my $merge_on = $task->{uniq} && $task->{uniq} eq "-" ?
@@ -63,9 +61,18 @@ sub _hashfunc {
     return (String::CRC32::crc32(${ shift() }) >> 16) & 0x7fff;
 }
 
-sub submit_job_args_ref {
+sub pack_submit_packet {
     my Gearman::Task $task = shift;
-    return \ join("\0", $task->{func}, $task->{uniq}, ${ $task->{argref} });
+    my $is_background = shift;
+
+    my $mode = $is_background ?
+	"submit_job_bg" :
+	($task->{high_priority} ?
+	 "submit_job_high" :
+	 "submit_job");
+
+    return Gearman::Util::pack_req_command($mode,
+					   join("\0", $task->{func}, $task->{uniq}, ${ $task->{argref} }));
 }
 
 sub fail {
