@@ -95,7 +95,8 @@ sub new {
     $self->{retries_done} = 0;
     $self->{taskset} = $ts;
 
-    my $merge_on = $self->{uniq} eq "-" ? $self->{argref} : \ $self->{uniq};
+    my $merge_on = $self->{uniq} && $self->{uniq} eq "-" ?
+        $self->{argref} : \ $self->{uniq};
     if ($$merge_on) {
         my $hash_num = _hashfunc($merge_on);
         $self->{jssock} = $ts->_get_hashed_sock($hash_num);
@@ -529,3 +530,114 @@ sub get_status {
 }
 
 1;
+__END__
+
+=head1 NAME
+
+Gearman::Client - Client for gearman distributed job system
+
+=head1 SYNOPSIS
+
+    use Gearman::Client;
+    my $client = Gearman::Client->new;
+    $client->job_servers('127.0.0.1');
+    my $taskset = $client->new_task_set;
+    $taskset->add_task( $funcname => $argref );
+
+=head1 DESCRIPTION
+
+I<Gearman::Client> is a client class for the Gearman distributed job system,
+providing a framework for sending jobs to a Gearman server. These jobs are
+then distributed out to workers.
+
+Callers instantiate a I<Gearman::Client> object and a task set. After
+creating a task set, the client then adds one or more tasks to the set.
+These tasks are immediately sent to the job server, which then distributes
+the tasks to any of the workers that are connected to the server.
+
+After the job is sent off, you may wish to wait for a response from the
+worker. The client has the option of waiting for a response, or just
+ignoring all responses.
+
+=head1 USAGE
+
+=head2 Gearman::Client->new(\%options)
+
+Creates a new I<Gearman::Client> object, and returns the object.
+
+If I<%options> is provided, initializes the new client object with the
+settings in I<%options>, which can contain:
+
+=over 4
+
+=item * job_servers
+
+Calls I<job_servers> (see below) to initialize the list of job servers.
+
+=back
+
+=head2 $client->job_servers(@servers)
+
+Initializes the client I<$client> with the list of job servers in I<@servers>.
+I<@servers> should contain a list of IP addresses, with optional port
+numbers. For example:
+
+    $client->job_servers('127.0.0.1', '192.168.1.100:7003');
+
+If the port number is not provided, C<7003> is used as the default.
+
+=head2 $client->new_task_set
+
+Creates and returns a new I<Gearman::Taskset> object.
+
+=head2 Gearman::Taskset->add_task($funcname, $args, \%options)
+
+Sends a task to the job server. I<$funcname> is the name of the task, and
+I<$args> should be either a scalar of reference to a scalar representing
+the arguments for the task.
+
+I<%options> can contain:
+
+=over 4
+
+=item * uniq
+
+=item * on_complete
+
+A subroutine reference to be invoked when the task is completed. The
+subroutine will be passed a reference to the return value from the worker
+process.
+
+=item * on_fail
+
+=item * on_status
+
+=back
+
+=head2 Gearman::Taskset->wait
+
+Waits for a response from the job server for any of the tasks listed in the
+taskset. Will call the I<on_*> handlers for each of the tasks that have
+been completed, updated, etc.
+
+=head1 EXAMPLES
+
+=head2 Summation
+
+This is an example client that sends off a request to sum up a list of
+integers.
+
+    use Gearman::Client;
+    use Storable qw( freeze );
+    my $client = Gearman::Client->new;
+    $client->job_servers('127.0.0.1');
+    my $tasks = $client->new_task_set;
+    my $handle = $tasks->add_task(sum => freeze([ 3, 5 ]), {
+        on_complete => sub { print ${ $_[0] }, "\n" }
+    });
+    $tasks->wait;
+
+See the I<Gearman::Worker> documentation for the worker for the I<sum>
+function.
+
+=cut

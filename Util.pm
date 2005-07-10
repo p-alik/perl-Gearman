@@ -51,10 +51,11 @@ sub cmd_name {
 
 sub pack_req_command {
     my $type_arg = shift;
-    my $type = int($type_arg) || $num{$type_arg};
+    my $type = $num{$type_arg} || $type_arg;
     die "Bogus type arg of '$type_arg'" unless $type;
-    my $len = length($_[0]);
-    return "\0REQ" . pack("NN", $type, $len) . $_[0];
+    my $arg = $_[0] || '';
+    my $len = length($arg);
+    return "\0REQ" . pack("NN", $type, $len) . $arg;
 }
 
 sub pack_res_command {
@@ -88,7 +89,7 @@ sub read_res_packet {
         return $err->("short_body") unless $rv == $len;
     }
 
-    my $type = $cmd{$type};
+    $type = $cmd{$type};
     return $err->("bogus_command") unless $type;
     return $err->("bogus_command_type") unless index($type->[0], "O") != -1;
 
@@ -116,7 +117,7 @@ sub wait_for_readability {
     my ($fileno, $timeout) = @_;
     return 0 unless $fileno && $timeout;
 
-    my $rin;
+    my $rin = 0;
     vec($rin, $fileno, 1) = 1;
     my $nfound = select($rin, undef, undef, $timeout);
 

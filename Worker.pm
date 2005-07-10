@@ -219,7 +219,7 @@ sub work {
         }
 
         if ($need_sleep) {
-            my $wake_vec = undef;
+            my $wake_vec = 0;
             foreach my $j (@jss) {
                 my ($js, $jss) = @$j;
                 unless (Gearman::Util::send_req($jss, \$presleep_req)) {
@@ -268,3 +268,100 @@ sub job_servers {
 
 
 1;
+__END__
+
+=head1 NAME
+
+Gearman::Worker - Worker for gearman distributed job system
+
+=head1 SYNOPSIS
+
+    use Gearman::Worker;
+    my $worker = Gearman::Worker->new;
+    $worker->job_servers('127.0.0.1');
+    $worker->register_function($funcname => $subref);
+    $worker->work while 1;
+
+=head1 DESCRIPTION
+
+I<Gearman::Worker> is a worker class for the Gearman distributed job system,
+providing a framework for receiving and serving jobs from a Gearman server.
+
+Callers instantiate a I<Gearman::Worker> object, register a list of functions
+and capabilities that they can handle, then enter an event loop, waiting
+for the server to send jobs.
+
+The worker can send a return value back to the server, which then gets
+sent back to the client that requested the job; or it can simply execute
+silently.
+
+=head1 USAGE
+
+=head2 Gearman::Worker->new(\%options)
+
+Creates a new I<Gearman::Worker> object, and returns the object.
+
+If I<%options> is provided, initializes the new worker object with the
+settings in I<%options>, which can contain:
+
+=over 4
+
+=item * job_servers
+
+Calls I<job_servers> (see below) to initialize the list of job servers.
+
+=back
+
+=head2 $worker->job_servers(@servers)
+
+Initializes the worker I<$worker> with the list of job servers in I<@servers>.
+I<@servers> should contain a list of IP addresses, with optional port numbers.
+For example:
+
+    $worker->job_servers('127.0.0.1', '192.168.1.100:7003');
+
+If the port number is not provided, 7003 is used as the default.
+
+=head2 $worker->register_function($funcname, $subref)
+
+Registers the function I<$funcname> as being provided by the worker
+I<$worker>, and advertises these capabilities to all of the job servers
+defined in this worker.
+
+I<$subref> must be a subroutine reference that will be invoked when the
+worker receives a request for this function. It will be passed a
+I<Gearman::Job> object representing the job that has been received by the
+worker.
+
+The subroutine reference can return a return value, which will be sent back
+to the job server.
+
+=head2 Gearman::Job->arg
+
+Returns the scalar argument that the client sent to the job server.
+
+=head2 Gearman::Job->set_status($numerator, $denominator)
+
+Updates the status of the job (most likely, a long-running job) and sends
+it back to the job server. I<$numerator> and I<$denominator> should
+represent the percentage completion of the job.
+
+=head1 EXAMPLES
+
+=head2 Summation
+
+This is an example worker that receives a request to sum up a list of
+integers.
+
+    use Gearman::Worker;
+    use Storable qw( thaw );
+    use List::Util qw( sum );
+    my $worker = Gearman::Worker->new;
+    $worker->job_servers('127.0.0.1');
+    $worker->register_function(sum => sub { sum @{ thaw($_[0]->arg) } });
+    $worker->work while 1;
+
+See the I<Gearman::Client> documentation for a sample client sending the
+I<sum> job.
+
+=cut
