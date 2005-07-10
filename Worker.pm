@@ -34,7 +34,6 @@ sub new {
 sub set_status {
     my Gearman::Job $self = shift;
     my ($nu, $de) = @_;
-    print "status of $self->{handle}: $nu/$de\n";
 
     my $req = Gearman::Util::pack_req_command("work_status",
                                               join("\0", $self->{handle}, $nu, $de));
@@ -204,7 +203,7 @@ sub work {
             my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle, $jss);
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
-            print "For func: $func, handler=$handler, ret=$ret: errors=[$@]\n";
+
             my $work_req;
             if (defined $ret) {
                 $work_req = Gearman::Util::pack_req_command("work_complete", "$handle\0" . (ref $ret ? $$ret : $ret));

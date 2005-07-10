@@ -2,6 +2,7 @@
 
 #TODO: priorities
 #TODO: fail_after_idle
+#TODO: hashing onto job servers?
 
 use strict;
 use Gearman::Util;
@@ -88,7 +89,6 @@ sub new {
         $self->{$k} = delete $opts->{$k};
     }
 
-
     if (%{$opts}) {
         Carp::croak("Unknown option(s): " . join(", ", sort keys %$opts));
     }
@@ -147,6 +147,8 @@ sub status {
     $task->{on_status}->($nu, $de);
 }
 
+# getter/setter for the fully-qualified handle of form "IP:port//shandle" where
+# shandle is an opaque handle specific to the job server running on IP:port
 sub handle {
     my Gearman::Task $task = shift;
     return $task->{handle} unless @_;
@@ -299,7 +301,7 @@ sub _wait_for_packet {
     if ($sock) {
         $res = Gearman::Util::read_res_packet($sock, \$err);
         return 0 unless $res;
-        return $ts->_process_packet($res);
+        return $ts->_process_packet($res, $sock);
     } else {
         # TODO: cache this vector?
         my ($rin, $rout, $eout);
@@ -321,64 +323,86 @@ sub _wait_for_packet {
             # TODO: deal with error vector
             my $sock = $watching{$fd};
             $res = Gearman::Util::read_res_packet($sock, \$err);
-            $ts->_process_packet($res) if $res;
+            $ts->_process_packet($res, $sock) if $res;
         }
         return 1;
 
     }
 }
 
+sub _ip_port {
+    my $sock = shift;
+    return undef unless $sock;
+    my $pn = getpeername($sock) or return undef;
+    my ($port, $iaddr) = Socket::sockaddr_in($pn);
+    return Socket::inet_ntoa($iaddr) . ":$port";
+}
+
+# note the failure of a task given by its jobserver-specific handle
+sub _fail_jshandle {
+    my Gearman::Taskset $ts = shift;
+    my $shandle = shift;
+
+    my $task_list = $ts->{waiting}{$handle} or
+	die "Uhhhh:  got work_fail for unknown handle: $handle\n";
+
+    my Gearman::Task $task = shift @$task_list or
+	die "Uhhhh:  task_list is empty on work_fail for handle $handle\n";
+
+    $task->fail;
+    delete $ts->{waiting}{$handle} unless @$task_list;
+}
+
 sub _process_packet {
     my Gearman::Taskset $ts = shift;
-    my $res = shift;
+    my ($res, $sock) = @_;
 
     if ($res->{type} eq "job_created") {
         my Gearman::Task $task = shift @{ $ts->{need_handle} } or
-            die "Um, got an unexpeted job_created notification";
+            die "Um, got an unexpected job_created notification";
 
-        my $handle = ${ $res->{'blobref'} };
-        $task->handle($handle);
-        push @{ $ts->{waiting}{$handle} ||= [] }, $task;
+        my $shandle = ${ $res->{'blobref'} };
+	my $ipport = _ip_port($sock);
 
+	# did sock become disconnected in the meantime?
+	if (! $ipport) {
+	    $ts->_fail_jshandle($shandle);
+	    return 1;
+	}
+
+        $task->handle("$ipport//$shandle");
+        push @{ $ts->{waiting}{$shandle} ||= [] }, $task;
         return 1;
     }
 
     if ($res->{type} eq "work_fail") {
-        my $handle = ${ $res->{'blobref'} };
-        my $task_list = $ts->{waiting}{$handle} or
-            die "Uhhhh:  got work_fail for unknown handle: $handle\n";
-
-        my Gearman::Task $task = shift @$task_list or
-            die "UHhhh:  task_list is empty on work_fail for handle $handle\n";
-
-        $task->fail;
-
-        delete $ts->{waiting}{$handle} unless @$task_list;
+        my $shandle = ${ $res->{'blobref'} };
+	$ts->_fail_jshandle($shandle);
         return 1;
     }
 
     if ($res->{type} eq "work_complete") {
         ${ $res->{'blobref'} } =~ s/^(.+?)\0//
             or die "Bogus work_complete from server";
-        my $handle = $1;
+        my $shandle = $1;
 
-        my $task_list = $ts->{waiting}{$handle} or
-            die "Uhhhh:  got work_complete for unknown handle: $handle\n";
+        my $task_list = $ts->{waiting}{$shandle} or
+            die "Uhhhh:  got work_complete for unknown handle: $shandle\n";
 
         my Gearman::Task $task = shift @$task_list or
-            die "Uhhhh:  task_list is empty on work_complete for handle $handle\n";
+            die "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
 
         $task->complete($res->{'blobref'});
-        delete $ts->{waiting}{$handle} unless @$task_list;
+        delete $ts->{waiting}{$shandle} unless @$task_list;
 
         return 1;
     }
 
     if ($res->{type} eq "work_status") {
-        my ($handle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
+        my ($shandle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
 
-        my $task_list = $ts->{waiting}{$handle} or
-            die "Uhhhh:  got work_status for unknown handle: $handle\n";
+        my $task_list = $ts->{waiting}{$shandle} or
+            die "Uhhhh:  got work_status for unknown handle: $shandle\n";
 
         # FIXME: the server is (probably) sending a work_status packet for each
         # interested client, even if the clients are the same, so probably need
@@ -410,7 +434,6 @@ sub new {
     $self->job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
 
-
     return $self;
 }
 
@@ -431,12 +454,43 @@ sub job_servers {
     return $self->{job_servers} = $list;
 }
 
+# given a (func, arg_p, opts?), returns either undef (on fail) or scalarref of result
+sub do_task {
+    my Gearman::Client $self = shift;
+    my ($func, $arg_p, $opts) = @_
+    my $argref = ref $arg_p ? $arg_p : \$arg_p;
+    Carp::croak("Function argument must be scalar or scalarref")
+        unless ref $argref eq "SCALAR";
+
+    my $ret = undef;
+    my $did_err = 0;
+
+    $opts ||= {};
+
+    $opts->{on_complete} = sub {
+	$res = shift;
+    };
+
+    $opts->{on_fail} = sub {
+	$did_err = 1;
+    };
+    
+    my $ts = $self->new_task_set;
+    $ts->add_task($func, $arg_p, $opts);
+    $ts->wait;
+
+    return $did_err ? undef : $ret;
+
+}
+
+# given a (func, arg_p, uniq)
 sub dispatch_background {
     my Gearman::Client $self = shift;
     my ($func, $arg_p, $uniq) = @_;
     my $argref = ref $arg_p ? $arg_p : \$arg_p;
     Carp::croak("Function argument must be scalar or scalarref")
         unless ref $argref eq "SCALAR";
+    $uniq ||= "";
 
     my ($jst, $jss) = $self->_get_random_js_sock;
     return 0 unless $jss;
@@ -468,8 +522,6 @@ sub _get_js_sock {
     my $sock = IO::Socket::INET->new(PeerAddr => $hostport,
                                      Timeout => 1)
         or return undef;
-
-    Carp::cluck("connected");
 
     setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
     $sock->autoflush(1);
@@ -541,24 +593,31 @@ Gearman::Client - Client for gearman distributed job system
 
     use Gearman::Client;
     my $client = Gearman::Client->new;
-    $client->job_servers('127.0.0.1');
+    $client->job_servers('127.0.0.1', '10.0.0.1');
+
+    # running a single task
+    my $result_ref = $client->do_task("add", "1+2");
+    print "1 + 2 = $$result_ref\n";
+
+    # waiting on a set of tasks in parallel
     my $taskset = $client->new_task_set;
-    $taskset->add_task( $funcname => $argref );
+    $taskset->add_task( "add" => "1+2", {
+       on_complete => sub { ... } 
+    });
+    $taskset->add_task( "divide" => "5/0", {
+       on_fail => sub { print "divide by zero error!\n"; },
+    });
+    $taskset->wait;
+
 
 =head1 DESCRIPTION
 
-I<Gearman::Client> is a client class for the Gearman distributed job system,
-providing a framework for sending jobs to a Gearman server. These jobs are
-then distributed out to workers.
+I<Gearman::Client> is a client class for the Gearman distributed job
+system, providing a framework for sending jobs to one or more Gearman
+servers.  These jobs are then distributed out to a farm of workers.
 
-Callers instantiate a I<Gearman::Client> object and a task set. After
-creating a task set, the client then adds one or more tasks to the set.
-These tasks are immediately sent to the job server, which then distributes
-the tasks to any of the workers that are connected to the server.
-
-After the job is sent off, you may wish to wait for a response from the
-worker. The client has the option of waiting for a response, or just
-ignoring all responses.
+Callers instantiate a I<Gearman::Client> object and from it dispatch
+single tasks, sets of tasks, or check on the status of tasks.
 
 =head1 USAGE
 
@@ -573,7 +632,8 @@ settings in I<%options>, which can contain:
 
 =item * job_servers
 
-Calls I<job_servers> (see below) to initialize the list of job servers.
+Calls I<job_servers> (see below) to initialize the list of job
+servers.  Value in this case should be an arrayref.
 
 =back
 
@@ -619,7 +679,30 @@ process.
 
 =item * on_fail
 
+A subroutine reference to be invoked when the task fails (or fails for
+the last time, if retries were specified).  No arguments are
+passed to this callback.  This callback won't be called after a failure
+if more retries are still possible.
+
 =item * on_status
+
+A subroutine reference to be invoked if the task emits status updates.
+Arguments passed to the subref are ($numerator, $denominator), where those
+are left up to the client and job to determine.
+
+=item * retry_count
+
+Number of times job will be retried if there are failures.  Defaults to 0.
+
+=item * high_priority
+
+Boolean, whether this job should take priority over other jobs already
+enqueued.
+
+=item * fail_after_idle
+
+Automatically fail after this many seconds have elapsed.  Defaults to 0,
+which means never.
 
 =back
 
