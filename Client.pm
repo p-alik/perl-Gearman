@@ -343,14 +343,14 @@ sub _fail_jshandle {
     my Gearman::Taskset $ts = shift;
     my $shandle = shift;
 
-    my $task_list = $ts->{waiting}{$handle} or
-	die "Uhhhh:  got work_fail for unknown handle: $handle\n";
+    my $task_list = $ts->{waiting}{$shandle} or
+	die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
 
     my Gearman::Task $task = shift @$task_list or
-	die "Uhhhh:  task_list is empty on work_fail for handle $handle\n";
+	die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
 
     $task->fail;
-    delete $ts->{waiting}{$handle} unless @$task_list;
+    delete $ts->{waiting}{$shandle} unless @$task_list;
 }
 
 sub _process_packet {
@@ -457,7 +457,7 @@ sub job_servers {
 # given a (func, arg_p, opts?), returns either undef (on fail) or scalarref of result
 sub do_task {
     my Gearman::Client $self = shift;
-    my ($func, $arg_p, $opts) = @_
+    my ($func, $arg_p, $opts) = @_;
     my $argref = ref $arg_p ? $arg_p : \$arg_p;
     Carp::croak("Function argument must be scalar or scalarref")
         unless ref $argref eq "SCALAR";
@@ -468,7 +468,7 @@ sub do_task {
     $opts ||= {};
 
     $opts->{on_complete} = sub {
-	$res = shift;
+	$ret = shift;
     };
 
     $opts->{on_fail} = sub {
