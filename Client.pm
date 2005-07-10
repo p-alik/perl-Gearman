@@ -89,7 +89,6 @@ sub do_task {
 # Gearman::Task, dispatches job in background.  returns the handle from the jobserver, or false if any failure
 sub dispatch_background {
     my Gearman::Client $self = shift;
-    my $task = shift;
     my Gearman::Task $task = &_get_task_from_args;
 
     my ($jst, $jss) = $self->_get_random_js_sock;
