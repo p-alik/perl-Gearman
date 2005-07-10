@@ -45,7 +45,7 @@ sub job_servers {
     return $self->{job_servers} = $list;
 }
 
-sub get_task_from_args {
+sub _get_task_from_args {
     my Gearman::Task $task;
     if (ref $_[0]) {
 	$task = $_[0];
