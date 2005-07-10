@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 #TODO: priorities
+#TODO: fail_after_idle
 
 use strict;
 use Gearman::Util;
@@ -601,6 +602,14 @@ I<%options> can contain:
 =over 4
 
 =item * uniq
+
+A key which indicates to the server that other tasks with the same
+function name and key will be merged into one.  That is, the task
+will be run just once, but all the listeners waiting on that job
+will get the response multiplexed back to them.
+
+Uniq may also contain the magic value "-" (a single hyphen) which
+means the uniq key is the contents of the args.
 
 =item * on_complete
 
