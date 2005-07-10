@@ -32,6 +32,7 @@ use fields (
             'uniq',
             'on_complete',
             'on_fail',
+            'on_retry',
             'on_status',
             'retry_count',
             'fail_after_idle',

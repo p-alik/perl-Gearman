@@ -18,7 +18,10 @@ sub new {
     Carp::croak("Argref not a scalar reference") unless ref $self->{argref} eq "SCALAR";
 
     my $opts = shift || {};
-    for my $k (qw( uniq on_complete on_fail on_status retry_count fail_after_idle high_priority )) {
+    for my $k (qw( uniq
+  		   on_complete on_fail on_retry on_status
+		   retry_count fail_after_idle high_priority 
+		   )) {
         $self->{$k} = delete $opts->{$k};
     }
 
@@ -71,6 +74,7 @@ sub fail {
     # try to retry, if we can
     if ($task->{retries_done} < $task->{retry_count}) {
         $task->{retries_done}++;
+        $task->{on_retry}->($task->{retries_done}) if $task->{on_retry};
         $task->handle(undef);
         return $task->{taskset}->add_task($task);
     }
@@ -166,6 +170,13 @@ A subroutine reference to be invoked when the task fails (or fails for
 the last time, if retries were specified).  No arguments are
 passed to this callback.  This callback won't be called after a failure
 if more retries are still possible.
+
+=item * on_retry
+
+A subroutine reference to be invoked when the task fails, but is about
+to be retried.
+
+Is passed one argument, what retry attempt number this is.  (starts with 1)
 
 =item * on_status
 
