@@ -214,7 +214,7 @@ single tasks, sets of tasks, or check on the status of tasks.
 
 =head1 USAGE
 
-=head2 Gearman::Client->new(\%options)
+=head2 Gearman::Client->new(%options)
 
 Creates a new I<Gearman::Client> object, and returns the object.
 
