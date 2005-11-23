@@ -218,7 +218,7 @@ sub work {
         }
 
         if ($need_sleep) {
-            my $wake_vec = 0;
+            my $wake_vec = '';
             foreach my $j (@jss) {
                 my ($js, $jss) = @$j;
                 unless (Gearman::Util::send_req($jss, \$presleep_req)) {
@@ -230,6 +230,7 @@ sub work {
             }
 
             # chill for some arbitrary time until we're woken up again
+            # FIXME: check response from select, $! on error
             select($wake_vec, undef, undef, 10);
         }
     }
