@@ -258,7 +258,7 @@ this function currently overrides them.
 =head2 $client-E<gt>dispatch_background($funcname, $arg, \%options)
 
 Dispatches a task and doesn't wait for the result.  Return value
-is 
+is an opaque scalar that can be used to refer to the task.
 
 =head2 $taskset = $client-E<gt>new_task_set
 
