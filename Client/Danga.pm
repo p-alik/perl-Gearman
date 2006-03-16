@@ -16,6 +16,8 @@ use Gearman::Objects;
 use Gearman::Task;
 use Gearman::JobStatus;
 
+sub DEBUGGING () { 1 }
+
 sub new {
     my ($class, %opts) = @_;
     my $self = $class;
@@ -53,7 +55,6 @@ sub shutdown {
     my Gearman::Client::Danga $self = shift;
     
     foreach (@{$self->{job_servers}}) {
-        warn "Shutting down $_\n";
         $_->close( "Shutdown" );
     }
 }
@@ -62,32 +63,38 @@ sub add_task {
     my Gearman::Client::Danga $self = shift;
     my Gearman::Task $task = shift;
 
-    my $job_servers = $self->{job_servers};
+    my @job_servers = grep { $_->safe } @{$self->{job_servers}};
 
-    die( "Can't add_task when there are no job servers\n" ) unless (@$job_servers);
-    
-    my $js;
-    if (defined( my $hash = $task->hash )) {
-        $js = $job_servers->[$hash % @$job_servers];
+    if (@job_servers) {
+        my $js;
+        if (defined( my $hash = $task->hash )) {
+            $js = @job_servers[$hash % @job_servers];
+        }
+        else {
+            $js = @job_servers->[int( rand( @job_servers ))];
+        }
+        $task->{taskset} = $self;
+        $js->add_task( $task );
     }
     else {
-        $js = $job_servers->[int( rand( @$job_servers ))];
-    }
-    $task->{taskset} = $self;
-    $js->add_task( $task );
+        $task->fail;
+    }    
 }
+
 
 package Gearman::Client::Danga::Socket;
 
 
 use Danga::Socket;
 use base 'Danga::Socket';
-use fields qw(state waiting need_handle buffer host port to_send);
+use fields qw(state waiting need_handle parser host port to_send safe);
 
 use Gearman::Task;
 use Gearman::Util;
 
 use Socket qw(PF_INET IPPROTO_TCP SOCK_STREAM);
+
+sub DEBUGGING () { 1 }
 
 sub new {
     my Gearman::Client::Danga::Socket $self = shift;
@@ -102,6 +109,7 @@ sub new {
     $self->{waiting} = {};
     $self->{need_handle} = [];
     $self->{to_send} = [];
+    $self->{safe} = 1;
 
     return $self;
 }
@@ -126,6 +134,8 @@ sub connect {
     $self->SUPER::new( $sock );
 
     connect $sock, Socket::sockaddr_in( $port, Socket::inet_aton( $host ) );
+
+    $self->{parser} = Gearman::ResponseParser::Danga->new( $self );
 
     $self->watch_write( 1 );
     $self->watch_read( 1 );
@@ -154,77 +164,53 @@ sub event_write {
 sub event_read {
     my Gearman::Client::Danga::Socket $self = shift;
 
-    my @packets = Gearman::Util::read_res_packets_async( $self->{sock}, \$self->{buffer} );
+    my $input = $self->read( 128 x 1024 );
 
-    foreach my $packet (@packets) {
-        $self->_process_packet( $packet );
-    }
-
-    my $to_send = $self->{to_send};
-    my $need_handle = $self->{need_handle};
-    my $waiting = $self->{waiting};
-
-    if (my $count = @$to_send + @$need_handle + keys( %$waiting )) {
-        warn "$count Events still waiting\n";
+    if ($input) {
+        $self->{parser}->parse_data( $input );
     }
     else {
-        warn "No events left\n";
-        $self->watch_read( 0 );
+        $self->close( "EOF" );
     }
 }
 
 sub event_err {
     my Gearman::Client::Danga::Socket $self = shift;
-    print "event_err: $self->{state}\n";
 
-    if ($self->{state} eq 'connecting') {
+    if (DEBUGGING and $self->{state} eq 'connecting') {
         warn "Jobserver, $self->{host}:$self->{port} ($self) has failed to connect properly\n";
     }
 
-    my $to_send = $self->{to_send};
-    my $need_handle = $self->{need_handle};
-    my $waiting = $self->{waiting};
-
-    $self->{to_send} = [];
-    $self->{need_handle} = [];
-    $self->{waiting} = {};
-    $self->{state} = 'disconnected';
-
+    $self->_mark_unsafe;
     $self->close( "error" );
-
-    while (@$to_send) {
-        my $task = shift @$to_send;
-        warn "Task $task in to_send queue during socket error, queueing for redispatch\n";
-        $task->{taskset}->add_task( $task );
-    }
-
-    while (@$need_handle) {
-        my $task = shift @$need_handle;
-        warn "Task $task in need_handle queue during socket error, queueing for redispatch\n";
-        $task->{taskset}->add_task( $task );
-    }
-
-    while (my ($shandle, $task) = each( %$waiting )) {
-        warn "Task $task ($shandle) in waiting queue during socket error, queueing for redispatch\n";
-        $task->{taskset}->add_task( $task );
-    }
 }
 
-sub event_hup {
-    print "EVENT HUP! [@_]\n";
+sub mark_unsafe {
+    my Gearman::Client::Danga::Socket $self = shift;
+
+    $self->{safe} = 0;
+
+    Danga::Socket->AddTimer( 10, sub { $self->{safe} = 1; } );
 }
 
 sub close {
-    warn "Close: [@_]\n";
     my Gearman::Client::Danga::Socket $self = shift;
-    $self->SUPER::close( @_ );
+    my $reason = shift;
+    
+    $self->{state} = 'disconnected';
+    $self->SUPER::close( $reason );
+    $self->_requeue_all;
+}
+
+sub safe {
+    my Gearman::Client::Danga::Socket $self = shift;
+    
+    return $self->{safe};
 }
 
 sub add_task {
     my Gearman::Client::Danga::Socket $self = shift;
     my Gearman::Task $task = shift;
-
-    warn "Adding Task - State: $self->{state}\n";
 
     if ($self->{state} eq 'disconnected') {
         $self->connect;
@@ -235,7 +221,36 @@ sub add_task {
     push @{$self->{to_send}}, $task;
 }
 
-sub _process_packet {
+sub _requeue_all {
+    my Gearman::Client::Danga::Socket $self = shift;
+    
+    my $to_send = $self->{to_send};
+    my $need_handle = $self->{need_handle};
+    my $waiting = $self->{waiting};
+
+    $self->{to_send} = [];
+    $self->{need_handle} = [];
+    $self->{waiting} = {};
+    
+    while (@$to_send) {
+        my $task = shift @$to_send;
+        warn "Task $task in to_send queue during socket error, queueing for redispatch\n" if DEBUGGING;
+        $task->{taskset}->add_task( $task );
+    }
+
+    while (@$need_handle) {
+        my $task = shift @$need_handle;
+        warn "Task $task in need_handle queue during socket error, queueing for redispatch\n" if DEBUGGING;
+        $task->{taskset}->add_task( $task );
+    }
+
+    while (my ($shandle, $task) = each( %$waiting )) {
+        warn "Task $task ($shandle) in waiting queue during socket error, queueing for redispatch\n" if DEBUGGING;
+        $task->{taskset}->add_task( $task );
+    }
+}
+
+sub process_packet {
     my Gearman::Client::Danga::Socket $self = shift;
     my $res = shift;
 
@@ -316,11 +331,37 @@ sub _fail_jshandle {
     delete $self->{waiting}{$shandle} unless @$task_list;
 }
 
-#sub DESTROY {
-#    my Gearman::Client::Danga::Socket $self = shift;
-#    $self->close( "DESTROY" );
-#    warn "DESTRUCTO\n";
-#}
+package Gearman::ResponseParser::Danga;
+
+use strict;
+use warnings;
+
+use Gearman::ResponseParser;
+use base 'Gearman::ResponseParser';
+
+sub new {
+    my $class = shift;
+
+    my $self = $class->SUPER::new;
+
+    $self->{_client} = shift;
+
+    return $self;
+}
+
+sub on_packet {
+    my $self = shift;
+    my $packet = shift;
+
+    $self->{_client}->process_packet( $packet );
+}
+
+sub on_error {
+    my $self = shift;
+    
+    $self->{_client}->mark_unsafe;
+    $self->{_client}->close;
+}
 
 1;
 __END__
