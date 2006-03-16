@@ -12,16 +12,16 @@ sub new {
     $self = fields::new($class) unless ref $self;
 
     $self->{func} = shift
-	or Carp::croak("No function given");
+        or Carp::croak("No function given");
 
     $self->{argref} = shift || do { my $empty = ""; \$empty; };
     Carp::croak("Argref not a scalar reference") unless ref $self->{argref} eq "SCALAR";
 
     my $opts = shift || {};
     for my $k (qw( uniq
-  		   on_complete on_fail on_retry on_status
-		   retry_count fail_after_idle high_priority 
-		   )) {
+                   on_complete on_fail on_retry on_status
+                   retry_count fail_after_idle high_priority 
+               )) {
         $self->{$k} = delete $opts->{$k};
     }
 
@@ -56,6 +56,19 @@ sub taskset {
     return $task->{taskset};
 }
 
+# returns undef on non-uniq packet, or the hash value (0-32767) if uniq
+sub hash {
+    my Gearman::Task $task = shift;
+
+    my $merge_on = $task->{uniq} && $task->{uniq} eq "-" ?
+        $task->{argref} : \ $task->{uniq};
+    if ($$merge_on) {
+        return _hashfunc( $merge_on );
+    } else {
+        return undef;
+    }
+}
+
 # returns number in range [0,32767] given a scalarref
 sub _hashfunc {
     return (String::CRC32::crc32(${ shift() }) >> 16) & 0x7fff;
@@ -66,13 +79,13 @@ sub pack_submit_packet {
     my $is_background = shift;
 
     my $mode = $is_background ?
-	"submit_job_bg" :
-	($task->{high_priority} ?
-	 "submit_job_high" :
-	 "submit_job");
+        "submit_job_bg" :
+        ($task->{high_priority} ?
+         "submit_job_high" :
+         "submit_job");
 
     return Gearman::Util::pack_req_command($mode,
-					   join("\0", $task->{func}, $task->{uniq}, ${ $task->{argref} }));
+                                           join("\0", $task->{func}, $task->{uniq}, ${ $task->{argref} }));
 }
 
 sub fail {
