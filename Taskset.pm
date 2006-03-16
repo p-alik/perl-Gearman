@@ -2,7 +2,9 @@ package Gearman::Taskset;
 
 use strict;
 use Carp ();
+use Gearman::Client;
 use Gearman::Util;
+use Gearman::ResponseParser::Taskset;
 
 sub new {
     my $class = shift;
@@ -43,11 +45,39 @@ sub _get_loaned_sock {
     return $ts->{loaned_sock}{$hostport} = $sock;
 }
 
+# event loop for reading in replies
 sub wait {
     my Gearman::Taskset $ts = shift;
 
+    my %parser;  # fd -> Gearman::ResponseParser object
+
+    my ($rin, $rout, $eout) = ('', '', '');
+    my %watching;
+
+    for my $sock ($ts->{default_sock}, values %{ $ts->{loaned_sock} }) {
+        next unless $sock;
+        my $fd = $sock->fileno;
+        vec($rin, $fd, 1) = 1;
+        $watching{$fd} = $sock;
+    }
+
+    my $tries = 0;
     while (keys %{$ts->{waiting}}) {
-        $ts->_wait_for_packet();
+        $tries++;
+
+        my $nfound = select($rout=$rin, undef, $eout=$rin, 0.5);
+        next if ! $nfound;
+
+        foreach my $fd (keys %watching) {
+            next unless vec($rout, $fd, 1);
+            # TODO: deal with error vector
+
+            my $sock   = $watching{$fd};
+            my $parser = $parser{$fd} ||= Gearman::ResponseParser::Taskset->new(source  => $sock,
+                                                                                taskset => $ts);
+            $parser->parse_sock($sock);
+        }
+
         # TODO: timeout jobs that have been running too long.  the _wait_for_packet
         # loop only waits 0.5 seconds.
     }
@@ -142,39 +172,12 @@ sub _get_hashed_sock {
 # otherwise, return value is undefined.
 sub _wait_for_packet {
     my Gearman::Taskset $ts = shift;
-    my $sock = shift;  # optional socket to singularly read from
+    my $sock = shift;  # socket to singularly read from
 
     my ($res, $err);
-    if ($sock) {
-        $res = Gearman::Util::read_res_packet($sock, \$err);
-        return 0 unless $res;
-        return $ts->_process_packet($res, $sock);
-    } else {
-        # TODO: cache this vector?
-        my ($rin, $rout, $eout);
-        my %watching;
-
-        for my $sock ($ts->{default_sock}, values %{ $ts->{loaned_sock} }) {
-            next unless $sock;
-            my $fd = $sock->fileno;
-
-            vec($rin, $fd, 1) = 1;
-            $watching{$fd} = $sock;
-        }
-
-        my $nfound = select($rout=$rin, undef, $eout=$rin, 0.5);
-        return 0 if ! $nfound;
-
-        foreach my $fd (keys %watching) {
-            next unless vec($rout, $fd, 1);
-            # TODO: deal with error vector
-            my $sock = $watching{$fd};
-            $res = Gearman::Util::read_res_packet($sock, \$err);
-            $ts->_process_packet($res, $sock) if $res;
-        }
-        return 1;
-
-    }
+    $res = Gearman::Util::read_res_packet($sock, \$err);
+    return 0 unless $res;
+    return $ts->_process_packet($res, $sock);
 }
 
 sub _ip_port {
@@ -191,10 +194,10 @@ sub _fail_jshandle {
     my $shandle = shift;
 
     my $task_list = $ts->{waiting}{$shandle} or
-	die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
+        die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
 
     my Gearman::Task $task = shift @$task_list or
-	die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
+        die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
 
     $task->fail;
     delete $ts->{waiting}{$shandle} unless @$task_list;
@@ -209,13 +212,13 @@ sub _process_packet {
             die "Um, got an unexpected job_created notification";
 
         my $shandle = ${ $res->{'blobref'} };
-	my $ipport = _ip_port($sock);
+        my $ipport = _ip_port($sock);
 
-	# did sock become disconnected in the meantime?
-	if (! $ipport) {
-	    $ts->_fail_jshandle($shandle);
-	    return 1;
-	}
+        # did sock become disconnected in the meantime?
+        if (! $ipport) {
+            $ts->_fail_jshandle($shandle);
+            return 1;
+        }
 
         $task->handle("$ipport//$shandle");
         push @{ $ts->{waiting}{$shandle} ||= [] }, $task;
@@ -224,7 +227,7 @@ sub _process_packet {
 
     if ($res->{type} eq "work_fail") {
         my $shandle = ${ $res->{'blobref'} };
-	$ts->_fail_jshandle($shandle);
+        $ts->_fail_jshandle($shandle);
         return 1;
     }
 
