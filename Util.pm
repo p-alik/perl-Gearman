@@ -100,60 +100,6 @@ sub read_res_packet {
     };
 }
 
-sub read_res_packets_async {
-    my $sock = shift;
-    my $state = shift;
-    my $err_ref = shift;
-
-    my @return;
-
-    my $err = sub {
-        my $code = shift;
-        $$err_ref = $code if ref $err_ref;
-        return undef;
-    };
-
-    while (sysread( $sock, my $read_buf = '', 1024 )) {
-        $$state .= $read_buf; # this causes perl to realloc the string, not sure how slow it is, unsets OOK
-
-        while (length( $$state ) >= 12) {
-            my ($magic, $type, $len) = unpack( "a4NN", $$state );
-            if ($magic ne "\0RES") {
-                # Clear buffer and try reading again.
-                # TODO This needs to be more robust if it /ever/ fails.
-                $$state = '';
-                $err->( "malformed_magic" );
-                next;
-            }
-
-            if (length( $$state ) >= (12 + $len)) {
-                substr( $$state, 0, 12, '' ); # PVIV OOK, very fast, memory is reclaimed at realloc time.
-                my $blob = substr( $$state, 0, $len, '' ); # OOK
-
-                # The one line that requires me to be defined in this file.
-                my $type = $cmd{$type};
-                
-                unless ($type) {
-                    $err->( "bogus_command" );
-                    next;
-                }
-                unless (index( $type->[0], "O" ) != -1) {
-                    $err->( "bogus_command_type" );
-                    next;
-                }
-
-                push @return, {
-                    'type'  => $type->[1],
-                    'len'   => $len,
-                    'blobref'   => \$blob,
-                };
-            }
-        }
-    }
-
-    return @return;
-}
-
 sub send_req {
     my ($sock, $reqref) = @_;
     return 0 unless $sock;
