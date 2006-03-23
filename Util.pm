@@ -80,7 +80,13 @@ sub read_res_packet {
         return undef;
     };
 
-    return $err->("malformed_header") unless sysread($sock, $buf, 12) == 12;
+    # read the header
+    $rv = sysread($sock, $buf, 12);
+
+    return $err->("read_error")       unless defined $rv;
+    return $err->("eof")              unless $rv;
+    return $err->("malformed_header") unless $rv == 12;
+
     my ($magic, $type, $len) = unpack("a4NN", $buf);
     return $err->("malformed_magic") unless $magic eq "\0RES";
 

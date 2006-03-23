@@ -62,7 +62,7 @@ use fields (
             'down_since',        # host:port -> unixtime
             'connecting',        # host:port -> unixtime connect started at
             'can',               # func -> subref
-	    'client_id',         # random identifer string, no whitespace
+            'client_id',         # random identifer string, no whitespace
             );
 
 sub new {
@@ -106,13 +106,8 @@ sub _get_js_sock {
     return undef unless $ipport =~ /(^\d+\..+):(\d+)/;
     my ($ip, $port) = ($1, $2);
 
-    my $sock;
-    socket $sock, PF_INET, SOCK_STREAM, IPPROTO_TCP;
-    #IO::Handle::blocking($sock, 0);
-    connect $sock, Socket::sockaddr_in($port, Socket::inet_aton($ip));
-
-    #my $sock = IO::Socket::INET->new(PeerAddr => $ip,
-    #                                 Timeout => 1);
+    my $sock = IO::Socket::INET->new(PeerAddr => "$ip:$port",
+                                     Timeout => 1);
     unless ($sock) {
         $self->{down_since}{$ipport} ||= $now;
         $self->{last_connect_fail}{$ipport} = $now;
@@ -152,7 +147,9 @@ sub reset_abilities {
     my Gearman::Worker $self = shift;
     my $req = Gearman::Util::pack_req_command("reset_abilities");
     foreach my $js (@{ $self->{job_servers} }) {
-        my $jss = $self->_get_js_sock($js);
+        my $jss = $self->_get_js_sock($js)
+            or next;
+
         unless (Gearman::Util::send_req($jss, \$req)) {
             delete $self->{sock_cache}{$js};
         }
@@ -177,25 +174,36 @@ sub work {
             my $jss = $self->_get_js_sock($js)
                 or next;
 
+            # TODO: add an optional sleep in here for the test suite
+            # to test gearmand server going away here.  (SIGPIPE on
+            # send_req, etc) this testing has been done manually, at
+            # least.
+
             unless (Gearman::Util::send_req($jss, \$grab_req) &&
                     Gearman::Util::wait_for_readability($jss->fileno, 0.50)) {
                 delete $self->{sock_cache}{$js};
                 next;
             }
-            push @jss, [$js, $jss];
 
             my ($res, $err);
             do {
                 $res = Gearman::Util::read_res_packet($jss, \$err);
-            } while ($res && $res->{type} eq "noop");
+                unless ($res) {
+                    delete $self->{sock_cache}{$js};
+                    next;
+                }
+                warn "Got packet: $res->{type}\n";
+            } while ($res->{type} eq "noop");
 
-            next unless $res;
+            push @jss, [$js, $jss];
 
             if ($res->{type} eq "no_job") {
                 next;
             }
 
             die "Uh, wasn't expecting a $res->{type} packet" unless $res->{type} eq "job_assign";
+
+            $need_sleep = 0;
 
             ${ $res->{'blobref'} } =~ s/^(.+?)\0(.+?)\0//
                 or die "Uh, regexp on job_assign failed";
@@ -230,7 +238,6 @@ sub work {
             }
 
             # chill for some arbitrary time until we're woken up again
-            # FIXME: check response from select, $! on error
             select($wake_vec, undef, undef, 10);
         }
     }
@@ -245,7 +252,9 @@ sub register_function {
     my $req = Gearman::Util::pack_req_command("can_do", $func);
 
     foreach my $js (@{ $self->{job_servers} }) {
-        my $jss = $self->_get_js_sock($js);
+        my $jss = $self->_get_js_sock($js)
+            or next;
+
         unless (Gearman::Util::send_req($jss, \$req)) {
             delete $self->{sock_cache}{$js};
         }
