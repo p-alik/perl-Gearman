@@ -161,6 +161,10 @@ sub reset_abilities {
 # does one job and returns.  no return value.
 sub work {
     my Gearman::Worker $self = shift;
+    my %opts = @_;
+    my $stop_if = delete $opts{'stop_if'} || sub { 0 };
+    die "Unknown opts" if %opts;
+
     my $grab_req = Gearman::Util::pack_req_command("grab_job");
     my $presleep_req = Gearman::Util::pack_req_command("pre_sleep");
     my %fd_map;
@@ -192,7 +196,6 @@ sub work {
                     delete $self->{sock_cache}{$js};
                     next;
                 }
-                warn "Got packet: $res->{type}\n";
             } while ($res->{type} eq "noop");
 
             push @jss, [$js, $jss];
@@ -240,6 +243,8 @@ sub work {
             # chill for some arbitrary time until we're woken up again
             select($wake_vec, undef, undef, 10);
         }
+
+        return if $stop_if->();
     }
 
 }
