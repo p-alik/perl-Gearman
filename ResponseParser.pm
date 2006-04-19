@@ -94,6 +94,8 @@ sub parse_data {
 sub eof {
     my $self = shift;
 
+    # TODO this is not a proper fix, but it will get us back on our feet.
+    die( "Gearmand disconnected\n" );
     # ERROR if in middle of packet
 }
 
