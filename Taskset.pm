@@ -75,7 +75,13 @@ sub wait {
             my $sock   = $watching{$fd};
             my $parser = $parser{$fd} ||= Gearman::ResponseParser::Taskset->new(source  => $sock,
                                                                                 taskset => $ts);
-            $parser->parse_sock($sock);
+            eval { $parser->parse_sock($sock); };
+
+            if ($@) {
+                # TODO this should remove the fd from the list, and reassign any tasks to other jobserver, or bail.
+                # We're not in an accessable place here, so if all job servers fail we must die to prevent hanging.
+                die( "Job server failure: $@" );
+            }
         }
 
         # TODO: timeout jobs that have been running too long.  the _wait_for_packet
