@@ -13,3 +13,5 @@ META.yml
 t/00-use.t
 t/10-all.t
 t/worker.pl
+CHANGES
+HACKING

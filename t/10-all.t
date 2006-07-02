@@ -5,7 +5,7 @@ our $Bin;
 use FindBin qw( $Bin );
 use Gearman::Client;
 use Storable qw( freeze );
-use Test::More tests => 20;
+use Test::More;
 use IO::Socket::INET;
 use POSIX qw( :sys_wait_h );
 use List::Util qw(first);;
@@ -15,7 +15,13 @@ our %Children;
 
 END { kill_children() }
 
-start_server(PORT);
+if (start_server(PORT)) {
+    plan tests => 20;
+} else {
+    plan skip_all => "Can't find server to test with";
+    exit 0;
+}
+
 start_server(PORT + 1);
 
 ## Sleep, wait for servers to start up before connecting workers.
@@ -162,9 +168,12 @@ sub start_server {
                '/usr/bin/gearmand',            # where some distros might put it
                '/usr/sbin/gearmand',           # where other distros might put it
                );
-    my $server = first { -e $_ } @loc;
+    my $server = first { -e $_ } @loc
+        or return 0;
+
     my $pid = start_child([ $server, '-p', $port ]);
     $Children{$pid} = 'S';
+    return 1;
 }
 
 sub start_worker {

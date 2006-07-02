@@ -1,0 +1,3 @@
+1.00 -- finally package it up and call it 1.00 now that we've been using
+        it in (LiveJournal) production for quite a while, finding/fixing
+        the bugs that happen when you put something into production.
