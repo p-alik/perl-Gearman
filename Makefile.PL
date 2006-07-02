@@ -7,7 +7,6 @@ WriteMakefile(
               'VERSION' => '1.00',
               'PREREQ_PM'=> {
                 String::CRC32 => 0,
-                  Danga::Socket                => 1.51,
               }, # e.g., Module::Name => 1.1
               AUTHOR     => 'Brad Fitzpatrick <brad@danga.com>',
               );
