@@ -20,10 +20,12 @@ sub new {
     my $opts = shift || {};
     for my $k (qw( uniq
                    on_complete on_fail on_retry on_status
-                   retry_count fail_after_idle high_priority 
+                   retry_count fail_after_idle high_priority
                )) {
         $self->{$k} = delete $opts->{$k};
     }
+
+    $self->{retry_count} ||= 0;
 
     if (%{$opts}) {
         Carp::croak("Unknown option(s): " . join(", ", sort keys %$opts));
@@ -85,7 +87,10 @@ sub pack_submit_packet {
          "submit_job");
 
     return Gearman::Util::pack_req_command($mode,
-                                           join("\0", $task->{func}, $task->{uniq}, ${ $task->{argref} }));
+                                           join("\0",
+                                                $task->{func} || '',
+                                                $task->{uniq} || '',
+                                                ${ $task->{argref} } || ''));
 }
 
 sub fail {

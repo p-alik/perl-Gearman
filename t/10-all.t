@@ -1,12 +1,14 @@
+#!/usr/bin/perl
+
 use strict;
 our $Bin;
 use FindBin qw( $Bin );
-use File::Spec;
 use Gearman::Client;
 use Storable qw( freeze );
 use Test::More tests => 20;
 use IO::Socket::INET;
 use POSIX qw( :sys_wait_h );
+use List::Util qw(first);;
 
 use constant PORT => 9000;
 our %Children;
@@ -83,7 +85,7 @@ is($client->do_task('fail' => '', {
 }), undef, 'Failure response is still failure, even after retrying');
 is($retried, 3, 'Retried 3 times');
 
-my $tasks = $client->new_task_set;
+$tasks = $client->new_task_set;
 $completed = 0;
 $failed = 0;
 $tasks->add_task(fail => '', {
@@ -123,8 +125,7 @@ like($out, qr/p.+6/, 'High priority tasks executed in priority order.');
 respawn_children();
 
 ## Test dispatch_background and get_status.
-my $out;
-my $handle = $client->dispatch_background(long => undef, {
+$handle = $client->dispatch_background(long => undef, {
     on_complete => sub { $out = ${ $_[0] } },
 });
 ok($handle, 'Got a handle back from dispatching background job');
@@ -157,14 +158,18 @@ sub respawn_children {
 
 sub start_server {
     my($port) = @_;
-    my $server = File::Spec->catfile($Bin, '..', 'server', 'gearmand');
+    my @loc = ("$Bin/../../../../server/gearmand",  # using svn
+               '/usr/bin/gearmand',            # where some distros might put it
+               '/usr/sbin/gearmand',           # where other distros might put it
+               );
+    my $server = first { -e $_ } @loc;
     my $pid = start_child([ $server, '-p', $port ]);
     $Children{$pid} = 'S';
 }
 
 sub start_worker {
     my($port, $num) = @_;
-    my $worker = File::Spec->catfile($Bin, 'worker.pl');
+    my $worker = "$Bin/worker.pl";
     my $servers = join ',',
                   map '127.0.0.1:' . (PORT + $_),
                   0..$num-1;
@@ -190,9 +195,9 @@ sub wait_for_port {
     my($port) = @_;
     my $start = time;
     while (1) {
-	my $sock = IO::Socket::INET->new(PeerAddr => "127.0.0.1:$port");
-	return 1 if $sock;
-	select undef, undef, undef, 0.25;
-	die "Timeout waiting for port $port to startup" if time > $start + 5;
+        my $sock = IO::Socket::INET->new(PeerAddr => "127.0.0.1:$port");
+        return 1 if $sock;
+        select undef, undef, undef, 0.25;
+        die "Timeout waiting for port $port to startup" if time > $start + 5;
     }
 }
