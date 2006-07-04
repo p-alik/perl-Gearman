@@ -112,8 +112,15 @@ sub fail {
         return $task->{taskset}->add_task($task);
     }
 
-    return undef unless $task->{on_fail};
+    $task->final_fail;
+}
+
+sub final_fail {
+    my Gearman::Task $task = shift;
+    return if $task->{is_finished};
     $task->{is_finished} = 1;
+
+    return undef unless $task->{on_fail};
     $task->{on_fail}->();
     return undef;
 }
