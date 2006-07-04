@@ -27,6 +27,8 @@ sub new {
 
     $self->{retry_count} ||= 0;
 
+    $self->{is_finished} = 0;  # bool: if success or fail has been called yet on this.
+
     if (%{$opts}) {
         Carp::croak("Unknown option(s): " . join(", ", sort keys %$opts));
     }
@@ -34,6 +36,11 @@ sub new {
     $self->{retries_done} = 0;
 
     return $self;
+}
+
+sub is_finished {
+    my Gearman::Task $task = $_[0];
+    return $task->{is_finished};
 }
 
 sub taskset {
@@ -95,6 +102,7 @@ sub pack_submit_packet {
 
 sub fail {
     my Gearman::Task $task = shift;
+    return if $task->{is_finished};
 
     # try to retry, if we can
     if ($task->{retries_done} < $task->{retry_count}) {
@@ -105,19 +113,24 @@ sub fail {
     }
 
     return undef unless $task->{on_fail};
+    $task->{is_finished} = 1;
     $task->{on_fail}->();
     return undef;
 }
 
 sub complete {
     my Gearman::Task $task = shift;
+    return if $task->{is_finished};
     return unless $task->{on_complete};
+
     my $result_ref = shift;
+    $task->{is_finished} = 1;
     $task->{on_complete}->($result_ref);
 }
 
 sub status {
     my Gearman::Task $task = shift;
+    return if $task->{is_finished};
     return unless $task->{on_status};
     my ($nu, $de) = @_;
     $task->{on_status}->($nu, $de);
@@ -221,8 +234,14 @@ enqueued.
 =item * fail_after_idle
 
 Automatically fail after this many seconds have elapsed.  Defaults to 0,
-which means never.
+which means never.  Bypasses any retry_count remaining.  Directly fails
+after this amount of time.
 
 =back
+
+=head2 $task->is_finished
+
+Returns bool: whether or not task is totally done (on_failure or
+on_complete callback has been called)
 
 =cut

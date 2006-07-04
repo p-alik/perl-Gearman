@@ -43,6 +43,7 @@ use fields (
 
             # maintained by this module:
             'retries_done',
+            'is_finished',
             'taskset',
             'jssock',  # jobserver socket.  shared by other tasks in the same taskset,
                        # but not w/ tasks in other tasksets using the same Gearman::Client
