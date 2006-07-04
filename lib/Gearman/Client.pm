@@ -22,7 +22,7 @@ sub new {
     $self->{js_count} = 0;
     $self->{sock_cache} = {};
 
-    $self->job_servers(@{ $opts{job_servers} })
+    $self->set_job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
 
     return $self;
@@ -36,8 +36,16 @@ sub new_task_set {
 # getter/setter
 sub job_servers {
     my Gearman::Client $self = shift;
-    return $self->{job_servers} unless @_;
-    my $list = [ @_ ];
+    unless (@_) {
+        return wantarray ? @{$self->{job_servers}} : $self->{job_servers};
+    }
+    $self->set_job_servers(@_);
+}
+
+sub set_job_servers {
+    my Gearman::Client $self = shift;
+    my $list = ref $_[0] ? $_[0] : [ @_ ]; # take arrayref or array
+
     $self->{js_count} = scalar @$list;
     foreach (@$list) {
         $_ .= ":7003" unless /:/;
@@ -48,14 +56,14 @@ sub job_servers {
 sub _get_task_from_args {
     my Gearman::Task $task;
     if (ref $_[0]) {
-	$task = $_[0];
-	Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
+        $task = $_[0];
+        Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
     } else {
-	my ($func, $arg_p, $opts) = @_;
-	my $argref = ref $arg_p ? $arg_p : \$arg_p;
-	Carp::croak("Function argument must be scalar or scalarref")
-	    unless ref $argref eq "SCALAR";
-	$task = Gearman::Task->new($func, $argref, $opts);
+        my ($func, $arg_p, $opts) = @_;
+        my $argref = ref $arg_p ? $arg_p : \$arg_p;
+        Carp::croak("Function argument must be scalar or scalarref")
+            unless ref $argref eq "SCALAR";
+        $task = Gearman::Task->new($func, $argref, $opts);
     }
     return $task;
 
@@ -70,13 +78,13 @@ sub do_task {
     my $did_err = 0;
 
     $task->{on_complete} = sub {
-	$ret = shift;
+        $ret = shift;
     };
 
     $task->{on_fail} = sub {
-	$did_err = 1;
+        $did_err = 1;
     };
-    
+
     my $ts = $self->new_task_set;
     $ts->add_task($task);
     $ts->wait;
@@ -195,7 +203,7 @@ Gearman::Client - Client for gearman distributed job system
     # waiting on a set of tasks in parallel
     my $taskset = $client->new_task_set;
     $taskset->add_task( "add" => "1+2", {
-       on_complete => sub { ... } 
+       on_complete => sub { ... }
     });
     $taskset->add_task( "divide" => "5/0", {
        on_fail => sub { print "divide by zero error!\n"; },

@@ -35,7 +35,7 @@ use fields (
             'on_retry',
             'on_status',
             'retry_count',
-            'fail_after_idle',
+            'timeout',
             'high_priority',
 
             # from server:

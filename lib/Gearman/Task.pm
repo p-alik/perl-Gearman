@@ -20,7 +20,7 @@ sub new {
     my $opts = shift || {};
     for my $k (qw( uniq
                    on_complete on_fail on_retry on_status
-                   retry_count fail_after_idle high_priority
+                   retry_count timeout high_priority
                )) {
         $self->{$k} = delete $opts->{$k};
     }
@@ -238,11 +238,12 @@ Number of times job will be retried if there are failures.  Defaults to 0.
 Boolean, whether this job should take priority over other jobs already
 enqueued.
 
-=item * fail_after_idle
+=item * timeout
 
-Automatically fail after this many seconds have elapsed.  Defaults to 0,
-which means never.  Bypasses any retry_count remaining.  Directly fails
-after this amount of time.
+Automatically fail, calling your on_fail callback, after this many
+seconds have elapsed without an on_fail or on_complete being
+called. Defaults to 0, which means never.  Bypasses any retry_count
+remaining.
 
 =back
 
