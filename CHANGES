@@ -1,7 +1,7 @@
-1.01  UNRELEASED
-
+1.01
      -- when workers are writing status messages up to parent, die on SIGPIPE,
-        or really any write errors, but just trap SIGPIPE now, if parent goes away
+        or really any write errors, but just trap SIGPIPE now, if parent goes away.
+        fixes a bug found via Gearman::Client::Async's test suite.
 
 1.00
      -- finally package it up and call it 1.00 now that we've been using
