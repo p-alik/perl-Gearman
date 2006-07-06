@@ -111,7 +111,7 @@ sub send_req {
     return 0 unless $sock;
 
     my $len = length($$reqref);
-    #TODO: catch SIGPIPE
+    local $SIG{PIPE} = 'IGNORE';
     my $rv = $sock->syswrite($$reqref, $len);
     return 0 unless $rv == $len;
     return 1;

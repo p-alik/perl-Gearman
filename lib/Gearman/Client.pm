@@ -4,6 +4,9 @@
 
 package Gearman::Client;
 
+our $VERSION;
+$VERSION = '1.01';
+
 use strict;
 use IO::Socket::INET;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);

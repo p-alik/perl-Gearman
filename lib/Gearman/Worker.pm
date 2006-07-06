@@ -37,7 +37,9 @@ sub set_status {
 
     my $req = Gearman::Util::pack_req_command("work_status",
                                               join("\0", $self->{handle}, $nu, $de));
-    return Gearman::Util::send_req($self->{jss}, \$req);
+    die "work_status write failed" unless
+        Gearman::Util::send_req($self->{jss}, \$req);
+    return 1;
 }
 
 sub argref {

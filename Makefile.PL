@@ -4,11 +4,12 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
               'NAME'=> 'Gearman',
-              'VERSION' => '1.00',
-              'PREREQ_PM'=> {
+              'VERSION_FROM' => 'lib/Gearman/Client.pm',
+              'PREREQ_PM' => {
                 String::CRC32 => 0,
               }, # e.g., Module::Name => 1.1
               AUTHOR     => 'Brad Fitzpatrick <brad@danga.com>',
+              ABSTRACT   => "Client and worker libraries for gearman job dispatch dispatch.  Server is in separate package.",
               );
 
 1;
