@@ -34,6 +34,7 @@ use fields (
             'on_fail',
             'on_retry',
             'on_status',
+            'on_post_hooks',   # used internally, when other hooks are done running, prior to cleanup
             'retry_count',
             'timeout',
             'high_priority',

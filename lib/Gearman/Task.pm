@@ -116,23 +116,28 @@ sub fail {
 }
 
 sub final_fail {
-    my Gearman::Task $task = shift;
-    return if $task->{is_finished};
-    $task->{is_finished} = 1;
+    my Gearman::Task $task = $_[0];
+    my $reason = $_[1];
 
-    return undef unless $task->{on_fail};
-    $task->{on_fail}->();
+    return if $task->{is_finished};
+    $task->{is_finished} = $_[1] || 1;
+
+    $task->{on_fail}->()       if $task->{on_fail};
+    $task->{on_post_hooks}->() if $task->{on_post_hooks};
+    $task->wipe;
     return undef;
 }
 
 sub complete {
     my Gearman::Task $task = shift;
     return if $task->{is_finished};
-    return unless $task->{on_complete};
 
     my $result_ref = shift;
-    $task->{is_finished} = 1;
-    $task->{on_complete}->($result_ref);
+    $task->{is_finished} = 'complete';
+
+    $task->{on_complete}->($result_ref) if $task->{on_complete};
+    $task->{on_post_hooks}->()          if $task->{on_post_hooks};
+    $task->wipe;
 }
 
 sub status {
@@ -151,6 +156,19 @@ sub handle {
     return $task->{handle} = shift;
 }
 
+sub set_on_post_hooks {
+    my Gearman::Task $task = shift;
+    my $code = shift;
+    $task->{on_post_hooks} = $code;
+}
+
+
+sub wipe {
+    my Gearman::Task $task = shift;
+    foreach my $f (qw(on_post_hooks on_complete on_fail on_retry on_status)) {
+        $task->{$f} = undef;
+    }
+}
 
 1;
 __END__

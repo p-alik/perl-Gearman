@@ -1,3 +1,10 @@
+1.02
+     -- Task objects weren't reusable before anyway, and now they're really not:
+        when they complete or fail, they wipe all their internal subref members
+        to break any potential loops.  also now support a new internal hook
+        that happens after your on_complete or on_failure callback.  this
+        is used by Gearman::Client::Async now, for cancelling timers.
+
 1.01
      -- when workers are writing status messages up to parent, die on SIGPIPE,
         or really any write errors, but just trap SIGPIPE now, if parent goes away.

@@ -1,11 +1,11 @@
 #!/usr/bin/perl
 
-#TODO: fail_after_idle
+#TODO: timeout isn't supported by this client API yet.
 
 package Gearman::Client;
 
 our $VERSION;
-$VERSION = '1.01';
+$VERSION = '1.02';
 
 use strict;
 use IO::Socket::INET;
