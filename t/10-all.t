@@ -16,7 +16,7 @@ our %Children;
 END { kill_children() }
 
 if (start_server(PORT)) {
-    plan tests => 20;
+    plan tests => 22;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -82,6 +82,14 @@ TODO: {
     is($client->do_task('sleep', 5, { timeout => 3 }), undef,
         'Job that timed out after 3 seconds returns failure');
 }
+
+is(${$client->do_task('sleep_three', 1)}, 1,
+   'We took less time than the worker timeout');
+
+is($client->do_task('sleep_three', 5), undef,
+    'We took more time than the worker timeout');
+
+
 
 ## Test retry_count.
 my $retried = 0;

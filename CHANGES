@@ -1,3 +1,7 @@
+1.03
+     -- Workers can now specify a timeout that when a task exceeds the time, the
+        jobserver will reassign the task and ignore results from the defunct job.
+
 1.02
      -- Task objects weren't reusable before anyway, and now they're really not:
         when they complete or fail, they wipe all their internal subref members

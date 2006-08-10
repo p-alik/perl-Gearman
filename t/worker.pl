@@ -24,6 +24,7 @@ $worker->register_function(fail => sub { undef });
 $worker->register_function(fail_exit => sub { exit 255 });
 
 $worker->register_function(sleep => sub { sleep $_[0]->arg });
+$worker->register_function(sleep_three => 3 => sub { sleep $_[0]->arg});
 
 $worker->register_function(echo_ws => sub {
     select undef, undef, undef, 0.25;

@@ -64,6 +64,7 @@ use fields (
             'down_since',        # host:port -> unixtime
             'connecting',        # host:port -> unixtime connect started at
             'can',               # func -> subref
+            'timeouts',          # func -> timeouts
             'client_id',         # random identifer string, no whitespace
             );
 
@@ -78,6 +79,7 @@ sub new {
     $self->{last_connect_fail} = {};
     $self->{down_since} = {};
     $self->{can} = {};
+    $self->{timeouts} = {};
     $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
 
     $self->job_servers(@{ $opts{job_servers} })
@@ -127,7 +129,8 @@ sub _get_js_sock {
 
     # get this socket's state caught-up
     foreach my $func (keys %{$self->{can}}) {
-        unless (_set_capability($sock, $func, 1)) {
+        my $timeout = $self->{timeouts}->{$func};
+        unless (_set_ability($sock, $func, $timeout)) {
             delete $self->{sock_cache}{$ipport};
             return undef;
         }
@@ -136,11 +139,15 @@ sub _get_js_sock {
     return $sock;
 }
 
-sub _set_capability {
-    my ($sock, $func, $can) = @_;
+sub _set_ability {
+    my ($sock, $func, $timeout) = @_;
 
-    my $req = Gearman::Util::pack_req_command($can ? "can_do" : "cant_do",
-                                              $func);
+    my $req;
+    if (defined $timeout) {
+        $req = Gearman::Util::pack_req_command("can_do_timeout", "$func\0$timeout");
+    } else {
+        $req = Gearman::Util::pack_req_command("can_do", $func);
+    }
     return Gearman::Util::send_req($sock, \$req);
 }
 
@@ -158,6 +165,7 @@ sub reset_abilities {
     }
 
     $self->{can} = {};
+    $self->{timeouts} = {};
 }
 
 # does one job and returns.  no return value.
@@ -217,6 +225,8 @@ sub work {
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
 
+            warn "Job '$func' died: $@" if $@;
+
             my $work_req;
             if (defined $ret) {
                 $work_req = Gearman::Util::pack_req_command("work_complete", "$handle\0" . (ref $ret ? $$ret : $ret));
@@ -254,9 +264,24 @@ sub work {
 sub register_function {
     my Gearman::Worker $self = shift;
     my $func = shift;
+    my $timeout = shift unless (ref $_[0] eq 'CODE');
     my $subref = shift;
 
-    my $req = Gearman::Util::pack_req_command("can_do", $func);
+    my $req;
+    if (defined $timeout) {
+        $req = Gearman::Util::pack_req_command("can_do_timeout", "$func\0$timeout");
+        $self->{timeouts}{$func} = $timeout;
+    } else {
+        $req = Gearman::Util::pack_req_command("can_do", $func);
+    }
+
+    $self->_register_all($req);
+    $self->{can}{$func} = $subref;
+}
+
+sub _register_all {
+    my Gearman::Worker $self = shift;
+    my $req = shift;
 
     foreach my $js (@{ $self->{job_servers} }) {
         my $jss = $self->_get_js_sock($js)
@@ -266,8 +291,6 @@ sub register_function {
             delete $self->{sock_cache}{$js};
         }
     }
-
-    $self->{can}{$func} = $subref;
 }
 
 # getter/setter
@@ -340,6 +363,8 @@ If the port number is not provided, 7003 is used as the default.
 
 =head2 $worker->register_function($funcname, $subref)
 
+=head2 $worker->register_function($funcname, $timeout, $subref)
+
 Registers the function I<$funcname> as being provided by the worker
 I<$worker>, and advertises these capabilities to all of the job servers
 defined in this worker.
@@ -348,6 +373,11 @@ I<$subref> must be a subroutine reference that will be invoked when the
 worker receives a request for this function. It will be passed a
 I<Gearman::Job> object representing the job that has been received by the
 worker.
+
+I<$timeout> is an optional parameter specifying how long the jobserver will
+wait for your subroutine to give an answer. Exceeding this time will result
+in the jobserver reassigning the task and ignoring your result. This prevents
+a gimpy worker from ruining the 'user experience' in many situations.
 
 The subroutine reference can return a return value, which will be sent back
 to the job server.

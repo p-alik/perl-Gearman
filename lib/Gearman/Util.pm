@@ -9,6 +9,7 @@ use strict;
 # J : jobserver
 our %cmd = (
             1 =>  [ 'I', "can_do" ],     # from W:  [FUNC]
+            23 => [ 'I', "can_do_timeout" ], # from W: FUNC[0]TIMEOUT
             2 =>  [ 'I', "cant_do" ],    # from W:  [FUNC]
             3 =>  [ 'I', "reset_abilities" ],  # from W:  ---
             22 => [ 'I', "set_client_id" ],    # W->J: [RANDOM_STRING_NO_WHITESPACE]
