@@ -16,7 +16,7 @@ our %Children;
 END { kill_children() }
 
 if (start_server(PORT)) {
-    plan tests => 22;
+    plan tests => 27;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -83,13 +83,37 @@ TODO: {
         'Job that timed out after 3 seconds returns failure');
 }
 
+# Test sleeping less than the timeout
 is(${$client->do_task('sleep_three', 1)}, 1,
    'We took less time than the worker timeout');
 
+# Do it three more times to check that 'uniq' (implied '-')
+# works okay. 3 more because we need to go past the timeout.
+is(${$client->do_task('sleep_three', 1)}, 1,
+   'We took less time than the worker timeout, again');
+
+is(${$client->do_task('sleep_three', 1)}, 1,
+   'We took less time than the worker timeout, again');
+
+is(${$client->do_task('sleep_three', 1)}, 1,
+   'We took less time than the worker timeout, again');
+
+# Now test if we sleep longer than the timeout
 is($client->do_task('sleep_three', 5), undef,
-    'We took more time than the worker timeout');
+   'We took more time than the worker timeout');
 
+# This task and the next one would be hashed with uniq onto the
+# previous task, except it failed, so make sure it doesn't happen.
+is($client->do_task('sleep_three', 5), undef,
+   'We took more time than the worker timeout, again');
 
+is($client->do_task('sleep_three', 5), undef,
+   'We took more time than the worker timeout, again, again');
+
+# TODO Try and think of a way to test that hashing explicitly does occur.
+# Possibly pass an argument to the job that changes on the second job, but
+# has the same uniq, or maybe just dispatch a few seconds apart and pay
+#  attention to return times to see if they are staggered.
 
 ## Test retry_count.
 my $retried = 0;
