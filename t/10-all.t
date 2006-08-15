@@ -16,7 +16,7 @@ our %Children;
 END { kill_children() }
 
 if (start_server(PORT)) {
-    plan tests => 27;
+    plan tests => 31;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -84,18 +84,18 @@ TODO: {
 }
 
 # Test sleeping less than the timeout
-is(${$client->do_task('sleep_three', 1)}, 1,
+is(${$client->do_task('sleep_three', '1:less')}, 'less',
    'We took less time than the worker timeout');
 
 # Do it three more times to check that 'uniq' (implied '-')
 # works okay. 3 more because we need to go past the timeout.
-is(${$client->do_task('sleep_three', 1)}, 1,
+is(${$client->do_task('sleep_three', '1:one')}, 'one',
    'We took less time than the worker timeout, again');
 
-is(${$client->do_task('sleep_three', 1)}, 1,
+is(${$client->do_task('sleep_three', '1:two')}, 'two',
    'We took less time than the worker timeout, again');
 
-is(${$client->do_task('sleep_three', 1)}, 1,
+is(${$client->do_task('sleep_three', '1:three')}, 'three',
    'We took less time than the worker timeout, again');
 
 # Now test if we sleep longer than the timeout
@@ -110,10 +110,49 @@ is($client->do_task('sleep_three', 5), undef,
 is($client->do_task('sleep_three', 5), undef,
    'We took more time than the worker timeout, again, again');
 
-# TODO Try and think of a way to test that hashing explicitly does occur.
-# Possibly pass an argument to the job that changes on the second job, but
-# has the same uniq, or maybe just dispatch a few seconds apart and pay
-#  attention to return times to see if they are staggered.
+# Check hashing on success, first job sends in 'a' for argument, second job
+# should complete and return 'a' to the callback.
+{
+    my $tasks = $client->new_task_set;
+    $tasks->add_task('sleep_three', '2:a', {
+        uniq => 'something',
+        on_complete => sub { is(${$_[0]}, 'a', "'a' received") },
+        on_fail => sub { fail() },
+        });
+
+    sleep 1;
+
+    $tasks->add_task('sleep_three', '2:b', {
+        uniq => 'something',
+        on_complete => sub { is(${$_[0]}, 'a', "'a' received, we were hashed properly") },
+        on_fail => sub { fail() },
+        });
+
+    $tasks->wait;
+
+}
+
+# Check to make sure there are no hashing glitches with an explicit
+# 'uniq' field. Both should fail.
+{
+    my $tasks = $client->new_task_set;
+    $tasks->add_task('sleep_three', '10:a', {
+        uniq => 'something',
+        on_complete => sub { fail("This can't happen!") },
+        on_fail => sub { pass("We failed properly!") },
+        });
+
+    sleep 5;
+
+    $tasks->add_task('sleep_three', '10:b', {
+        uniq => 'something',
+        on_complete => sub { fail("This can't happen!") },
+        on_fail => sub { pass("We failed properly again!") },
+        });
+
+    $tasks->wait;
+
+}
 
 ## Test retry_count.
 my $retried = 0;
