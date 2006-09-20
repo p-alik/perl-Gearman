@@ -16,25 +16,31 @@ our %Children;
 END { kill_children() }
 
 if (start_server(PORT)) {
-    plan tests => 31;
+    plan tests => 32;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
 }
 
-start_server(PORT + 1);
+use constant NUM_SERVERS => 3;
 
-## Sleep, wait for servers to start up before connecting workers.
-wait_for_port(PORT);
-wait_for_port(PORT + 1);
+for (1..(NUM_SERVERS-1)) {
+    start_server(PORT + $_)
+}
+
+# kinda useless, now that start_server does this for us, but...
+for (0..(NUM_SERVERS-1)) {
+    ## Sleep, wait for servers to start up before connecting workers.
+    wait_for_port(PORT + $_);
+}
 
 ## Look for 2 job servers, starting at port number PORT.
-start_worker(PORT, 2);
-start_worker(PORT, 2);
+start_worker(PORT);
+start_worker(PORT);
 
 my $client = Gearman::Client->new;
 isa_ok($client, 'Gearman::Client');
-$client->job_servers('127.0.0.1:' . PORT, '127.0.0.1:' . (PORT + 1));
+$client->job_servers('127.0.0.1:' . PORT, '127.0.0.1:' . (PORT + 1), '127.0.0.1:' . (PORT + 2));
 
 eval { $client->do_task(sum => []) };
 like($@, qr/scalar or scalarref/, 'do_task does not accept arrayref argument');
@@ -178,7 +184,7 @@ is($failed, 1, 'on_fail called on failed result');
 ## In on_fail, add a new task with high priority set, and make sure it
 ## gets executed before task 4. To make this reliable, we need to first
 ## kill off all but one of the worker processes.
-my @worker_pids = grep $Children{$_} eq 'W', keys %Children;
+my @worker_pids = grep { $Children{$_} eq 'W' } keys %Children;
 kill INT => @worker_pids[1..$#worker_pids];
 $tasks = $client->new_task_set;
 $out = '';
@@ -187,7 +193,9 @@ $tasks->add_task(echo_ws => 2, { on_complete => sub { $out .= ${ $_[0] } } });
 $tasks->add_task(echo_ws => 'x', {
     on_fail => sub {
         $tasks->add_task(echo_ws => 'p', {
-            on_complete => sub { $out .= ${ $_[0] } },
+            on_complete => sub {
+                $out .= ${ $_[0] };
+            },
             high_priority => 1
         });
     },
@@ -205,11 +213,17 @@ respawn_children();
 $handle = $client->dispatch_background(long => undef, {
     on_complete => sub { $out = ${ $_[0] } },
 });
+
+# wait for job to start being processed:
+sleep 1;
+
 ok($handle, 'Got a handle back from dispatching background job');
 my $status = $client->get_status($handle);
 isa_ok($status, 'Gearman::JobStatus');
+ok($status->known, 'Job is known');
 ok($status->running, 'Job is still running');
 is($status->percent, .5, 'Job is 50 percent complete');
+
 do {
     sleep 1;
     $status = $client->get_status($handle);
@@ -223,7 +237,7 @@ sub pid_is_dead {
     my $type = delete $Children{$pid};
     if ($type eq 'W') {
         ## Right now we can only restart workers.
-        start_worker(PORT, 2);
+        start_worker(PORT);
     }
 }
 
@@ -244,19 +258,37 @@ sub start_server {
     my $server = first { -e $_ } @loc
         or return 0;
 
-    my $pid = start_child([ $server, '-p', $port ]);
+    my $ready = 0;
+    local $SIG{USR1} = sub {
+        $ready = 1;
+    };
+
+    my $pid = start_child([ $server, '-p' => $port, '-n' => $$ ]);
     $Children{$pid} = 'S';
-    return 1;
+    while (!$ready) {
+        select undef, undef, undef, 0.10;
+    }
+    return $pid;
 }
 
 sub start_worker {
-    my($port, $num) = @_;
+    my($port) = @_;
+    my $num = NUM_SERVERS;
     my $worker = "$Bin/worker.pl";
     my $servers = join ',',
                   map '127.0.0.1:' . (PORT + $_),
                   0..$num-1;
-    my $pid = start_child([ $worker, '-s', $servers ]);
+    my $ready = 0;
+    my $pid;
+    local $SIG{USR1} = sub {
+        $ready = 1;
+    };
+    $pid = start_child([ $worker, '-s' => $servers, '-n' => $$ ]);
     $Children{$pid} = 'W';
+    while (!$ready) {
+        select undef, undef, undef, 0.10;
+    }
+    return $pid;
 }
 
 sub start_child {

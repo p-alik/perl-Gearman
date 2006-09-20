@@ -5,9 +5,12 @@ use Gearman::Worker;
 use Storable qw( thaw );
 use Getopt::Long qw( GetOptions );
 
+my ($servers, $notifypid);
 GetOptions(
-    's|servers=s', \my($servers),
-);
+           's|servers=s' => \$servers,
+           'n=i'         => \$notifypid,
+           );
+
 die "usage: $0 -s <servers>" unless $servers;
 my @servers = split /,/, $servers;
 
@@ -42,5 +45,8 @@ $worker->register_function(long => sub {
     $job->set_status(100, 100);
     sleep 2;
 });
+
+my $nsig;
+$nsig = kill 'USR1', $notifypid if $notifypid;
 
 $worker->work while 1;
