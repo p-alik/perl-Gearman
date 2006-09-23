@@ -79,7 +79,6 @@ sub ipport {
 
 sub DESTROY {
     my $self = shift;
-    print "DESTROYING $self->{pid}\n";
     kill 9, $self->{pid} if $self->{pid};
 }
 

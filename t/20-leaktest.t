@@ -25,7 +25,7 @@ if (! $s1) {
     exit 0;
 }
 
-plan tests => 5;
+plan tests => 6;
 
 my $client = Gearman::Client->new;
 $client->job_servers($s1->ipport);
@@ -43,7 +43,7 @@ ok($sock, "got raw connection");
 my $num = sub {
     my $what = shift;
     my $n = 0;
-    print $sock "gladiator\r\n";
+    print $sock "gladiator all\r\n";
     while (<$sock>) {
         last if /^\./;
         /(\d+)\s$what/ or next;
