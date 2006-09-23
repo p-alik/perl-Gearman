@@ -18,7 +18,7 @@ use fields (
             'default_sockaddr', # default socket's ip/port
 
             'loaned_sock',      # { hostport => socket }
-
+            'cancelled',        # bool, if taskset has been cancelled mid-processing
             );
 
 

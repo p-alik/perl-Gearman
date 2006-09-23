@@ -34,6 +34,8 @@ my $tasks = $client->new_task_set;
 my $handle = $tasks->add_task(dummy => 'xxxx',
                               on_complete => sub { die "shouldn't complete"; },
                               on_fail => sub { warn "Failed...\n"; });
+
+
 ok($handle, "got handle");
 my $sock = IO::Socket::INET->new(PeerAddr => $s1->ipport);
 ok($sock, "got raw connection");
@@ -52,9 +54,10 @@ my $num = sub {
 
 is($num->("Gearman::Server::Client"), 2, "2 clients connected (debug and caller)");
 is($num->("IO::Socket::INET"), 3, "3 sockets (clients + listen)");
-$client = undef;
+$tasks->cancel;
+
 sleep(0.10);
-is($num->("IO::Socket::INET"), 3, "2 sockets (client + listen)");
+is($num->("IO::Socket::INET"), 2, "2 sockets (client + listen)");
 is($num->("Gearman::Server::Client"), 1, "1 client connected (debug)");
 
 

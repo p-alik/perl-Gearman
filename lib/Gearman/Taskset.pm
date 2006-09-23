@@ -5,6 +5,7 @@ use Carp ();
 use Gearman::Client;
 use Gearman::Util;
 use Gearman::ResponseParser::Taskset;
+use Scalar::Util ();  # i thought about weakening taskset's client, but might be too weak.
 
 sub new {
     my $class = shift;
@@ -13,10 +14,11 @@ sub new {
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
-    $self->{waiting} = {};
+    $self->{waiting}     = {};
     $self->{need_handle} = [];
-    $self->{client} = $client;
+    $self->{client}      = $client;
     $self->{loaned_sock} = {};
+    $self->{cancelled}   = 0;
 
     return $self;
 }
@@ -31,6 +33,25 @@ sub DESTROY {
     while (my ($hp, $sock) = each %{ $ts->{loaned_sock} }) {
         $ts->{client}->_put_js_sock($hp, $sock);
     }
+}
+
+sub cancel {
+    my Gearman::Taskset $ts = shift;
+
+    $ts->{cancelled} = 1;
+
+    if ($ts->{default_sock}) {
+        close($ts->{default_sock});
+        $ts->{default_sock} = undef;
+    }
+
+    while (my ($hp, $sock) = each %{ $ts->{loaned_sock} }) {
+        $sock->close;
+    }
+
+    $ts->{waiting}     = {};
+    $ts->{need_handle} = [];
+    $ts->{client}      = undef;
 }
 
 sub _get_loaned_sock {
@@ -62,7 +83,7 @@ sub wait {
     }
 
     my $tries = 0;
-    while (keys %{$ts->{waiting}}) {
+    while (!$ts->{cancelled} && keys %{$ts->{waiting}}) {
         $tries++;
 
         my $nfound = select($rout=$rin, undef, $eout=$rin, 0.5);
