@@ -5,8 +5,8 @@ use strict;
 
 sub new {
     my ($class, $known, $running, $nu, $de) = @_;
-    $nu = '' unless defined($nu) and length($nu);
-    $de = '' unless defined($de) and length($de);
+    $nu = '' unless defined($nu) && length($nu);
+    $de = '' unless defined($de) && length($de);
     my $self = [ $known, $running, $nu, $de ];
     bless $self;
     return $self;
