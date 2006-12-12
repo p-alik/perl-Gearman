@@ -4,6 +4,9 @@ use strict;
 use Carp ();
 use String::CRC32 ();
 
+use Gearman::Taskset;
+use Gearman::Util;
+
 # constructor, given: ($func, $argref, $opts);
 sub new {
     my $class = shift;
