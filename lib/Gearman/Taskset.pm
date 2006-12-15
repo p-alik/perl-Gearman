@@ -26,6 +26,9 @@ sub new {
 sub DESTROY {
     my Gearman::Taskset $ts = shift;
 
+    # During global cleanup this may be called out of order, and the client my not exist in the taskset.
+    return unless $ts->{client};
+
     if ($ts->{default_sock}) {
         $ts->{client}->_put_js_sock($ts->{default_sockaddr}, $ts->{default_sock});
     }
