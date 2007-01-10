@@ -5,7 +5,7 @@
 use strict;
 use Gearman::Util;
 use Carp ();
-use IO::Socket::INET;
+use IO::Socket::INET ();
 
 # this is the object that's handed to the worker subrefs
 package Gearman::Job;
