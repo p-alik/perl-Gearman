@@ -38,6 +38,29 @@ sub DESTROY {
     }
 }
 
+sub run_hook {
+    my Gearman::Taskset $self = shift;
+    my $hookname = shift || return;
+
+    my $hook = $self->{hooks}->{$hookname};
+    return unless $hook;
+
+    eval { $hook->(@_) };
+
+    warn "Gearman::Taskset hook '$hookname' threw error: $@\n";
+}
+
+sub add_hook {
+    my Gearman::Taskset $self = shift;
+    my $hookname = shift || return;
+
+    if (@_) {
+        $self->{hooks}->{$hookname} = shift;
+    } else {
+        delete $self->{hooks}->{$hookname};
+    }
+}
+
 sub cancel {
     my Gearman::Taskset $ts = shift;
 
@@ -144,6 +167,8 @@ sub add_task {
         $task = Gearman::Task->new($func, $argref, $opts);
     }
     $task->taskset($ts);
+
+    $ts->{client}->run_hook('taskset_add_task', $ts, $task);
 
     my $req = $task->pack_submit_packet;
     my $len = length($req);
