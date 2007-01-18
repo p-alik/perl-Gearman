@@ -50,7 +50,7 @@ sub run_hook {
 
     eval { $hook->(@_) };
 
-    warn "Gearman::Task hook '$hookname' threw error: $@\n";
+    warn "Gearman::Task hook '$hookname' threw error: $@\n" if $@;
 }
 
 sub add_hook {
