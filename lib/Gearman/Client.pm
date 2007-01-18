@@ -24,6 +24,7 @@ sub new {
     $self->{job_servers} = [];
     $self->{js_count} = 0;
     $self->{sock_cache} = {};
+    $self->{hooks} = {};
 
     $self->set_job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
@@ -33,7 +34,9 @@ sub new {
 
 sub new_task_set {
     my Gearman::Client $self = shift;
-    return Gearman::Taskset->new($self);
+    my $taskset = Gearman::Taskset->new($self);
+    $self->run_hook('new_task_set', $taskset);
+    return $taskset;
 }
 
 # getter/setter
@@ -113,6 +116,29 @@ sub dispatch_background {
     my $res = Gearman::Util::read_res_packet($jss, \$err);
     return 0 unless $res && $res->{type} eq "job_created";
     return "$jst//${$res->{blobref}}";
+}
+
+sub run_hook {
+    my Gearman::Client $self = shift;
+    my $hookname = shift || return;
+
+    my $hook = $self->{hooks}->{$hookname};
+    return unless $hook;
+
+    eval { $hook->(@_) };
+
+    warn "Gearman::Client hook '$hookname' threw error: $@\n";
+}
+
+sub add_hook {
+    my Gearman::Client $self = shift;
+    my $hookname = shift || return;
+
+    if (@_) {
+        $self->{hooks}->{$hookname} = shift;
+    } else {
+        delete $self->{hooks}->{$hookname};
+    }
 }
 
 sub get_status {

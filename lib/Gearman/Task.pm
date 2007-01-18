@@ -41,6 +41,29 @@ sub new {
     return $self;
 }
 
+sub run_hook {
+    my Gearman::Task $self = shift;
+    my $hookname = shift || return;
+
+    my $hook = $self->{hooks}->{$hookname};
+    return unless $hook;
+
+    eval { $hook->(@_) };
+
+    warn "Gearman::Task hook '$hookname' threw error: $@\n";
+}
+
+sub add_hook {
+    my Gearman::Task $self = shift;
+    my $hookname = shift || return;
+
+    if (@_) {
+        $self->{hooks}->{$hookname} = shift;
+    } else {
+        delete $self->{hooks}->{$hookname};
+    }
+}
+
 sub is_finished {
     my Gearman::Task $task = $_[0];
     return $task->{is_finished};
@@ -125,9 +148,12 @@ sub final_fail {
     return if $task->{is_finished};
     $task->{is_finished} = $_[1] || 1;
 
+    $task->run_hook('final_fail', $task);
+
     $task->{on_fail}->()       if $task->{on_fail};
     $task->{on_post_hooks}->() if $task->{on_post_hooks};
     $task->wipe;
+
     return undef;
 }
 
@@ -137,6 +163,8 @@ sub complete {
 
     my $result_ref = shift;
     $task->{is_finished} = 'complete';
+
+    $task->run_hook('complete', $task);
 
     $task->{on_complete}->($result_ref) if $task->{on_complete};
     $task->{on_post_hooks}->()          if $task->{on_post_hooks};
