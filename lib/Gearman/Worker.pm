@@ -336,7 +336,7 @@ silently.
 
 =head1 USAGE
 
-=head2 Gearman::Worker->new(\%options)
+=head2 Gearman::Worker->new(%options)
 
 Creates a new I<Gearman::Worker> object, and returns the object.
 
