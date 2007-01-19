@@ -35,7 +35,7 @@ sub new {
 sub new_task_set {
     my Gearman::Client $self = shift;
     my $taskset = Gearman::Taskset->new($self);
-    $self->run_hook('new_task_set', $taskset);
+    $self->run_hook('new_task_set', $self, $taskset);
     return $taskset;
 }
 

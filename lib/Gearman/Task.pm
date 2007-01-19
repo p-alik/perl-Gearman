@@ -201,6 +201,10 @@ sub wipe {
     }
 }
 
+sub func {
+    my Gearman::Task $task = shift;
+    return $task->{func};
+}
 1;
 __END__
 

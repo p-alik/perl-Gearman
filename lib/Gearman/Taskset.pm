@@ -168,7 +168,7 @@ sub add_task {
     }
     $task->taskset($ts);
 
-    $ts->{client}->run_hook('taskset_add_task', $ts, $task);
+    $ts->run_hook('add_task', $ts, $task);
 
     my $req = $task->pack_submit_packet;
     my $len = length($req);
