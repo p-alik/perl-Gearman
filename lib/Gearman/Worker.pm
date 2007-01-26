@@ -240,7 +240,9 @@ sub work {
             return;
         }
 
+        my $is_idle = 0;
         if ($need_sleep) {
+            $is_idle = 1;
             my $wake_vec = '';
             foreach my $j (@jss) {
                 my ($js, $jss) = @$j;
@@ -253,10 +255,11 @@ sub work {
             }
 
             # chill for some arbitrary time until we're woken up again
-            select($wake_vec, undef, undef, 10);
+            my $nready = select($wake_vec, undef, undef, 10);
+            $is_idle = 0 if $nready;
         }
 
-        return if $stop_if->();
+        return if $stop_if->($is_idle);
     }
 
 }
