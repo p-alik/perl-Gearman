@@ -224,6 +224,7 @@ sub work {
             my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle, $jss);
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
+            warn "err: $@" if $@;
 
             warn "Job '$func' died: $@" if $@;
 
@@ -237,7 +238,6 @@ sub work {
             unless (Gearman::Util::send_req($jss, \$work_req)) {
                 delete $self->{sock_cache}{$js};
             }
-            return;
         }
 
         my $is_idle = 0;
