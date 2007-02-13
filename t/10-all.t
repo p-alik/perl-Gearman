@@ -1,19 +1,11 @@
 #!/usr/bin/perl
 
 use strict;
-our $Bin;
-use FindBin qw( $Bin );
 use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
-use IO::Socket::INET;
-use POSIX qw( :sys_wait_h );
-use List::Util qw(first);;
-
-use constant PORT => 9000;
-our %Children;
-
-END { kill_children() }
+use lib 't';
+use TestGearman;
 
 if (start_server(PORT)) {
     plan tests => 32;
@@ -22,21 +14,22 @@ if (start_server(PORT)) {
     exit 0;
 }
 
-use constant NUM_SERVERS => 3;
+$NUM_SERVERS = 3;
 
-for (1..(NUM_SERVERS-1)) {
+for (1..($NUM_SERVERS-1)) {
     start_server(PORT + $_)
 }
 
 # kinda useless, now that start_server does this for us, but...
-for (0..(NUM_SERVERS-1)) {
+for (0..($NUM_SERVERS-1)) {
     ## Sleep, wait for servers to start up before connecting workers.
     wait_for_port(PORT + $_);
 }
 
-## Look for 2 job servers, starting at port number PORT.
-start_worker(PORT);
-start_worker(PORT);
+## Start two workers, look for $NUM_SERVERS job servers, starting at
+## port number PORT.
+start_worker(PORT, $NUM_SERVERS);
+start_worker(PORT, $NUM_SERVERS);
 
 my $client = Gearman::Client->new;
 isa_ok($client, 'Gearman::Client');
@@ -231,87 +224,5 @@ do {
 
 
 
-sub pid_is_dead {
-    my($pid) = @_;
-    return if $pid == -1;
-    my $type = delete $Children{$pid};
-    if ($type eq 'W') {
-        ## Right now we can only restart workers.
-        start_worker(PORT);
-    }
-}
 
-sub respawn_children {
-    for my $pid (keys %Children) {
-        if (waitpid($pid, WNOHANG) > 0) {
-            pid_is_dead($pid);
-        }
-    }
-}
 
-sub start_server {
-    my($port) = @_;
-    my @loc = ("$Bin/../../../../server/gearmand",  # using svn
-               '/usr/bin/gearmand',            # where some distros might put it
-               '/usr/sbin/gearmand',           # where other distros might put it
-               );
-    my $server = first { -e $_ } @loc
-        or return 0;
-
-    my $ready = 0;
-    local $SIG{USR1} = sub {
-        $ready = 1;
-    };
-
-    my $pid = start_child([ $server, '-p' => $port, '-n' => $$ ]);
-    $Children{$pid} = 'S';
-    while (!$ready) {
-        select undef, undef, undef, 0.10;
-    }
-    return $pid;
-}
-
-sub start_worker {
-    my($port) = @_;
-    my $num = NUM_SERVERS;
-    my $worker = "$Bin/worker.pl";
-    my $servers = join ',',
-                  map '127.0.0.1:' . (PORT + $_),
-                  0..$num-1;
-    my $ready = 0;
-    my $pid;
-    local $SIG{USR1} = sub {
-        $ready = 1;
-    };
-    $pid = start_child([ $worker, '-s' => $servers, '-n' => $$ ]);
-    $Children{$pid} = 'W';
-    while (!$ready) {
-        select undef, undef, undef, 0.10;
-    }
-    return $pid;
-}
-
-sub start_child {
-    my($cmd) = @_;
-    my $pid = fork();
-    die $! unless defined $pid;
-    unless ($pid) {
-        exec 'perl', '-Iblib/lib', '-Ilib', @$cmd or die $!;
-    }
-    $pid;
-}
-
-sub kill_children {
-    kill INT => keys %Children;
-}
-
-sub wait_for_port {
-    my($port) = @_;
-    my $start = time;
-    while (1) {
-        my $sock = IO::Socket::INET->new(PeerAddr => "127.0.0.1:$port");
-        return 1 if $sock;
-        select undef, undef, undef, 0.25;
-        die "Timeout waiting for port $port to startup" if time > $start + 5;
-    }
-}
