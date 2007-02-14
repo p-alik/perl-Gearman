@@ -231,8 +231,6 @@ sub work {
             my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle, $jss);
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
-            warn "err: $@" if $@;
-
             warn "Job '$func' died: $@" if $@;
 
             my $work_req;
