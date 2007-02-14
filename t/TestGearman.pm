@@ -9,7 +9,9 @@ use POSIX qw( :sys_wait_h );
 our $Bin;
 use FindBin qw( $Bin );
 
+# TODO: use a variation of t/lib/GearTestLib::free_port to find 3 free ports
 use constant PORT => 9050;
+
 our $NUM_SERVERS = 1;
 
 our %Children;
@@ -39,8 +41,13 @@ sub start_server {
 }
 
 sub start_worker {
-    my($port, $num_servers) = @_;
-    $num_servers ||= 1;
+    my($port, $args) = @_;
+    my $num_servers;
+    unless (ref $args) {
+        $num_servers = $args;
+        $args        = {};
+    }
+    $num_servers ||= $args->{num_servers} || 1;
     my $worker = "$Bin/worker.pl";
     my $servers = join ',',
                   map '127.0.0.1:' . (PORT + $_),
@@ -50,7 +57,7 @@ sub start_worker {
     local $SIG{USR1} = sub {
         $ready = 1;
     };
-    $pid = start_child([ $worker, '-s' => $servers, '-n' => $$ ]);
+    $pid = start_child([ $worker, '-s' => $servers, '-n' => $$, ($args->{prefix} ? ('-p' => $args->{prefix}) : ()) ]);
     $Children{$pid} = 'W';
     while (!$ready) {
         select undef, undef, undef, 0.10;

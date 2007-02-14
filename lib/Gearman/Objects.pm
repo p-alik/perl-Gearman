@@ -6,6 +6,7 @@ use fields (
             'js_count',
             'sock_cache',  # hostport -> socket
             'hooks',       # hookname -> coderef
+            'prefix',
             );
 
 package Gearman::Taskset;

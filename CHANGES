@@ -1,4 +1,8 @@
 
+     -- Add prefix setting to Gearman::Client and Gearman::Worker for simple
+        namespace separation of different instances of the same worker and
+        client code sharing job servers. (Ask Bjoern Hansen)
+
      -- Refactor tests to have less duplicate code (Ask Bjoern Hansen)
 
      -- Make Gearman::Client / Gearman::Worker tests use $^X instead

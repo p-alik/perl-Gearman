@@ -33,7 +33,7 @@ start_worker(PORT, $NUM_SERVERS);
 
 my $client = Gearman::Client->new;
 isa_ok($client, 'Gearman::Client');
-$client->job_servers('127.0.0.1:' . PORT, '127.0.0.1:' . (PORT + 1), '127.0.0.1:' . (PORT + 2));
+$client->job_servers(map { '127.0.0.1:' . (PORT + $_) } 0..$NUM_SERVERS);
 
 eval { $client->do_task(sum => []) };
 like($@, qr/scalar or scalarref/, 'do_task does not accept arrayref argument');

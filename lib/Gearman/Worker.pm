@@ -59,6 +59,7 @@ use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
 use fields (
             'job_servers',
             'js_count',
+            'prefix',
             'sock_cache',        # host:port -> IO::Socket::INET
             'last_connect_fail', # host:port -> unixtime
             'down_since',        # host:port -> unixtime
@@ -81,9 +82,12 @@ sub new {
     $self->{can} = {};
     $self->{timeouts} = {};
     $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
+    $self->{prefix}   = '';
 
     $self->job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
+
+    $self->prefix($opts{prefix}) if $opts{prefix};
 
     return $self;
 }
@@ -130,7 +134,7 @@ sub _get_js_sock {
     # get this socket's state caught-up
     foreach my $func (keys %{$self->{can}}) {
         my $timeout = $self->{timeouts}->{$func};
-        unless (_set_ability($sock, $func, $timeout)) {
+        unless ($self->_set_ability($sock, $func, $timeout)) {
             delete $self->{sock_cache}{$ipport};
             return undef;
         }
@@ -140,7 +144,10 @@ sub _get_js_sock {
 }
 
 sub _set_ability {
+    my Gearman::Worker $self = shift;
     my ($sock, $func, $timeout) = @_;
+
+    $func = join "\t", $self->prefix, $func if $self->prefix;
 
     my $req;
     if (defined $timeout) {
@@ -270,6 +277,8 @@ sub register_function {
     my $timeout = shift unless (ref $_[0] eq 'CODE');
     my $subref = shift;
 
+    $func = join "\t", $self->prefix, $func if $self->prefix;
+
     my $req;
     if (defined $timeout) {
         $req = Gearman::Util::pack_req_command("can_do_timeout", "$func\0$timeout");
@@ -296,7 +305,7 @@ sub _register_all {
     }
 }
 
-# getter/setter
+# getters/setters
 sub job_servers {
     my Gearman::Worker $self = shift;
     return $self->{job_servers} unless @_;
@@ -306,6 +315,12 @@ sub job_servers {
         $_ .= ":7003" unless /:/;
     }
     return $self->{job_servers} = $list;
+}
+
+sub prefix {
+    my Gearman::Worker $self = shift;
+    return $self->{prefix} unless @_;
+    $self->{prefix} = shift;
 }
 
 
@@ -352,6 +367,10 @@ settings in I<%options>, which can contain:
 
 Calls I<job_servers> (see below) to initialize the list of job servers.
 
+=item * prefix
+
+Calls I<prefix> (see below) to set the prefix / namespace.
+
 =back
 
 =head2 $worker->job_servers(@servers)
@@ -384,6 +403,16 @@ a gimpy worker from ruining the 'user experience' in many situations.
 
 The subroutine reference can return a return value, which will be sent back
 to the job server.
+
+=head2 $client-E<gt>prefix($prefix)
+
+Sets the namespace / prefix for the function names.  This is useful
+for sharing job servers between different applications or different
+instances of the same application (different development sandboxes for
+example).
+
+The namespace is currently implemented as a simple tab separated
+concatentation of the prefix and the function name.
 
 =head2 Gearman::Job->arg
 

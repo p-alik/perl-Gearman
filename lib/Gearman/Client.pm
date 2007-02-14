@@ -25,9 +25,12 @@ sub new {
     $self->{js_count} = 0;
     $self->{sock_cache} = {};
     $self->{hooks} = {};
+    $self->{prefix} = '';
 
     $self->set_job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
+
+    $self->prefix($opts{prefix}) if $opts{prefix};
 
     return $self;
 }
@@ -212,6 +215,12 @@ sub _get_random_js_sock {
     return ();
 }
 
+sub prefix {
+    my Gearman::Client $self = shift;
+    return $self->{prefix} unless @_;
+    $self->{prefix} = shift;
+}
+
 1;
 __END__
 
@@ -265,6 +274,10 @@ settings in I<%options>, which can contain:
 Calls I<job_servers> (see below) to initialize the list of job
 servers.  Value in this case should be an arrayref.
 
+=item * prefix
+
+Calls I<prefix> (see below) to set the prefix / namespace.
+
 =back
 
 =head2 $client->job_servers(@servers)
@@ -316,6 +329,13 @@ Waits for a response from the job server for any of the tasks listed
 in the taskset. Will call the I<on_*> handlers for each of the tasks
 that have been completed, updated, etc.  Doesn't return until
 everything has finished running or failing.
+
+=head2 $client-E<gt>prefix($prefix)
+
+Sets the namespace / prefix for the function names. 
+
+See L<Gearman::Worker> for more details.
+
 
 =head1 EXAMPLES
 

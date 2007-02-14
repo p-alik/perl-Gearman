@@ -1,20 +1,21 @@
 #!/usr/bin/perl -w
 use strict;
 
+use lib 'lib';
 use Gearman::Worker;
 use Storable qw( thaw );
 use Getopt::Long qw( GetOptions );
 
-my ($servers, $notifypid);
 GetOptions(
-           's|servers=s' => \$servers,
-           'n=i'         => \$notifypid,
-           );
+           's|servers=s' => \(my $servers),
+           'n=i'         => \(my $notifypid),
+           'p=s'         => \(my $prefix),
+          );
 
 die "usage: $0 -s <servers>" unless $servers;
 my @servers = split /,/, $servers;
 
-my $worker = Gearman::Worker->new;
+my $worker = Gearman::Worker->new($prefix ? (prefix => $prefix) : ());
 $worker->job_servers(@servers);
 
 $worker->register_function(sum => sub {
@@ -37,6 +38,11 @@ $worker->register_function(echo_ws => sub {
     select undef, undef, undef, 0.25;
     $_[0]->arg eq 'x' ? undef : $_[0]->arg;
 });
+
+$worker->register_function(echo_prefix => sub {
+    join " from ", $_[0]->arg, $prefix;
+});
+
 
 $worker->register_function(long => sub {
     my($job) = @_;

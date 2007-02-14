@@ -119,9 +119,15 @@ sub pack_submit_packet {
          "submit_job_high" :
          "submit_job");
 
+    my $func = $task->{func};
+
+    if (my $prefix = $task->{taskset} && $task->{taskset}->{client} && $task->{taskset}->{client}->prefix) {
+        $func = join "\t", $prefix, $task->{func};
+    }
+
     return Gearman::Util::pack_req_command($mode,
                                            join("\0",
-                                                $task->{func} || '',
+                                                $func || '',
                                                 $task->{uniq} || '',
                                                 ${ $task->{argref} } || ''));
 }

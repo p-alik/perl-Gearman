@@ -8,6 +8,10 @@ use Test::More;
 use lib 't';
 use TestGearman;
 
+# This is testing the MAXQUEUE feature of gearmand. There's no direct
+# support for it in Gearman::Worker yet, so we connect directly to
+# gearmand to configure it for the test.
+
 if (start_server(PORT)) {
     plan tests => 6;
 } else {
