@@ -14,7 +14,7 @@ use TestGearman;
 # gearmand to configure it for the test.
 
 if (start_server(PORT)) {
-    plan tests => 6;
+    plan tests => 3;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -60,29 +60,6 @@ $tasks->wait(timeout => 11);
 
 my $late_tasks = $client->new_task_set;
 isa_ok($tasks, 'Gearman::Taskset');
-
-my $late_failed = 0;
-my $late_completed = 0;
-
-sleep 10;
-while (my ($handle, $iter) = each %handles) {
-    my $new_handle = $late_tasks->add_task('long', $iter, {
-        uniq => $iter,
-        on_complete => sub { 
-            diag "Got result for $iter";
-        $late_completed++ },
-        on_fail => sub {     $late_failed++ },
-    });
-    diag("$new_handle should match $handle");
-}
-
-$late_tasks->wait(timeout => 10);
-
-is($completed, 2, 'number of success'); # One starts immediately and on the queue
-is($failed, 0, 'number of failure'); # All the rest
-
-is($late_completed, 8, 'number of late success');
-is($late_failed, 0, 'number of late failures');
 
 
 # vim: filetype=perl
