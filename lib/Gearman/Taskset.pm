@@ -124,7 +124,7 @@ sub wait {
     while (!$ts->{cancelled} && keys %{$ts->{waiting}}) {
         $tries++;
 
-        my $time_left = $timeout - Time::HiRes::time() if $timeout;
+        my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
         my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left);
         if ($timeout && $time_left <= 0) {
             $ts->cancel;
