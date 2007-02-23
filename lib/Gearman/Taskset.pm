@@ -6,6 +6,7 @@ use Gearman::Client;
 use Gearman::Util;
 use Gearman::ResponseParser::Taskset;
 use Scalar::Util ();  # i thought about weakening taskset's client, but might be too weak.
+use Time::HiRes ();
 
 sub new {
     my $class = shift;
@@ -96,6 +97,17 @@ sub _get_loaned_sock {
 sub wait {
     my Gearman::Taskset $ts = shift;
 
+    my %opts = @_;
+
+    my $timeout;
+    if (exists $opts{timeout}) {
+        $timeout = delete $opts{timeout};
+        $timeout += Time::HiRes::time();
+    }
+
+    Carp::carp "Unknown options: " . join(',', keys %opts) . " passed to Taskset->wait."
+        if keys %opts;
+
     my %parser;  # fd -> Gearman::ResponseParser object
 
     my ($rin, $rout, $eout) = ('', '', '');
@@ -112,7 +124,12 @@ sub wait {
     while (!$ts->{cancelled} && keys %{$ts->{waiting}}) {
         $tries++;
 
-        my $nfound = select($rout=$rin, undef, $eout=$rin, 0.5);
+        my $time_left = $timeout - Time::HiRes::time() if $timeout;
+        my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left);
+        if ($timeout && $time_left <= 0) {
+            $ts->cancel;
+            return;
+        }
         next if ! $nfound;
 
         foreach my $fd (keys %watching) {
@@ -131,8 +148,6 @@ sub wait {
             }
         }
 
-        # TODO: timeout jobs that have been running too long.  the _wait_for_packet
-        # loop only waits 0.5 seconds.
     }
 }
 
