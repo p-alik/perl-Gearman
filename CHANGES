@@ -1,4 +1,7 @@
 
+     -- Let Gearman::Worker use hostnames for job_servers (like
+        Gearman::Client does)  (Ask)
+
      -- Add prefix setting to Gearman::Client and Gearman::Worker for simple
         namespace separation of different instances of the same worker and
         client code sharing job servers. (Ask Bjoern Hansen)

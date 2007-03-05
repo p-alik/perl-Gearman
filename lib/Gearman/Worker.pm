@@ -111,10 +111,7 @@ sub _get_js_sock {
         }
     }
 
-    return undef unless $ipport =~ /(^\d+\..+):(\d+)/;
-    my ($ip, $port) = ($1, $2);
-
-    my $sock = IO::Socket::INET->new(PeerAddr => "$ip:$port",
+    my $sock = IO::Socket::INET->new(PeerAddr => $ipport,
                                      Timeout => 1);
     unless ($sock) {
         $self->{down_since}{$ipport} ||= $now;
