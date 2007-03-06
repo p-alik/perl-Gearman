@@ -60,6 +60,7 @@ use fields (
             'job_servers',
             'js_count',
             'prefix',
+            'debug',
             'sock_cache',        # host:port -> IO::Socket::INET
             'last_connect_fail', # host:port -> unixtime
             'down_since',        # host:port -> unixtime
@@ -84,6 +85,8 @@ sub new {
     $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
     $self->{prefix}   = '';
 
+    $self->debug($opts{debug}) if $opts{debug};
+
     $self->job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
 
@@ -96,6 +99,8 @@ sub _get_js_sock {
     my Gearman::Worker $self = shift;
     my $ipport = shift;
 
+    warn "getting job server socket: $ipport" if $self->debug;
+
     if (my $sock = $self->{sock_cache}{$ipport}) {
         return $sock if getpeername($sock);
         delete $self->{sock_cache}{$ipport};
@@ -104,12 +109,16 @@ sub _get_js_sock {
     my $now = time;
     my $down_since = $self->{down_since}{$ipport};
     if ($down_since) {
+        warn "job server down since $down_since" if $self->debug;
+
         my $down_for = $now - $down_since;
         my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
         if ($self->{last_connect_fail}{$ipport} > $now - $retry_period) {
             return undef;
         }
     }
+
+    warn "connecting to '$ip:$port'" if $self->debug;
 
     my $sock = IO::Socket::INET->new(PeerAddr => $ipport,
                                      Timeout => 1);
@@ -318,6 +327,11 @@ sub prefix {
     $self->{prefix} = shift;
 }
 
+sub debug {
+    my Gearman::Worker $self = shift;
+    $self->{debug} = shift if @_;
+    return $self->{debug} || 0;
+}
 
 1;
 __END__

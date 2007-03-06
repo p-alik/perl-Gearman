@@ -7,6 +7,7 @@ use fields (
             'sock_cache',  # hostport -> socket
             'hooks',       # hookname -> coderef
             'prefix',
+            'debug',
             );
 
 package Gearman::Taskset;

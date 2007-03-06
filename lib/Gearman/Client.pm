@@ -27,6 +27,8 @@ sub new {
     $self->{hooks} = {};
     $self->{prefix} = '';
 
+    $self->debug($opts{debug}) if $opts{debug};
+
     $self->set_job_servers(@{ $opts{job_servers} })
         if $opts{job_servers};
 
@@ -219,6 +221,12 @@ sub prefix {
     my Gearman::Client $self = shift;
     return $self->{prefix} unless @_;
     $self->{prefix} = shift;
+}
+
+sub debug {
+    my Gearman::Client $self = shift;
+    $self->{debug} = shift if @_;
+    return $self->{debug} || 0;
 }
 
 1;
