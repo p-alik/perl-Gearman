@@ -118,7 +118,7 @@ sub _get_js_sock {
         }
     }
 
-    warn "connecting to '$ip:$port'" if $self->debug;
+    warn "connecting to '$ipport'" if $self->debug;
 
     my $sock = IO::Socket::INET->new(PeerAddr => $ipport,
                                      Timeout => 1);
