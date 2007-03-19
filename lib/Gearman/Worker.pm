@@ -52,6 +52,10 @@ sub arg {
     return ${ $self->{argref} };
 }
 
+sub handle {
+    my Gearman::Job $self = shift;
+    return $self->{handle};
+}
 
 package Gearman::Worker;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
@@ -186,6 +190,9 @@ sub work {
     my Gearman::Worker $self = shift;
     my %opts = @_;
     my $stop_if = delete $opts{'stop_if'} || sub { 0 };
+    my $complete_cb = delete $opts{on_complete};
+    my $fail_cb = delete $opts{on_fail};
+    my $start_cb = delete $opts{on_start};
     die "Unknown opts" if %opts;
 
     my $grab_req = Gearman::Util::pack_req_command("grab_job");
@@ -235,15 +242,23 @@ sub work {
                 or die "Uh, regexp on job_assign failed";
             my ($handle, $func) = ($1, $2);
             my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle, $jss);
+
+            my $jobhandle = "$js//" . $job->handle;
+            $start_cb->($jobhandle) if $start_cb;
+
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
-            warn "Job '$func' died: $@" if $@;
+            my $err = $@ || '';
+            warn "Job '$func' died: $err" if $err;
 
             my $work_req;
             if (defined $ret) {
-                $work_req = Gearman::Util::pack_req_command("work_complete", "$handle\0" . (ref $ret ? $$ret : $ret));
+                my $rv = ref $ret ? $$ret : $ret;
+                $work_req = Gearman::Util::pack_req_command("work_complete", "$handle\0$rv");
+                $complete_cb->($jobhandle, $ret) if $complete_cb;
             } else {
                 $work_req = Gearman::Util::pack_req_command("work_fail", $handle);
+                $fail_cb->($jobhandle, $err) if $fail_cb;
             }
 
             unless (Gearman::Util::send_req($jss, \$work_req)) {
