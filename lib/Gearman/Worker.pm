@@ -448,6 +448,11 @@ Updates the status of the job (most likely, a long-running job) and sends
 it back to the job server. I<$numerator> and I<$denominator> should
 represent the percentage completion of the job.
 
+=head2 Gearman::Job->work(%opts)
+
+Do one job and returns (no value returned).
+You can pass "on_start" "on_complete" and "on_fail" callbacks in I<%opts>.
+
 =head1 EXAMPLES
 
 =head2 Summation
