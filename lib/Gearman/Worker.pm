@@ -219,8 +219,9 @@ sub work {
                 next;
             }
 
-            my ($res, $err);
+            my $res;
             do {
+                my $err;
                 $res = Gearman::Util::read_res_packet($jss, \$err);
                 unless ($res) {
                     delete $self->{sock_cache}{$js};
