@@ -335,7 +335,7 @@ sub _process_packet {
         return 1;
     }
 
-    die "Unknown/unimplemented packet type: $res->{type}";
+    die "Unknown/unimplemented packet type: $res->{type} [${$res->{blobref}}]";
 
 }
 

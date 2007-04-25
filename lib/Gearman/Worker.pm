@@ -235,7 +235,14 @@ sub work {
                 next;
             }
 
-            die "Uh, wasn't expecting a $res->{type} packet" unless $res->{type} eq "job_assign";
+            unless ($res->{type} eq "job_assign") {
+                my $msg = "Uh, wasn't expecting a $res->{type} packet.";
+                if ($res->{type} eq "error") {
+                    $msg .= " [${$res->{blobref}}]\n";
+                    $msg =~ s/\0/ -- /g;
+                }
+                die $msg;
+            }
 
             $need_sleep = 0;
 

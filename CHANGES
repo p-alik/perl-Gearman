@@ -1,3 +1,6 @@
+     -- just some extra debugging/deaths during weird cases (helped find
+        bugs when server code was massively refactored)
+
 1.04 - 2007-04-16
 
      -- Let Gearman::Worker use hostnames for job_servers (like

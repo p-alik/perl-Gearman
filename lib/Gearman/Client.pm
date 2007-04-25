@@ -162,6 +162,11 @@ sub get_status {
 
     my $err;
     my $res = Gearman::Util::read_res_packet($sock, \$err);
+
+    if ($res && $res->{type} eq "error") {
+        die "Error packet from server after get_status: ${$res->{blobref}}\n";
+    }
+
     return undef unless $res && $res->{type} eq "status_res";
     my @args = split(/\0/, ${ $res->{blobref} });
     return undef unless $args[0];
