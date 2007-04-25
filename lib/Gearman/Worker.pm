@@ -92,13 +92,10 @@ sub new {
     $self->debug($opts{debug}) if $opts{debug};
 
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
-        unless (fileno(\*STDIN) == fileno(\*STDOUT)) {
-            die "Input and Output streams aren't the same fileno. Can't handle this";
-        }
         open my $sock, '+<&', \*STDIN or die "Unable to dup STDIN to socket for worker to use.";
         $self->{job_servers} = [ $sock ];
         $self->{sock_cache}{$sock} = $sock;
-    elsif ($opts{job_servers}) {
+    } elsif ($opts{job_servers}) {
         $self->job_servers(@{ $opts{job_servers} });
     }
 
@@ -351,6 +348,7 @@ sub _register_all {
 # getters/setters
 sub job_servers {
     my Gearman::Worker $self = shift;
+    return if ($ENV{GEARMAN_WORKER_USE_STDIO});
     return $self->{job_servers} unless @_;
     my $list = [ @_ ];
     $self->{js_count} = scalar @$list;
@@ -413,7 +411,8 @@ settings in I<%options>, which can contain:
 
 =item * job_servers
 
-Calls I<job_servers> (see below) to initialize the list of job servers.
+Calls I<job_servers> (see below) to initialize the list of job servers. It
+will be ignored if this worker is running as a child process of gearmand.
 
 =item * prefix
 
@@ -430,6 +429,9 @@ For example:
     $worker->job_servers('127.0.0.1', '192.168.1.100:7003');
 
 If the port number is not provided, 7003 is used as the default.
+
+Calling this method will do nothing in a worker that is running as a child
+process of a gearmand.
 
 =head2 $worker->register_function($funcname, $subref)
 
@@ -476,6 +478,14 @@ represent the percentage completion of the job.
 
 Do one job and returns (no value returned).
 You can pass "on_start" "on_complete" and "on_fail" callbacks in I<%opts>.
+
+=head1 GEARMAND CHILDREN
+
+Gearman workers can be run run as child processes of gearmand. To do this
+the gearmand sets the environment variable GEARMAN_WORKER_USE_STDIO to true
+before launching the worker. If this variable is set to true, then the
+jobservers function and option for new() are ignored and STDIN/OUT are used
+instead as the IO path.
 
 =head1 EXAMPLES
 
