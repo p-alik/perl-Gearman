@@ -91,8 +91,16 @@ sub new {
 
     $self->debug($opts{debug}) if $opts{debug};
 
-    $self->job_servers(@{ $opts{job_servers} })
-        if $opts{job_servers};
+    if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
+        unless (fileno(\*STDIN) == fileno(\*STDOUT)) {
+            die "Input and Output streams aren't the same fileno. Can't handle this";
+        }
+        open my $sock, '+<&', \*STDIN or die "Unable to dup STDIN to socket for worker to use.";
+        $self->{job_servers} = [ $sock ];
+        $self->{sock_cache}{$sock} = $sock;
+    elsif ($opts{job_servers}) {
+        $self->job_servers(@{ $opts{job_servers} });
+    }
 
     $self->prefix($opts{prefix}) if $opts{prefix};
 
@@ -104,6 +112,14 @@ sub _get_js_sock {
     my $ipport = shift;
 
     warn "getting job server socket: $ipport" if $self->debug;
+
+    if (ref $ipport eq 'GLOB') {
+        if (my $sock = $self->{sock_cache}{$ipport}) {
+            return $sock;
+        } else {
+            die "Gearman server disappeared in STDIO mode.\n";
+        }
+    }
 
     if (my $sock = $self->{sock_cache}{$ipport}) {
         return $sock if getpeername($sock);
