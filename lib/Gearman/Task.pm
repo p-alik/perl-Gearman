@@ -121,7 +121,7 @@ sub pack_submit_packet {
 
     my $func = $task->{func};
 
-    if (my $prefix = $task->{taskset} && $task->{taskset}->{client} && $task->{taskset}->{client}->prefix) {
+    if (my $prefix = $task->{taskset} && $task->{taskset}->client && $task->{taskset}->client->prefix) {
         $func = join "\t", $prefix, $task->{func};
     }
 

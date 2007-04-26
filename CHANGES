@@ -1,10 +1,15 @@
+1.05 (2008-04-26)
+
+     -- update the prefix code to not break Gearman::Client::Async, which
+        was also updated to be compatible.
+
      -- Add ability for workers to be launched as sub processes of the
         gearmand, using a duped socketpair for communication.
 
      -- just some extra debugging/deaths during weird cases (helped find
         bugs when server code was massively refactored)
 
-1.04 - 2007-04-16
+1.04 (2007-04-16)
 
      -- Let Gearman::Worker use hostnames for job_servers (like
         Gearman::Client does)  (Ask)

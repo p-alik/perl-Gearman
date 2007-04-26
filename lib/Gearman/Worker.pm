@@ -411,8 +411,9 @@ settings in I<%options>, which can contain:
 
 =item * job_servers
 
-Calls I<job_servers> (see below) to initialize the list of job servers. It
-will be ignored if this worker is running as a child process of gearmand.
+Calls I<job_servers> (see below) to initialize the list of job
+servers. It will be ignored if this worker is running as a child
+process of a gearman server.
 
 =item * prefix
 
@@ -431,7 +432,7 @@ For example:
 If the port number is not provided, 7003 is used as the default.
 
 Calling this method will do nothing in a worker that is running as a child
-process of a gearmand.
+process of a gearman server.
 
 =head2 $worker->register_function($funcname, $subref)
 
@@ -479,13 +480,15 @@ represent the percentage completion of the job.
 Do one job and returns (no value returned).
 You can pass "on_start" "on_complete" and "on_fail" callbacks in I<%opts>.
 
-=head1 GEARMAND CHILDREN
+=head1 WORKERS AS CHILD PROCESSES
 
-Gearman workers can be run run as child processes of gearmand. To do this
-the gearmand sets the environment variable GEARMAN_WORKER_USE_STDIO to true
-before launching the worker. If this variable is set to true, then the
-jobservers function and option for new() are ignored and STDIN/OUT are used
-instead as the IO path.
+Gearman workers can be run run as child processes of a parent process
+which embeds L<Gearman::Server>.  When such a parent process
+fork/execs a worker, it sets the environment variable
+GEARMAN_WORKER_USE_STDIO to true before launching the worker. If this
+variable is set to true, then the jobservers function and option for
+new() are ignored and the unix socket bound to STDIN/OUT are used
+instead as the IO path to the gearman server.
 
 =head1 EXAMPLES
 

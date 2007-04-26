@@ -20,7 +20,8 @@ END { kill_children() }
 
 sub start_server {
     my($port) = @_;
-    my @loc = ("$Bin/../../../../server/gearmand",  # using svn
+    my @loc = ("$Bin/../../../../server/gearmand",     # using svn
+               "$Bin/../../../../../server/gearmand",  # using svn and 'disttest'
                '/usr/bin/gearmand',            # where some distros might put it
                '/usr/sbin/gearmand',           # where other distros might put it
                );
