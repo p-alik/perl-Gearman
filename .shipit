@@ -1,6 +1,7 @@
 # auto-generated shipit config file.
-steps = FindVersion, ChangeVersion, CheckChangeLog, DistTest, Commit, Tag, MakeDist, UploadCPAN
+steps = FindVersion, ChangeVersion, CheckChangeLog, DistTest, Commit, Tag, MakeDist, UploadCPAN, AddToSVNDir
 
 svn.tagpattern = Gearman-%v
+AddToSVNDir.dir = /home/lj/cvs/web-danga/dist/Gearman/
 
 # CheckChangeLog.files = ChangeLog, MyProj.CHANGES
