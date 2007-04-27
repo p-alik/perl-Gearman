@@ -1,3 +1,6 @@
+     -- In worker class, broke out the on connection work, and use that better
+        in the case of being a sub process of the gearmand.
+
 1.05 (2008-04-26)
 
      -- update the prefix code to not break Gearman::Client::Async, which

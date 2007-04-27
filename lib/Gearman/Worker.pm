@@ -95,6 +95,9 @@ sub new {
         open my $sock, '+<&', \*STDIN or die "Unable to dup STDIN to socket for worker to use.";
         $self->{job_servers} = [ $sock ];
         $self->{sock_cache}{$sock} = $sock;
+
+        die "Unable to initialize connection to gearmand"
+            unless $self->_on_connect($sock);
     } elsif ($opts{job_servers}) {
         $self->job_servers(@{ $opts{job_servers} });
     }
@@ -151,19 +154,32 @@ sub _get_js_sock {
 
     $self->{sock_cache}{$ipport} = $sock;
 
+    unless ($self->_on_connect($sock)) {
+        delete $self->{sock_cache}{$ipport};
+        return undef;
+    }
+
+    return $sock;
+}
+
+# Housekeeping things to do on connection to a server. Method call
+# with one argument being the 'socket' we're going to take care of.
+# returns true on success, false on failure.
+sub _on_connect {
+    my ($self, $sock) = @_;
+
     my $cid_req = Gearman::Util::pack_req_command("set_client_id", $self->{client_id});
-    Gearman::Util::send_req($sock, \$cid_req);
+    return undef unless Gearman::Util::send_req($sock, \$cid_req);
 
     # get this socket's state caught-up
     foreach my $func (keys %{$self->{can}}) {
         my $timeout = $self->{timeouts}->{$func};
         unless ($self->_set_ability($sock, $func, $timeout)) {
-            delete $self->{sock_cache}{$ipport};
             return undef;
         }
     }
 
-    return $sock;
+    return 1;
 }
 
 sub _set_ability {
