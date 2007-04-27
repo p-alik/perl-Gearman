@@ -61,7 +61,7 @@ sub pack_req_command {
 
 sub pack_res_command {
     my $type_arg = shift;
-    my $type = int($type_arg) || $num{$type_arg};
+    my $type = $num{$type_arg} || int($type_arg);
     die "Bogus type arg of '$type_arg'" unless $type;
     my $len = length($_[0]);
     return "\0RES" . pack("NN", $type, $len) . $_[0];
