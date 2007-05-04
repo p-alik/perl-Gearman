@@ -1,7 +1,12 @@
+1.06 (2007-05-04)
+
+     -- better support for Gearman::Workers as child processes talking
+        to a Gearman::Server over unix pipe to parent
+
      -- In worker class, broke out the on connection work, and use that better
         in the case of being a sub process of the gearmand.
 
-1.05 (2008-04-26)
+1.05 (2007-04-26)
 
      -- update the prefix code to not break Gearman::Client::Async, which
         was also updated to be compatible.

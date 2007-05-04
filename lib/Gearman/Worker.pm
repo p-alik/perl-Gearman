@@ -72,6 +72,9 @@ use fields (
             'can',               # func -> subref
             'timeouts',          # func -> timeouts
             'client_id',         # random identifer string, no whitespace
+            'parent_pipe',       # bool/obj:  if we're a child process of a gearman server,
+                                 #   this is socket to our parent process.  also means parent
+                                 #   sock can never disconnect or timeout, etc..
             );
 
 sub new {
@@ -94,7 +97,7 @@ sub new {
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
         open my $sock, '+<&', \*STDIN or die "Unable to dup STDIN to socket for worker to use.";
         $self->{job_servers} = [ $sock ];
-        $self->{sock_cache}{$sock} = $sock;
+        $self->{parent_pipe} = $sock;
 
         die "Unable to initialize connection to gearmand"
             unless $self->_on_connect($sock);
@@ -113,13 +116,9 @@ sub _get_js_sock {
 
     warn "getting job server socket: $ipport" if $self->debug;
 
-    if (ref $ipport eq 'GLOB') {
-        if (my $sock = $self->{sock_cache}{$ipport}) {
-            return $sock;
-        } else {
-            die "Gearman server disappeared in STDIO mode.\n";
-        }
-    }
+    # special case, if we're a child process of a gearman::server
+    # parent process, talking over a unix pipe...
+    return $self->{parent_pipe} if $self->{parent_pipe};
 
     if (my $sock = $self->{sock_cache}{$ipport}) {
         return $sock if getpeername($sock);
@@ -206,12 +205,23 @@ sub reset_abilities {
             or next;
 
         unless (Gearman::Util::send_req($jss, \$req)) {
-            delete $self->{sock_cache}{$js};
+            $self->uncache_sock("js", "err_write_reset_abilities");
         }
     }
 
     $self->{can} = {};
     $self->{timeouts} = {};
+}
+
+sub uncache_sock {
+    my ($self, $ipport, $reason) = @_;
+
+    # we can't reconnect as a child process, so all we can do is die and hope our
+    # parent process respawns us...
+    die "Error/timeout talking to gearman parent process: [$reason]" if $self->{parent_pipe};
+
+    # normal case, we just close this TCP connectiona and we'll reconnect later.
+    delete $self->{sock_cache}{$ipport};
 }
 
 # does one job and returns.  no return value.
@@ -242,9 +252,15 @@ sub work {
             # send_req, etc) this testing has been done manually, at
             # least.
 
+            # if we're a child process talking over a unix pipe, give more
+            # time, since we know there are no network issues, and also
+            # because on failure, we can't "reconnect".  all we can do is
+            # die and hope our parent process respawns us.
+            my $timeout = $self->{parent_pipe} ? 5 : 0.50;
+
             unless (Gearman::Util::send_req($jss, \$grab_req) &&
-                    Gearman::Util::wait_for_readability($jss->fileno, 0.50)) {
-                delete $self->{sock_cache}{$js};
+                    Gearman::Util::wait_for_readability($jss->fileno, $timeout)) {
+                $self->uncache_sock($js, "grab_job_timeout");
                 next;
             }
 
@@ -253,7 +269,7 @@ sub work {
                 my $err;
                 $res = Gearman::Util::read_res_packet($jss, \$err);
                 unless ($res) {
-                    delete $self->{sock_cache}{$js};
+                    $self->uncache_sock($js, "read_res_error");
                     next;
                 }
             } while ($res->{type} eq "noop");
@@ -299,7 +315,7 @@ sub work {
             }
 
             unless (Gearman::Util::send_req($jss, \$work_req)) {
-                delete $self->{sock_cache}{$js};
+                $self->uncache_sock($js, "write_res_error");
             }
         }
 
@@ -310,7 +326,7 @@ sub work {
             foreach my $j (@jss) {
                 my ($js, $jss) = @$j;
                 unless (Gearman::Util::send_req($jss, \$presleep_req)) {
-                    delete $self->{sock_cache}{$js};
+                    $self->uncache_sock($js, "write_presleep_error");
                     next;
                 }
                 my $fd = $jss->fileno;
@@ -356,7 +372,7 @@ sub _register_all {
             or next;
 
         unless (Gearman::Util::send_req($jss, \$req)) {
-            delete $self->{sock_cache}{$js};
+            $self->uncache_sock($js, "write_register_func_error");
         }
     }
 }
