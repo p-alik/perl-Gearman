@@ -252,14 +252,22 @@ sub work {
             # send_req, etc) this testing has been done manually, at
             # least.
 
+            unless (Gearman::Util::send_req($jss, \$grab_req)) {
+                if ($!{EPIPE} && $self->{parent_pipe}) {
+                    # our parent process died, so let's just quit
+                    # gracefully.
+                    exit(0);
+                }
+                $self->uncache_sock($js, "grab_job_timeout");
+                next;
+            }
+
             # if we're a child process talking over a unix pipe, give more
             # time, since we know there are no network issues, and also
             # because on failure, we can't "reconnect".  all we can do is
             # die and hope our parent process respawns us.
             my $timeout = $self->{parent_pipe} ? 5 : 0.50;
-
-            unless (Gearman::Util::send_req($jss, \$grab_req) &&
-                    Gearman::Util::wait_for_readability($jss->fileno, $timeout)) {
+            unless (Gearman::Util::wait_for_readability($jss->fileno, $timeout)) {
                 $self->uncache_sock($js, "grab_job_timeout");
                 next;
             }

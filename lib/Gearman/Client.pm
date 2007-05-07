@@ -5,7 +5,7 @@
 package Gearman::Client;
 
 our $VERSION;
-$VERSION = '1.06';
+$VERSION = '1.07';
 
 use strict;
 use IO::Socket::INET;
