@@ -21,4 +21,11 @@
 \#$
 \b\.#
 
+# Avoid debian directory, and rpm specfiles.
+\bdebian\b
+\.spec$
+
+# Don't put the shipit file in distros
+^\.shipit$
+
 build.pl
