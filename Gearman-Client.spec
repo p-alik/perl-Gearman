@@ -11,6 +11,7 @@ buildarch: noarch
 source:    Gearman-%{version}.tar.gz
 buildrequires: perl-String-CRC32
 requires:  perl-String-CRC32
+autoreq: no
 
 %description
 Gearman client libs
