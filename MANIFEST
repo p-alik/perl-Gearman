@@ -1,3 +1,5 @@
+CHANGES
+HACKING
 lib/Gearman/Client.pm
 lib/Gearman/JobStatus.pm
 lib/Gearman/Objects.pm
@@ -13,14 +15,11 @@ MANIFEST.SKIP			This list of files
 META.yml
 t/00-use.t
 t/10-all.t
-t/worker.pl
-CHANGES
-HACKING
-TODO
 t/20-leaktest.t
 t/30-maxqueue.t
 t/40-prefix.t
 t/50-wait_timeout.t
 t/lib/GearTestLib.pm
 t/TestGearman.pm
-
+t/worker.pl
+TODO
