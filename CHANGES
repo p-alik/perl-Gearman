@@ -1,3 +1,6 @@
+     -- In pack_res_command, silence any warnings about 'undefined' or 'uninitialized'
+        variables if we aren't sending an argument along with the command.
+
 1.07 (2007-05-07)
 
      -- continued improved support for child processes as workers,
