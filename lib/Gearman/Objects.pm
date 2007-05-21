@@ -1,5 +1,10 @@
 use strict;
 
+package Gearman::Objects;
+# this dummy package exists purely for building RPMs,
+# some tools of which have requirements for above package
+# line and the filename to match somehow.
+
 package Gearman::Client;
 use fields (
             'job_servers',

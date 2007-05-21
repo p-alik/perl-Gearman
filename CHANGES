@@ -1,3 +1,10 @@
+1.08 (2007-05-21)
+
+     -- add "package Gearman::Objects" line to Objects.pm, to ease RPM
+        building
+
+     -- reserve the packet number for "all_yours", not yet implemented
+
      -- In pack_res_command, silence any warnings about 'undefined' or 'uninitialized'
         variables if we aren't sending an argument along with the command.
 

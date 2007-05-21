@@ -36,6 +36,11 @@ our %cmd = (
             17 => [ 'O',  "echo_res" ],    # J->? TEXT
 
             19 => [ 'O',  "error" ],       # J->? ERRCODE[0]ERR_TEXT
+
+            # for worker to declare to the jobserver that this worker is only connected
+            # to one jobserver, so no polls/grabs will take place, and server is free
+            # to push "job_assign" packets back down.
+            24 => [ 'I', "all_yours" ],    # W->J ---
             );
 
 our %num;  # name -> num
