@@ -1,3 +1,7 @@
+1.09 (2007-06-29)
+
+     -- document the license and copyright
+
 1.08 (2007-05-21)
 
      -- add "package Gearman::Objects" line to Objects.pm, to ease RPM
