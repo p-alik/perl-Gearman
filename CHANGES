@@ -1,3 +1,7 @@
+     -- change server polling order in workers to start at a random point in the list
+        during every worker pass. So we drain jobs from all servers rather than
+        working on each of them in order.
+
 1.09 (2007-06-29)
 
      -- document the license and copyright

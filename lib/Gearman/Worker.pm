@@ -243,7 +243,12 @@ sub work {
         my @jss;
         my $need_sleep = 1;
 
-        foreach my $js (@{ $self->{job_servers} }) {
+        my $js_count = @{ $self->{job_servers} };
+        my $js_offset = int(rand($js_count));
+
+        for (my $i = 0; $i < $js_count; $i++) {
+            my $js_index = ($i + $js_offset) % $js_count;
+            my $js = $self->{job_servers}->[$js_index];
             my $jss = $self->_get_js_sock($js)
                 or next;
 
