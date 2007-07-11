@@ -238,6 +238,8 @@ sub work {
     my $presleep_req = Gearman::Util::pack_req_command("pre_sleep");
     my %fd_map;
 
+    my $last_job_time;
+
     while (1) {
 
         my @jss;
@@ -317,6 +319,8 @@ sub work {
             my $err = $@ || '';
             warn "Job '$func' died: $err" if $err;
 
+            $last_job_time = time();
+
             my $work_req;
             if (defined $ret) {
                 my $rv = ref $ret ? $$ret : $ret;
@@ -351,7 +355,7 @@ sub work {
             $is_idle = 0 if $nready;
         }
 
-        return if $stop_if->($is_idle);
+        return if $stop_if->($is_idle, $last_job_time);
     }
 
 }

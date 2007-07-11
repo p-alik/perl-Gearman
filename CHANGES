@@ -1,3 +1,8 @@
+     -- expose the time that the last job was processed in the stop_if hook of worker.
+        Since a jobserver wakes up all workers in the case of a new job to be processed
+        the concept of is_idle doesn't actually reflect if a worker has procssed jobs,
+        rather it indicates whether the jobserver has been silent for 10 seconds.
+
      -- change server polling order in workers to start at a random point in the list
         during every worker pass. So we drain jobs from all servers rather than
         working on each of them in order.

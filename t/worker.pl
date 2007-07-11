@@ -3,7 +3,7 @@ use strict;
 
 use lib 'lib';
 use Gearman::Worker;
-use Storable qw( thaw );
+use Storable qw(thaw nfreeze);
 use Getopt::Long qw( GetOptions );
 
 GetOptions(
@@ -55,4 +55,29 @@ $worker->register_function(long => sub {
 my $nsig;
 $nsig = kill 'USR1', $notifypid if $notifypid;
 
-$worker->work while 1;
+my $work_exit = 0;
+
+$worker->register_function(work_exit => sub {
+    $work_exit = 1;
+});
+
+my ($is_idle, $last_job_time);
+
+$worker->register_function(check_stop_if => sub {
+    return nfreeze([$is_idle, $last_job_time]);
+});
+
+
+
+my $stop_if = sub {
+    ($is_idle, $last_job_time) = @_;
+
+    if ($work_exit) {
+        $work_exit = 0;
+        return 1;
+    }
+
+    return 0;
+};
+
+$worker->work(stop_if => $stop_if) while (1);
