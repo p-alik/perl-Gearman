@@ -100,8 +100,18 @@ sub read_res_packet {
     return $err->("malformed_magic") unless $magic eq "\0RES";
 
     if ($len) {
-        $rv = sysread($sock, $buf, $len);
-        return $err->("short_body") unless $rv == $len;
+        # Start off trying to read the whole buffer. Store the bits in an array
+        # one element for each read, then do a big join at the end. This minimizes
+        # the number of memory allocations we have to do.
+        my $readlen = $len;
+        my @buffers;
+        for (my $i = 0; $readlen > 0 && $i < 20; $i++) {
+            my $rv = sysread($sock, $buffers[$i], $readlen);
+            return $err->("short_body") unless $rv > 0;
+            last unless $rv > 0;
+            $readlen -= $rv;
+        }
+        $buf = join('', @buffers);
     }
 
     $type = $cmd{$type};
