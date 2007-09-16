@@ -19,6 +19,7 @@ t/20-leaktest.t
 t/30-maxqueue.t
 t/40-prefix.t
 t/50-wait_timeout.t
+t/51-large_args.t
 t/60-stop-if.t
 t/lib/GearTestLib.pm
 t/TestGearman.pm
