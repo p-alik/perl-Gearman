@@ -1,3 +1,6 @@
+     -- fix jobs of > 32kilobytes in size so they work properly (workers would disconnect
+        when a job greater than 32kb would arrive.)
+
      -- expose the time that the last job was processed in the stop_if hook of worker.
         Since a jobserver wakes up all workers in the case of a new job to be processed
         the concept of is_idle doesn't actually reflect if a worker has procssed jobs,
