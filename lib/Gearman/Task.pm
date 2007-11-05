@@ -22,7 +22,7 @@ sub new {
 
     my $opts = shift || {};
     for my $k (qw( uniq
-                   on_complete on_fail on_retry on_status
+                   on_complete on_exception on_fail on_retry on_status
                    retry_count timeout high_priority
                )) {
         $self->{$k} = delete $opts->{$k};
@@ -161,6 +161,15 @@ sub final_fail {
     $task->wipe;
 
     return undef;
+}
+
+sub exception {
+    my Gearman::Task $task = shift;
+
+    my $exception_ref = shift;
+    my $exception = Storable::thaw($$exception_ref);
+    $task->{on_exception}->($$exception) if $task->{on_exception};
+    return;
 }
 
 sub complete {

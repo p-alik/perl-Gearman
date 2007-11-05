@@ -329,6 +329,21 @@ sub _process_packet {
         return 1;
     }
 
+    if ($res->{type} eq "work_exception") {
+        ${ $res->{'blobref'} } =~ s/^(.+?)\0//
+            or die "Bogus work_exception from server";
+        my $shandle = $1;
+        my $task_list = $ts->{waiting}{$shandle} or
+            die "Uhhhh:  got work_exception for unknown handle: $shandle\n";
+
+        my Gearman::Task $task = $task_list->[0] or
+            die "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
+
+        $task->exception($res->{'blobref'});
+
+        return 1;
+    }
+
     if ($res->{type} eq "work_status") {
         my ($shandle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
 

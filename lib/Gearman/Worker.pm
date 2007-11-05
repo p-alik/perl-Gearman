@@ -77,6 +77,20 @@ use fields (
                                  #   sock can never disconnect or timeout, etc..
             );
 
+BEGIN {
+    my $storable = eval { require Storable; 1 }
+        if !defined &THROW_EXCEPTIONS || THROW_EXCEPTIONS();
+
+    $storable ||= 0;
+
+    if (defined &THROW_EXCEPTIONS) {
+        die "Exceptions support requires Storable: $@";
+    } else {
+        eval "sub THROW_EXCEPTIONS () { $storable }";
+        die "Couldn't define THROW_EXCEPTIONS: $@\n" if $@;
+    }
+}
+
 sub new {
     my ($class, %opts) = @_;
     my $self = $class;
@@ -316,10 +330,18 @@ sub work {
 
             my $handler = $self->{can}{$func};
             my $ret = eval { $handler->($job); };
-            my $err = $@ || '';
+            my $err = $@;
             warn "Job '$func' died: $err" if $err;
 
             $last_job_time = time();
+
+            if (THROW_EXCEPTIONS && $err) {
+                my $exception_req = Gearman::Util::pack_req_command("work_exception", join("\0", $handle, Storable::nfreeze(\$err)));
+                unless (Gearman::Util::send_req($jss, \$exception_req)) {
+                    $self->uncache_sock($js, "write_res_error");
+                    next;
+                }
+            }
 
             my $work_req;
             if (defined $ret) {

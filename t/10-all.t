@@ -8,7 +8,7 @@ use lib 't';
 use TestGearman;
 
 if (start_server(PORT)) {
-    plan tests => 32;
+    plan tests => 34;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -31,7 +31,7 @@ for (0..($NUM_SERVERS-1)) {
 start_worker(PORT, $NUM_SERVERS);
 start_worker(PORT, $NUM_SERVERS);
 
-my $client = Gearman::Client->new;
+my $client = Gearman::Client->new(exceptions => 1);
 isa_ok($client, 'Gearman::Client');
 $client->job_servers(map { '127.0.0.1:' . (PORT + $_) } 0..$NUM_SERVERS);
 
@@ -70,6 +70,26 @@ is($sums[1], 4, 'Second task completed (sum is 4)');
 ## Test some failure conditions:
 ## Normal failure (worker returns undef or dies within eval).
 is($client->do_task('fail'), undef, 'Job that failed naturally returned undef');
+
+## the die message is available in the on_fail sub
+my $msg = undef;
+$tasks = $client->new_task_set;
+$tasks->add_task('fail_die', undef, {
+        on_exception => sub { $msg = shift },
+});
+$tasks->wait;
+like($msg, qr/test reason/, 'the die message is available in the on_fail sub');
+
+### the exception message is available in the on_fail sub
+#$msg = undef;
+#$tasks = $client->new_task_set;
+#$tasks->add_task('fail_exception', undef, { 
+#        on_fail => sub { $msg = shift },
+#});
+#$tasks->wait;
+#is($msg, 'test reason', 'the exception message is available in the on_fail sub');
+
+
 ## Worker process exits.
 is($client->do_task('fail_exit'), undef,
     'Job that failed via exit returned undef');
