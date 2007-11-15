@@ -8,7 +8,7 @@ use lib 't';
 use TestGearman;
 
 if (start_server(PORT)) {
-    plan tests => 34;
+    plan tests => 33;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -79,16 +79,6 @@ $tasks->add_task('fail_die', undef, {
 });
 $tasks->wait;
 like($msg, qr/test reason/, 'the die message is available in the on_fail sub');
-
-### the exception message is available in the on_fail sub
-#$msg = undef;
-#$tasks = $client->new_task_set;
-#$tasks->add_task('fail_exception', undef, { 
-#        on_fail => sub { $msg = shift },
-#});
-#$tasks->wait;
-#is($msg, 'test reason', 'the exception message is available in the on_fail sub');
-
 
 ## Worker process exits.
 is($client->do_task('fail_exit'), undef,

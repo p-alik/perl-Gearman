@@ -26,7 +26,6 @@ $worker->register_function(sum => sub {
 
 $worker->register_function(fail => sub { undef });
 $worker->register_function(fail_die => sub { die 'test reason' });
-# $worker->register_function(fail_exception => sub { throw Error::Simple('test reason') });
 $worker->register_function(fail_exit => sub { exit 255 });
 
 $worker->register_function(sleep => sub { sleep $_[0]->arg });
