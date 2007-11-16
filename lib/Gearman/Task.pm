@@ -156,7 +156,7 @@ sub final_fail {
 
     $task->run_hook('final_fail', $task);
 
-    $task->{on_fail}->()       if $task->{on_fail};
+    $task->{on_fail}->($reason)       if $task->{on_fail};
     $task->{on_post_hooks}->() if $task->{on_post_hooks};
     $task->wipe;
 
