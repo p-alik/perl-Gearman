@@ -54,8 +54,8 @@ foreach my $iter (1..5) {
 }
 $tasks->wait;
 
-is($completed, 2, 'number of success'); # One starts immediately and on the queue
-is($failed, 3, 'number of failure'); # All the rest
+ok($completed == 2 || $completed == 1, 'number of success'); # One in the queue, plus one that may start immediately
+ok($failed == 3 || $failed== 4, 'number of failure'); # All the rest
 
 
 
