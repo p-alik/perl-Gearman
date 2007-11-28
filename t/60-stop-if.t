@@ -67,6 +67,8 @@ sleep 5;
 
 $client->do_task('work_exit');
 
+sleep 2; # make sure the worker has time to shut down and isn't still in the 'run' loop
+
 {
     my $result = $client->do_task('check_stop_if');
 
