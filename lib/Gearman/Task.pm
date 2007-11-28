@@ -7,6 +7,20 @@ use String::CRC32 ();
 use Gearman::Taskset;
 use Gearman::Util;
 
+BEGIN {
+    my $storable = eval { require Storable; 1 }
+    if !defined &RECEIVE_EXCEPTIONS || RECEIVE_EXCEPTIONS();
+
+    $storable ||= 0;
+
+    if (defined &RECEIVE_EXCEPTIONS) {
+        die "Exceptions support requires Storable: $@";
+    } else {
+        eval "sub RECEIVE_EXCEPTIONS () { $storable }";
+        die "Couldn't define RECEIVE_EXCEPTIONS: $@\n" if $@;
+    }
+}
+
 # constructor, given: ($func, $argref, $opts);
 sub new {
     my $class = shift;
@@ -165,6 +179,8 @@ sub final_fail {
 
 sub exception {
     my Gearman::Task $task = shift;
+
+    return unless RECEIVE_EXCEPTIONS;
 
     my $exception_ref = shift;
     my $exception = Storable::thaw($$exception_ref);

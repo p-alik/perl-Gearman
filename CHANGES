@@ -1,3 +1,6 @@
+     -- Make the Gearman::Task class autoload Storable and fail gracefully when it's not
+        loadable.
+
      -- Initial fold-in of exceptions support in the gearman client, makes an option
         to the gearman server to enable it, and is disabled by default. Workers will
         will attempt to throw exceptions anytime Storable is available.
