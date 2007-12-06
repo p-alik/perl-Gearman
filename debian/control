@@ -1,0 +1,20 @@
+Source: libgearman-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 4.0.2)
+Build-Depends-Indep: perl (>= 5.8.0-7)
+Maintainer: Jonathan Steinert <debian@hachi.kuiki.net>
+Standards-Version: 3.6.1
+
+Package: libgearman-perl
+Architecture: all
+Depends: ${perl:Depends}, ${misc:Depends}, libstring-crc32-perl
+Description:  Client for gearman distributed job system
+ Gearman::Client is a client class for the Gearman distributed job
+ system, providing a framework for sending jobs to one or more Gearman
+ servers.  These jobs are then distributed out to a farm of workers.
+ .
+ Callers instantiate a Gearman::Client object and from it dispatch
+ single tasks, sets of tasks, or check on the status of tasks.
+ .
+ This description was automagically extracted from the module by dh-make-perl.

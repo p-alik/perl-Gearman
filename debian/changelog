@@ -1,0 +1,12 @@
+libgearman-perl (1.09-1) unstable; urgency=low
+
+  * Upstream release
+
+ -- Jonathan Steinert <deb@hachi.kuiki.net>  Wed, 14 Nov 2007 18:39:05 -0800
+
+libgearman-perl (1.04-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Jonathan Steinert <debian@hachi.kuiki.net>  Tue, 20 Feb 2007 00:58:02 -0800
+
