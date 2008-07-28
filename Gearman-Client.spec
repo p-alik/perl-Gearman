@@ -1,6 +1,6 @@
 name:      perl-Gearman-Client
 summary:   perl-Gearman-Client - Gearman client libs
-version:   1.07
+version:   1.09
 release:   1
 vendor:    Brad Fitzpatrick <brad@danga.com>
 packager:  Jonathan Steinert <hachi@cpan.org>
@@ -11,6 +11,7 @@ buildarch: noarch
 source:    Gearman-%{version}.tar.gz
 buildrequires: perl-String-CRC32
 requires:  perl-String-CRC32
+conflicts: Gearman <= 1.03
 autoreq: no
 
 %description
