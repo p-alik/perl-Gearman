@@ -123,6 +123,7 @@ sub dispatch_background {
 
     my $err;
     my $res = Gearman::Util::read_res_packet($jss, \$err);
+    $self->_put_js_sock($jst, $jss);
     return 0 unless $res && $res->{type} eq "job_created";
     return "$jst//${$res->{blobref}}";
 }
