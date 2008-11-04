@@ -236,6 +236,12 @@ sub func {
     my Gearman::Task $task = shift;
     return $task->{func};
 }
+
+sub timeout {
+    my Gearman::Task $task = shift;
+    return $task->{timeout} unless @_;
+    return $task->{timeout} = shift;
+}
 1;
 __END__
 

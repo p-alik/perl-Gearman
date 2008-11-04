@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 
-#TODO: timeout isn't supported by this client API yet.
-
 package Gearman::Client;
 
 our $VERSION;
@@ -102,7 +100,7 @@ sub do_task {
 
     my $ts = $self->new_task_set;
     $ts->add_task($task);
-    $ts->wait;
+    $ts->wait(timeout => $task->timeout);
 
     return $did_err ? undef : $ret;
 

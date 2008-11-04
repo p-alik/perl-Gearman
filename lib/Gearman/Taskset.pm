@@ -111,7 +111,7 @@ sub wait {
     my %opts = @_;
 
     my $timeout;
-    if (exists $opts{timeout}) {
+    if (defined $opts{timeout}) {
         $timeout = delete $opts{timeout};
         $timeout += Time::HiRes::time();
     }
