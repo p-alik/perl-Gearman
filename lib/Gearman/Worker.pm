@@ -402,6 +402,18 @@ sub register_function {
     $self->{can}{$func} = $subref;
 }
 
+sub unregister_function {
+    my Gearman::Worker $self = shift;
+    my $func = shift;
+
+    $func = join "\t", $self->prefix, $func if $self->prefix;
+
+    my $req = Gearman::Util::pack_req_command("cant_do", $func);
+
+    $self->_register_all($req);
+    delete $self->{can}{$func};
+}
+
 sub _register_all {
     my Gearman::Worker $self = shift;
     my $req = shift;
