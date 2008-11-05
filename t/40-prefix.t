@@ -4,6 +4,7 @@ use strict;
 use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
+use Time::HiRes 'sleep';
 
 use lib 't';
 use TestGearman;
@@ -11,7 +12,7 @@ use TestGearman;
 
 
 if (start_server(PORT)) {
-    plan tests => 8;
+    plan tests => 9;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -63,4 +64,17 @@ for my $k (sort keys %tasks) {
     is($out{$k}, "$k from prefix_$k", "taskset from client_$k");
 }
 
+## dispatch_background tasks also support prefixing
+my $bg_task = Gearman::Task->new('echo_sleep', \('sleep prefix test'));
+my $handle = $client_a->dispatch_background($bg_task);
 
+## wait for the task to be done
+my $status;
+my $n = 0;
+do {
+    sleep 0.1;
+    $n++;
+    diag "still waiting..." if $n == 12;
+    $status = $client_a->get_status($handle);
+} until $status->percent == 1 or $n == 20;
+is $status->percent, 1, "Background task completed using prefix";

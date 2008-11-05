@@ -232,7 +232,3 @@ do {
     $status = $client->get_status($handle);
 } until $status->percent == 1;
 
-
-
-
-

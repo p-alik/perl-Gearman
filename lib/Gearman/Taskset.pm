@@ -196,7 +196,7 @@ sub add_task {
 
     $ts->run_hook('add_task', $ts, $task);
 
-    my $req = $task->pack_submit_packet;
+    my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
     my $rv = $task->{jssock}->syswrite($req, $len);
     die "Wrote $rv but expected to write $len" unless $rv == $len;

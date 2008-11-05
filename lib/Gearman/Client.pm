@@ -115,7 +115,7 @@ sub dispatch_background {
     my ($jst, $jss) = $self->_get_random_js_sock;
     return 0 unless $jss;
 
-    my $req = $task->pack_submit_packet("background");
+    my $req = $task->pack_submit_packet($self, "background");
     my $len = length($req);
     my $rv = $jss->write($req, $len);
 

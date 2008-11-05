@@ -44,6 +44,13 @@ $worker->register_function(echo_prefix => sub {
     join " from ", $_[0]->arg, $prefix;
 });
 
+$worker->register_function(echo_sleep => sub {
+    my($job) = @_;
+    $job->set_status(1, 1);
+    sleep 2; ## allow some time to read the status
+    join " from ", $_[0]->arg, $prefix;
+});
+
 
 $worker->register_function(long => sub {
     my($job) = @_;
