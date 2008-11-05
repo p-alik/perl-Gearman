@@ -111,9 +111,9 @@ sub wait {
     my %opts = @_;
 
     my $timeout;
-    if (defined $opts{timeout}) {
+    if (exists $opts{timeout}) {
         $timeout = delete $opts{timeout};
-        $timeout += Time::HiRes::time();
+        $timeout += Time::HiRes::time() if defined $timeout;
     }
 
     Carp::carp "Unknown options: " . join(',', keys %opts) . " passed to Taskset->wait."
