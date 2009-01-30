@@ -373,7 +373,7 @@ sub work {
             }
 
             # chill for some arbitrary time until we're woken up again
-            my $nready = select($wake_vec, undef, undef, 10);
+            my $nready = select($wake_vec, undef, undef, 60);
             $is_idle = 0 if $nready;
         }
 
