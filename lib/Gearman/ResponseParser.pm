@@ -85,7 +85,7 @@ sub parse_data {
 
     }
 
-    if (length(${ $self->{pkt}{blobref} }) == $self->{pkt}{len}) {
+    if (defined($self->{pkt}) && length(${ $self->{pkt}{blobref} }) == $self->{pkt}{len}) {
         $self->on_packet($self->{pkt}, $self);
         $self->reset;
     }
