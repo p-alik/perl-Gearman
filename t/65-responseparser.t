@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 2;
+use Test::More tests => 6;
 use Gearman::Client;
 
 our $last_packet = undef;
@@ -16,6 +16,22 @@ test_packet("\0RES\0\0\0\x0a\0\0\0\x01!", {
 test_packet("\0RES\0\0\0\x0a\0\0\0\0", {
     len => 0,
     blobref => \"", #"
+    type => 'no_job',
+});
+
+# Message split into two packets
+test_packet("\0RE", undef);
+test_packet("S\0\0\0\x0a\0\0\0\0", {
+    len => 0,
+    blobref => \"", #"
+    type => 'no_job',
+});
+
+# Message with payload split into two packets
+test_packet("\0RES\0\0\0\x0a\0\0\0\x02a", undef);
+test_packet("b", {
+    len => 2,
+    blobref => \"ab", #"
     type => 'no_job',
 });
 
