@@ -58,6 +58,7 @@ $worker->register_function(long => sub {
     sleep 2;
     $job->set_status(100, 100);
     sleep 2;
+    return $job->arg;
 });
 
 my $nsig;

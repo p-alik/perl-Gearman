@@ -36,7 +36,14 @@ my $arg = "x" x ( 5 * 1024 * 1024 );
 
 $tasks->add_task('long', \$arg, {
     on_complete => sub {
-        pass("Large job succeeded");
+        my $rr = shift;
+        if (length($$rr) != length($arg)) {
+            fail("Large job failed size check: got ".length($$rr).", want ".length($arg));
+        } elsif ($$rr ne $arg) {
+            fail("Large job failed content check");
+        } else {
+            pass("Large job succeeded");
+        }
     },
     on_fail     => sub {
         fail("Large job failed");

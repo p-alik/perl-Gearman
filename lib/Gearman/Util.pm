@@ -108,14 +108,16 @@ sub read_res_packet {
         # one element for each read, then do a big join at the end. This minimizes
         # the number of memory allocations we have to do.
         my $readlen = $len;
+        my $lim = 20 + int( $len / 2**10 );
         my @buffers;
-        for (my $i = 0; $readlen > 0 && $i < 20; $i++) {
+        for (my $i = 0; $readlen > 0 && $i < $lim; $i++) {
             my $rv = sysread($sock, $buffers[$i], $readlen);
             return $err->("short_body") unless $rv > 0;
             last unless $rv > 0;
             $readlen -= $rv;
         }
         $buf = join('', @buffers);
+        return $err->("short_body") unless length($buf) == $len; 
     }
 
     $type = $cmd{$type};
