@@ -1,3 +1,9 @@
+     -- Fix issue where the other response parser code in Util would silently truncate
+        argument strings longer than 20*the socket buffer size.
+
+     -- Fix issue where the ResponseParser class would not correctly handle messages with
+        zero-length bodies.
+
      -- Make the Gearman::Task class autoload Storable and fail gracefully when it's not
         loadable.
 
