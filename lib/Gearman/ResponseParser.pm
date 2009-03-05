@@ -83,6 +83,10 @@ sub parse_data {
 
         ${$self->{pkt}{blobref}} .= substr($$dataref, 0, $to_copy, '');
 
+        if ($to_copy == $need) {
+            $self->on_packet($self->{pkt}, $self);
+            $self->reset;
+        }
     }
 
     if (defined($self->{pkt}) && length(${ $self->{pkt}{blobref} }) == $self->{pkt}{len}) {
