@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 9;
 use Gearman::Client;
 
 our $last_packet = undef;
@@ -45,6 +45,20 @@ test_packet("\0RES\0\0\0\x0a\0\0\0\x02a", undef);
 test_packet("b", {
     len => 2,
     blobref => \"ab", #"
+    type => 'no_job',
+});
+
+# Two packets, with the first containing a full message
+# and a partial message, and the second containing the
+# remainder of the partial message.
+test_packet("\0RES\0\0\0\x0a\0\0\0\x02ab\0RES\0\0\0\x0a\0\0\0\x02b", {
+    len => 2,
+    blobref => \"ab", #"
+    type => 'no_job',
+});
+test_packet("a", {
+    len => 2,
+    blobref => \"ba", #"
     type => 'no_job',
 });
 
