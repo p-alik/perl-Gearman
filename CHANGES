@@ -1,3 +1,6 @@
+     -- Fix issue where prefixes were double-prepended on function names on worker
+        upon reconnect.
+
      -- Fix issue where the other response parser code in Util would silently truncate
         argument strings longer than 20*the socket buffer size.
 

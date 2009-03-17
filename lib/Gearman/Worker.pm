@@ -69,8 +69,8 @@ use fields (
             'last_connect_fail', # host:port -> unixtime
             'down_since',        # host:port -> unixtime
             'connecting',        # host:port -> unixtime connect started at
-            'can',               # func -> subref
-            'timeouts',          # func -> timeouts
+            'can',               # ability -> subref     (ability is func with optional prefix)
+            'timeouts',          # ability -> timeouts
             'client_id',         # random identifer string, no whitespace
             'parent_pipe',       # bool/obj:  if we're a child process of a gearman server,
                                  #   this is socket to our parent process.  also means parent
@@ -104,7 +104,7 @@ sub new {
     $self->{can} = {};
     $self->{timeouts} = {};
     $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
-    $self->{prefix}   = '';
+    $self->{prefix}   = undef;
 
     $self->debug($opts{debug}) if $opts{debug};
 
@@ -185,9 +185,9 @@ sub _on_connect {
     return undef unless Gearman::Util::send_req($sock, \$cid_req);
 
     # get this socket's state caught-up
-    foreach my $func (keys %{$self->{can}}) {
-        my $timeout = $self->{timeouts}->{$func};
-        unless ($self->_set_ability($sock, $func, $timeout)) {
+    foreach my $ability (keys %{$self->{can}}) {
+        my $timeout = $self->{timeouts}->{$ability};
+        unless ($self->_set_ability($sock, $ability, $timeout)) {
             return undef;
         }
     }
@@ -197,15 +197,13 @@ sub _on_connect {
 
 sub _set_ability {
     my Gearman::Worker $self = shift;
-    my ($sock, $func, $timeout) = @_;
-
-    $func = join "\t", $self->prefix, $func if $self->prefix;
+    my ($sock, $ability, $timeout) = @_;
 
     my $req;
     if (defined $timeout) {
-        $req = Gearman::Util::pack_req_command("can_do_timeout", "$func\0$timeout");
+        $req = Gearman::Util::pack_req_command("can_do_timeout", "$ability\0$timeout");
     } else {
-        $req = Gearman::Util::pack_req_command("can_do", $func);
+        $req = Gearman::Util::pack_req_command("can_do", $ability);
     }
     return Gearman::Util::send_req($sock, \$req);
 }
@@ -322,16 +320,16 @@ sub work {
 
             ${ $res->{'blobref'} } =~ s/^(.+?)\0(.+?)\0//
                 or die "Uh, regexp on job_assign failed";
-            my ($handle, $func) = ($1, $2);
-            my $job = Gearman::Job->new($func, $res->{'blobref'}, $handle, $jss);
+            my ($handle, $ability) = ($1, $2);
+            my $job = Gearman::Job->new($ability, $res->{'blobref'}, $handle, $jss);
 
             my $jobhandle = "$js//" . $job->handle;
             $start_cb->($jobhandle) if $start_cb;
 
-            my $handler = $self->{can}{$func};
+            my $handler = $self->{can}{$ability};
             my $ret = eval { $handler->($job); };
             my $err = $@;
-            warn "Job '$func' died: $err" if $err;
+            warn "Job '$ability' died: $err" if $err;
 
             $last_job_time = time();
 
@@ -388,30 +386,32 @@ sub register_function {
     my $timeout = shift unless (ref $_[0] eq 'CODE');
     my $subref = shift;
 
-    $func = join "\t", $self->prefix, $func if $self->prefix;
+    my $prefix = $self->prefix;
+    my $ability = defined($prefix) ? "$prefix\t$func" : "$func";
 
     my $req;
     if (defined $timeout) {
-        $req = Gearman::Util::pack_req_command("can_do_timeout", "$func\0$timeout");
-        $self->{timeouts}{$func} = $timeout;
+        $req = Gearman::Util::pack_req_command("can_do_timeout", "$ability\0$timeout");
+        $self->{timeouts}{$ability} = $timeout;
     } else {
-        $req = Gearman::Util::pack_req_command("can_do", $func);
+        $req = Gearman::Util::pack_req_command("can_do", $ability);
     }
 
     $self->_register_all($req);
-    $self->{can}{$func} = $subref;
+    $self->{can}{$ability} = $subref;
 }
 
 sub unregister_function {
     my Gearman::Worker $self = shift;
     my $func = shift;
 
-    $func = join "\t", $self->prefix, $func if $self->prefix;
+    my $prefix = $self->prefix;
+    my $ability = defined($prefix) ? "$prefix\t$func" : "$func";
 
-    my $req = Gearman::Util::pack_req_command("cant_do", $func);
+    my $req = Gearman::Util::pack_req_command("cant_do", $ability);
 
     $self->_register_all($req);
-    delete $self->{can}{$func};
+    delete $self->{can}{$ability};
 }
 
 sub _register_all {
