@@ -25,6 +25,9 @@ isa_ok($client, 'Gearman::Client');
 $client->job_servers('127.0.0.1:' . PORT);
 
 {
+    # If we start up too fast, then the worker hasn't gone 'idle' yet.
+    sleep 1;
+
     my $result = $client->do_task('check_stop_if');
 
     my ($is_idle, $last_job_time) = @{thaw($$result)};
