@@ -127,6 +127,10 @@ sub new {
 sub _get_js_sock {
     my Gearman::Worker $self = shift;
     my $ipport = shift;
+    my %opts = @_;
+
+    my $on_connect = delete $opts{on_connect};
+    # Someday should warn when called with extra opts.
 
     warn "getting job server socket: $ipport" if $self->debug;
 
@@ -167,7 +171,7 @@ sub _get_js_sock {
 
     $self->{sock_cache}{$ipport} = $sock;
 
-    unless ($self->_on_connect($sock)) {
+    unless ($self->_on_connect($sock) && $on_connect && $on_connect->($sock)) {
         delete $self->{sock_cache}{$ipport};
         return undef;
     }
@@ -363,8 +367,12 @@ sub work {
 
         my @jss;
 
+        my $on_connect = sub {
+            return Gearman::Util::send_req($_[0], \$presleep_req);
+        };
+
         foreach my $js (@{$self->{job_servers}}) {
-            my $jss = $self->_get_js_sock($js)
+            my $jss = $self->_get_js_sock($js, on_connect => $on_connect)
                 or next;
             push @jss, [$js, $jss];
         }
