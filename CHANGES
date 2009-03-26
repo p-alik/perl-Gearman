@@ -1,3 +1,5 @@
+     -- Help prevent leaks when Gearman::Task->add_hook is used.
+
      -- Change worker to only 'wake up' against a gearmand that has woken it up, this prevents
         a constant flood of pre-sleep command from arriving at an otherwise silent gearmand.
 

@@ -228,7 +228,7 @@ sub set_on_post_hooks {
 
 sub wipe {
     my Gearman::Task $task = shift;
-    foreach my $f (qw(on_post_hooks on_complete on_fail on_retry on_status)) {
+    foreach my $f (qw(on_post_hooks on_complete on_fail on_retry on_status hooks)) {
         $task->{$f} = undef;
     }
 }

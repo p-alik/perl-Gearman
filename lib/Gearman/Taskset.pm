@@ -20,6 +20,7 @@ sub new {
     $self->{client}      = $client;
     $self->{loaned_sock} = {};
     $self->{cancelled}   = 0;
+    $self->{hooks}       = {};
 
     return $self;
 }
