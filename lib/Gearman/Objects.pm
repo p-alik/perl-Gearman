@@ -48,6 +48,7 @@ use fields (
             'on_post_hooks',   # used internally, when other hooks are done running, prior to cleanup
             'retry_count',
             'timeout',
+            'try_timeout',
             'high_priority',
 
             # from server:

@@ -37,7 +37,7 @@ sub new {
     my $opts = shift || {};
     for my $k (qw( uniq
                    on_complete on_exception on_fail on_retry on_status
-                   retry_count timeout high_priority
+                   retry_count timeout high_priority try_timeout
                )) {
         $self->{$k} = delete $opts->{$k};
     }
@@ -149,6 +149,7 @@ sub pack_submit_packet {
 
 sub fail {
     my Gearman::Task $task = shift;
+    my $reason = shift;
     return if $task->{is_finished};
 
     # try to retry, if we can
@@ -159,7 +160,7 @@ sub fail {
         return $task->{taskset}->add_task($task);
     }
 
-    $task->final_fail;
+    $task->final_fail($reason);
 }
 
 sub final_fail {
@@ -171,8 +172,8 @@ sub final_fail {
 
     $task->run_hook('final_fail', $task);
 
-    $task->{on_fail}->($reason)       if $task->{on_fail};
-    $task->{on_post_hooks}->() if $task->{on_post_hooks};
+    $task->{on_fail}->($reason) if $task->{on_fail};
+    $task->{on_post_hooks}->()  if $task->{on_post_hooks};
     $task->wipe;
 
     return undef;
@@ -335,6 +336,12 @@ Automatically fail, calling your on_fail callback, after this many
 seconds have elapsed without an on_fail or on_complete being
 called. Defaults to 0, which means never.  Bypasses any retry_count
 remaining.
+
+=item * try_timeout
+
+Automatically fail, calling your on_retry callback (or on_fail if out of
+retries), after this many seconds have elapsed. Defaults to 0, which means
+never.
 
 =back
 
