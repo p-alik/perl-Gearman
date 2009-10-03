@@ -252,13 +252,21 @@ sub work {
 
     my $grab_req = Gearman::Util::pack_req_command("grab_job");
     my $presleep_req = Gearman::Util::pack_req_command("pre_sleep");
-    my %fd_map;
 
     my $last_job_time;
 
+    # "Active" job servers are servers that have woken us up and should be
+    # queried to see if they have jobs for us to handle. On our first pass
+    # in the loop we contact all servers.
     my %active_js = map { $_ => 1 } @{$self->{job_servers}};
 
+    # ( js => last_update_time, ... )
+    my %last_update_time;
+
     while (1) {
+        # "Jobby" job servers are the set of server which we will contact
+        # on this pass through the loop, because we need to clear and use
+        # the "Active" set to plan for our next pass through the loop.
         my @jobby_js = keys %active_js;
 
         %active_js = ();
@@ -285,6 +293,7 @@ sub work {
                     exit(0);
                 }
                 $self->uncache_sock($js, "grab_job_timeout");
+                delete $last_update_time{$js};
                 next;
             }
 
@@ -295,6 +304,7 @@ sub work {
             my $timeout = $self->{parent_pipe} ? 5 : 0.50;
             unless (Gearman::Util::wait_for_readability($jss->fileno, $timeout)) {
                 $self->uncache_sock($js, "grab_job_timeout");
+                delete $last_update_time{$js};
                 next;
             }
 
@@ -304,14 +314,17 @@ sub work {
                 $res = Gearman::Util::read_res_packet($jss, \$err);
                 unless ($res) {
                     $self->uncache_sock($js, "read_res_error");
+                    delete $last_update_time{$js};
                     next;
                 }
             } while ($res->{type} eq "noop");
 
             if ($res->{type} eq "no_job") {
                 unless (Gearman::Util::send_req($jss, \$presleep_req)) {
+                    delete $last_update_time{$js};
                     $self->uncache_sock($js, "write_presleep_error");
                 }
+                $last_update_time{$js} = time;
                 next;
             }
 
@@ -337,7 +350,7 @@ sub work {
             my $err = $@;
             warn "Job '$ability' died: $err" if $err;
 
-            $last_job_time = time();
+            $last_update_time{$js} = $last_job_time = time();
 
             if (THROW_EXCEPTIONS && $err) {
                 my $exception_req = Gearman::Util::pack_req_command("work_exception", join("\0", $handle, Storable::nfreeze(\$err)));
@@ -404,6 +417,12 @@ sub work {
         $is_idle = 0 if keys %active_js;
 
         return if $stop_if->($is_idle, $last_job_time);
+
+        my $update_since = time - (15 + rand 60);
+
+        while (my ($js, $last_update) = each %last_update_time) {
+            $active_js{$js} = 1 if $last_update < $update_since;
+        }
     }
 
 }

@@ -1,3 +1,7 @@
+     -- Make workers wake up periodically for a particular server to make sure they aren't
+        stale connections. This happened naturally (although at relatively low interval) in
+        previous releases.
+
      -- Help prevent leaks when Gearman::Task->add_hook is used.
 
      -- Change worker to only 'wake up' against a gearmand that has woken it up, this prevents
