@@ -1,3 +1,5 @@
+1.10 (2009-10-04)
+
      -- Make workers wake up periodically for a particular server to make sure they aren't
         stale connections. This happened naturally (although at relatively low interval) in
         previous releases.

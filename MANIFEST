@@ -24,4 +24,5 @@ t/60-stop-if.t
 t/lib/GearTestLib.pm
 t/TestGearman.pm
 t/worker.pl
+t/65-responseparser.t
 TODO
