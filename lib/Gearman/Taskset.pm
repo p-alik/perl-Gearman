@@ -208,7 +208,6 @@ sub add_task {
         if (! $rv) {
             shift @{ $ts->{need_handle} };  # ditch it, it failed.
             # this will resubmit it if it failed.
-            print " INITIAL SUBMIT FAILED\n";
             return $task->fail;
         }
     }

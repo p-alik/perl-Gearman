@@ -1,3 +1,6 @@
+     -- Fix from Martin Atkins, don't print() in the Gearman::Util code and close sockets
+        when you have an error of some kind (indicating we're out of sync)
+
 1.10 (2009-10-04)
 
      -- Make workers wake up periodically for a particular server to make sure they aren't

@@ -89,6 +89,7 @@ sub read_res_packet {
 
     my $err = sub {
         my $code = shift;
+        $sock->close() if $sock->connected;
         $$err_ref = $code if ref $err_ref;
         return undef;
     };
