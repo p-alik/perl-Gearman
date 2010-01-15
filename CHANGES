@@ -1,3 +1,6 @@
+     -- Switch read_res_packet to use sysread with a large buffer and offsets. This improves
+        memory usage (sometimes drastically) and performance.
+
      -- Fix from Martin Atkins, don't print() in the Gearman::Util code and close sockets
         when you have an error of some kind (indicating we're out of sync)
 
