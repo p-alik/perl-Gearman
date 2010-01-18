@@ -1,3 +1,5 @@
+1.11 (2010-01-17)
+
      -- Switch read_res_packet to use sysread with a large buffer and offsets. This improves
         memory usage (sometimes drastically) and performance.
 
