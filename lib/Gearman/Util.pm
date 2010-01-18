@@ -109,6 +109,9 @@ sub read_res_packet {
         my $offset = 0;
         my $lim = 20 + int( $len / 2**10 );
         for (my $i = 0; $readlen > 0 && $i < $lim; $i++) {
+            # Because we know the length of the data we need to read exactly, the
+            # most efficient way to do this in perl is with one giant buffer, and
+            # an appropriate offset passed to sysread.
             my $rv = sysread($sock, $buf, $readlen, $offset);
             return $err->("short_body") unless $rv > 0;
             last unless $rv > 0;
