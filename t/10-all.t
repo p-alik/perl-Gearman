@@ -212,6 +212,39 @@ like($out, qr/p.+6/, 'High priority tasks executed in priority order.');
 ## We just killed off all but one worker--make sure they get respawned.
 respawn_children();
 
+my $js_status = $client->get_job_server_status();
+isnt($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{capable}, 0, 'Correct capable jobs for echo_prefix');
+isnt($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{capable}, 0, 'Correct capable jobs for echo_prefix, again');
+isnt($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{capable}, 0, 'Correct capable jobs for echo_prefix, yet again');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, again');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, yet again');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, again');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, yet again');
+
+$tasks = $client->new_task_set;
+$tasks->add_task('sleep', 1);
+my $js_jobs = $client->get_job_server_jobs();
+is(scalar keys %$js_jobs, 1, 'Correct number of running jobs');
+my $host = (keys %$js_jobs)[0];
+is($js_jobs->{$host}->{'sleep'}->{key}, '', 'Correct key for running job');
+isnt($js_jobs->{$host}->{'sleep'}->{address}, undef, 'Correct address for running job');
+is($js_jobs->{$host}->{'sleep'}->{listeners}, 1, 'Correct listeners for running job');
+$tasks->wait;
+
+$tasks = $client->new_task_set;
+$tasks->add_task('sleep', 1);
+my $js_clients = $client->get_job_server_clients();
+foreach my $js (keys %$js_clients) {
+    foreach my $client (keys %{ $js_clients->{$js} }) {
+        next unless scalar keys %{ $js_clients->{$js}->{$client} };
+        is($js_clients->{$js}->{$client}->{'sleep'}->{key}, '', 'Correct key for running job via client');
+        isnt($js_clients->{$js}->{$client}->{'sleep'}->{address}, undef, 'Correct address for running job via client');
+    }
+}
+$tasks->wait;
+
 ## Test dispatch_background and get_status.
 $handle = $client->dispatch_background(long => undef, {
     on_complete => sub { $out = ${ $_[0] } },
@@ -231,36 +264,3 @@ do {
     sleep 1;
     $status = $client->get_status($handle);
 } until $status->percent == 1;
-
-my $js_status = $client->get_job_server_status();
-is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix');
-is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, again');
-is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, yet again');
-is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix');
-is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, again');
-is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, yet again');
-is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix');
-is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, again');
-is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, yet again');
-
-$tasks = $client->new_task_set;
-$tasks->add_task('sleep', 1);
-my $js_jobs = $client->get_job_server_jobs();
-is(scalar keys %$js_jobs, 1, 'Correct number of running jobs');
-my $host = (keys %$js_jobs)[0];
-is($js_jobs->{$host}->{'sleep'}->{key}, '', 'Correct key for running job');
-is($js_jobs->{$host}->{'sleep'}->{address}, '-', 'Correct address for running job');
-is($js_jobs->{$host}->{'sleep'}->{listeners}, 1, 'Correct listeners for running job');
-$tasks->wait;
-
-$tasks = $client->new_task_set;
-$tasks->add_task('sleep', 1);
-my $js_clients = $client->get_job_server_clients();
-foreach my $js (keys %$js_clients) {
-    foreach my $client (keys %{ $js_clients->{$js} }) {
-        next unless scalar keys %{ $js_clients->{$js}->{$client} };
-        is($js_clients->{$js}->{$client}->{'sleep'}->{key}, '', 'Correct key for running job via client');
-        is($js_clients->{$js}->{$client}->{'sleep'}->{address}, '-', 'Correct address for running job via client');
-    }
-}
-$tasks->wait;
