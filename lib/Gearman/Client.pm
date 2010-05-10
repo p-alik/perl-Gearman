@@ -145,6 +145,33 @@ sub get_job_server_jobs {
     return $js_jobs;
 }
 
+sub get_job_server_clients {
+    my Gearman::Client $self = shift;
+
+    my $js_clients = {};
+    my $client;
+    $self->_job_server_status_command(
+        "clients\n",
+        sub {
+            my ($hostport, $line) = @_;
+
+            if ($line =~ /^(\S+)$/) {
+                $client = $1;
+                $js_clients->{$hostport}->{$client} ||= {};
+            }
+            elsif ($client && $line =~ /^\s+(\S+)\s+(\S*)\s+(\S+)$/) {
+                my ($job, $key, $address) = ($1, $2, $3);
+                $js_clients->{$hostport}->{$client}->{$job} = {
+                    key       => $key,
+                    address   => $address,
+                };
+            }
+        },
+        @_
+    );
+    return $js_clients;
+}
+
 sub _get_task_from_args {
     my Gearman::Task $task;
     if (ref $_[0]) {
