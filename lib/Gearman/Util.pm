@@ -132,6 +132,35 @@ sub read_res_packet {
     };
 }
 
+sub read_text_status {
+    my $sock = shift;
+    my $err_ref = shift;
+
+    my $err = sub {
+        my $code = shift;
+        $sock->close() if $sock->connected;
+        $$err_ref = $code if ref $err_ref;
+        return undef;
+    };
+
+    my @lines;
+    my $complete = 0;
+    while (my $line = <$sock>) {
+        chomp $line;
+        return $err->($1) if $line =~ /^ERR (\w+) /;
+
+        if ($line eq '.') {
+            $complete++;
+            last;
+        }
+
+        push @lines, $line;
+    }
+    return $err->("eof") unless $complete;
+
+    return @lines;
+}
+
 sub send_req {
     my ($sock, $reqref) = @_;
     return 0 unless $sock;
