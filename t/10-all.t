@@ -50,14 +50,6 @@ my $handle = $tasks->add_task(sum => freeze([ 3, 5 ]), {
     on_complete => sub { $sum = ${ $_[0] } },
     on_fail => sub { $failed = 1 }
 });
-
-my $js_jobs = $client->get_job_server_jobs();
-is(scalar keys %$js_jobs, 1, 'correct number of running jobs');
-my $host = (keys %$js_jobs)[0];
-is($js_jobs->{$host}->{sum}->{key}, '', 'correct key for running job');
-is($js_jobs->{$host}->{sum}->{address}, '-', 'correct address for running job');
-is($js_jobs->{$host}->{sum}->{listeners}, 1, 'correct listeners for running job');
-
 $tasks->wait;
 is($sum, 8, 'add_task/wait returned 8 for sum');
 is($failed, 0, 'on_fail not called on a successful result');
@@ -241,15 +233,25 @@ do {
 } until $status->percent == 1;
 
 my $js_status = $client->get_job_server_status();
-is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, :9050');
-is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, :9051');
-is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, :9052');
-is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, :9050');
-is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, :9051');
-is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, :9052');
-is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9050');
-is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9051');
-is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9052');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, again');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, yet again');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, again');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, yet again');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, again');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, yet again');
+
+$tasks = $client->new_task_set;
+$tasks->add_task('sleep', 1);
+my $js_jobs = $client->get_job_server_jobs();
+is(scalar keys %$js_jobs, 1, 'Correct number of running jobs');
+my $host = (keys %$js_jobs)[0];
+is($js_jobs->{$host}->{'sleep'}->{key}, '', 'Correct key for running job');
+is($js_jobs->{$host}->{'sleep'}->{address}, '-', 'Correct address for running job');
+is($js_jobs->{$host}->{'sleep'}->{listeners}, 1, 'Correct listeners for running job');
+$tasks->wait;
 
 $tasks = $client->new_task_set;
 $tasks->add_task('sleep', 1);
