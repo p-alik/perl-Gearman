@@ -91,10 +91,7 @@ sub get_job_server_status {
         next if $err;
 
         foreach my $line (@lines) {
-            unless ($line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/) {
-                warn "line: $line";
-                last;
-            }
+            last unless $line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
 
             my ($job, $queued, $running, $capable) = ($1, $2, $3, $4);
             $js_status->{$hostport}->{$job} = {
