@@ -8,7 +8,7 @@ use lib 't';
 use TestGearman;
 
 if (start_server(PORT)) {
-    plan tests => 42;
+    plan tests => 46;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -50,6 +50,14 @@ my $handle = $tasks->add_task(sum => freeze([ 3, 5 ]), {
     on_complete => sub { $sum = ${ $_[0] } },
     on_fail => sub { $failed = 1 }
 });
+
+my $js_jobs = $client->get_job_server_jobs();
+is(scalar keys %$js_jobs, 1, 'correct number of running jobs');
+my $host = (keys %$js_jobs)[0];
+is($js_jobs->{$host}->{sum}->{key}, '', 'correct key for running job');
+is($js_jobs->{$host}->{sum}->{address}, '-', 'correct address for running job');
+is($js_jobs->{$host}->{sum}->{listeners}, 1, 'correct listeners for running job');
+
 $tasks->wait;
 is($sum, 8, 'add_task/wait returned 8 for sum');
 is($failed, 0, 'on_fail not called on a successful result');

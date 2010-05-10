@@ -121,6 +121,30 @@ sub get_job_server_status {
     return $js_status;
 }
 
+sub get_job_server_jobs {
+    my Gearman::Client $self = shift;
+
+    my $js_jobs = {};
+    $self->_job_server_status_command(
+        "jobs\n",
+        sub {
+            my ($hostport, $line) = @_;
+
+            # Yes, the unique key is sometimes omitted.
+            return unless $line =~ /^(\S+)\s+(\S*)\s+(\S+)\s+(\d+)$/;
+
+            my ($job, $key, $address, $listeners) = ($1, $2, $3, $4);
+            $js_jobs->{$hostport}->{$job} = {
+                key       => $key,
+                address   => $address,
+                listeners => $listeners,
+            };
+        },
+        @_
+    );
+    return $js_jobs;
+}
+
 sub _get_task_from_args {
     my Gearman::Task $task;
     if (ref $_[0]) {
