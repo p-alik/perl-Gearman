@@ -8,7 +8,7 @@ use lib 't';
 use TestGearman;
 
 if (start_server(PORT)) {
-    plan tests => 33;
+    plan tests => 42;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -231,4 +231,15 @@ do {
     sleep 1;
     $status = $client->get_status($handle);
 } until $status->percent == 1;
+
+my $js_status = $client->get_job_server_status();
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, :9050');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, :9051');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{capable}, 2, 'Correct capable jobs for echo_prefix, :9052');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, :9050');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, :9051');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{running}, 0, 'Correct running jobs for echo_prefix, :9052');
+is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9050');
+is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9051');
+is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9052');
 
