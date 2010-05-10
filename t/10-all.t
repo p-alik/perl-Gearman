@@ -8,7 +8,7 @@ use lib 't';
 use TestGearman;
 
 if (start_server(PORT)) {
-    plan tests => 46;
+    plan tests => 48;
 } else {
     plan skip_all => "Can't find server to test with";
     exit 0;
@@ -251,3 +251,14 @@ is($js_status->{'127.0.0.1:9050'}->{echo_prefix}->{queued}, 0, 'Correct queued j
 is($js_status->{'127.0.0.1:9051'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9051');
 is($js_status->{'127.0.0.1:9052'}->{echo_prefix}->{queued}, 0, 'Correct queued jobs for echo_prefix, :9052');
 
+$tasks = $client->new_task_set;
+$tasks->add_task('sleep', 1);
+my $js_clients = $client->get_job_server_clients();
+foreach my $js (keys %$js_clients) {
+    foreach my $client (keys %{ $js_clients->{$js} }) {
+        next unless scalar keys %{ $js_clients->{$js}->{$client} };
+        is($js_clients->{$js}->{$client}->{'sleep'}->{key}, '', 'Correct key for running job via client');
+        is($js_clients->{$js}->{$client}->{'sleep'}->{address}, '-', 'Correct address for running job via client');
+    }
+}
+$tasks->wait;
