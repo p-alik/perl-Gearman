@@ -71,27 +71,43 @@ sub set_job_servers {
     return $self->{job_servers} = $list;
 }
 
-sub get_job_server_status {
+sub _job_server_status_command {
     my Gearman::Client $self = shift;
+    my $command = shift; # e.g. "status\n".
+    my $each_line_sub = shift; # A sub to be called on each line of response;
+                               # takes $hostport and the $line as args.
 
     my $list = _canonicalize_job_servers(@_);
     $list = $self->{job_servers} unless @$list;
 
-    my $js_status = {};
     foreach my $hostport (@$list) {
         next unless grep { $_ eq $hostport } @{ $self->{job_servers} };
 
         my $sock = $self->_get_js_sock($hostport)
             or next;
 
-        my $rv = $sock->write("status\n");
+        my $rv = $sock->write($command);
 
         my $err;
         my @lines = Gearman::Util::read_text_status($sock, \$err);
         next if $err;
 
-        foreach my $line (@lines) {
-            last unless $line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
+        $each_line_sub->($hostport, $_) foreach @lines;
+
+        $self->_put_js_sock($hostport, $sock);
+    }
+}
+
+sub get_job_server_status {
+    my Gearman::Client $self = shift;
+
+    my $js_status = {};
+    $self->_job_server_status_command(
+        "status\n",
+        sub {
+            my ($hostport, $line) = @_;
+
+            return unless $line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
 
             my ($job, $queued, $running, $capable) = ($1, $2, $3, $4);
             $js_status->{$hostport}->{$job} = {
@@ -99,11 +115,9 @@ sub get_job_server_status {
                 running => $running,
                 capable => $capable,
             };
-        }
-
-        $self->_put_js_sock($hostport, $sock);
-    }
-
+        },
+        @_
+    );
     return $js_status;
 }
 
