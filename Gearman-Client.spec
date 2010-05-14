@@ -1,6 +1,6 @@
 name:      perl-Gearman-Client
 summary:   perl-Gearman-Client - Gearman client libs
-version:   1.10
+version:   1.11
 release:   1
 vendor:    Alan Kasindorf <dormando@rydia.net>
 packager:  Jonathan Steinert <hachi@cpan.org>
