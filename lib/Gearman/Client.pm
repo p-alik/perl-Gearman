@@ -220,18 +220,10 @@ sub dispatch_background {
     my Gearman::Client $self = shift;
     my Gearman::Task $task = &_get_task_from_args;
 
-    my ($jst, $jss) = $self->_get_random_js_sock;
-    return 0 unless $jss;
+    $task->{background} = 1;
 
-    my $req = $task->pack_submit_packet($self, "background");
-    my $len = length($req);
-    my $rv = $jss->write($req, $len);
-
-    my $err;
-    my $res = Gearman::Util::read_res_packet($jss, \$err);
-    $self->_put_js_sock($jst, $jss);
-    return 0 unless $res && $res->{type} eq "job_created";
-    return "$jst//${$res->{blobref}}";
+    my $ts = $self->new_task_set;
+    return $ts->add_task($task);
 }
 
 sub run_hook {

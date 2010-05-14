@@ -288,6 +288,7 @@ sub _process_packet {
         }
 
         $task->handle("$ipport//$shandle");
+        return 1 if $task->{background};
         push @{ $ts->{waiting}{$shandle} ||= [] }, $task;
         return 1;
     }

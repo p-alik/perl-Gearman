@@ -37,7 +37,7 @@ sub new {
     my $opts = shift || {};
     for my $k (qw( uniq
                    on_complete on_exception on_fail on_retry on_status
-                   retry_count timeout high_priority try_timeout
+                   retry_count timeout high_priority background try_timeout
                )) {
         $self->{$k} = delete $opts->{$k};
     }
@@ -126,9 +126,8 @@ sub _hashfunc {
 sub pack_submit_packet {
     my Gearman::Task $task = shift;
     my Gearman::Client $client = shift;
-    my $is_background = shift;
 
-    my $mode = $is_background ?
+    my $mode = $task->{background} ?
         "submit_job_bg" :
         ($task->{high_priority} ?
          "submit_job_high" :

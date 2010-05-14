@@ -50,6 +50,7 @@ use fields (
             'timeout',
             'try_timeout',
             'high_priority',
+            'background',
 
             # from server:
             'handle',
