@@ -298,7 +298,7 @@ sub _option_request {
     my $rv = $sock->write($req, $len);
 
     my $err;
-    my $res = Gearman::Util::read_res_packet($sock, \$err);
+    my $res = Gearman::Util::read_res_packet($sock, \$err, $self->{command_timeout});
 
     return unless $res;
 
