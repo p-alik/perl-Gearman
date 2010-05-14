@@ -2,6 +2,12 @@
 package Gearman::Util;
 use strict;
 
+use Errno qw(EAGAIN);
+use Time::HiRes qw();
+use IO::Handle;
+
+sub DEBUG () { 0 }
+
 # I: to jobserver
 # O: out of job server
 # W: worker
@@ -81,11 +87,11 @@ sub pack_res_command {
 
 # returns undef on closed socket or malformed packet
 sub read_res_packet {
+    warn " Entering read_res_packet" if DEBUG;
     my $sock = shift;
     my $err_ref = shift;
-
-    my $buf;
-    my $rv;
+    my $timeout = shift;
+    my $time_start = Time::HiRes::time();
 
     my $err = sub {
         my $code = shift;
@@ -94,42 +100,84 @@ sub read_res_packet {
         return undef;
     };
 
-    # read the header
-    $rv = sysread($sock, $buf, 12);
+    IO::Handle::blocking($sock, 0);
 
-    return $err->("read_error")       unless defined $rv;
-    return $err->("eof")              unless $rv;
-    return $err->("malformed_header") unless $rv == 12;
+    my $fileno = fileno($sock);
+    my $rin = '';
+    vec($rin, $fileno, 1) = 1;
 
-    my ($magic, $type, $len) = unpack("a4NN", $buf);
-    return $err->("malformed_magic") unless $magic eq "\0RES";
+    my $readlen = 12;
+    my $offset = 0;
+    my $buf = '';
 
-    if ($len) {
-        my $readlen = $len;
-        my $offset = 0;
-        my $lim = 20 + int( $len / 2**10 );
-        for (my $i = 0; $readlen > 0 && $i < $lim; $i++) {
-            # Because we know the length of the data we need to read exactly, the
-            # most efficient way to do this in perl is with one giant buffer, and
-            # an appropriate offset passed to sysread.
-            my $rv = sysread($sock, $buf, $readlen, $offset);
-            return $err->("short_body") unless $rv > 0;
-            last unless $rv > 0;
-            $readlen -= $rv;
-            $offset += $rv;
+    my ($magic, $type, $len);
+
+    warn " Starting up event loop\n" if DEBUG;
+
+    LOOP: while (1) {
+        my $time_remaining = undef;
+        if (defined $timeout) {
+            warn "  We have a timeout of $timeout\n" if DEBUG;
+            $time_remaining = $time_start + $timeout - Time::HiRes::time();
+            return $err->("timeout") if $time_remaining < 0;
         }
-        return $err->("short_body") unless length($buf) == $len; 
+
+        warn "  Selecting on fd $fileno\n" if DEBUG;
+        my $nfound = select((my $rout = $rin), undef, undef, $time_remaining);
+
+        warn "   Got $nfound fds back from select\n" if DEBUG;
+
+        next LOOP unless vec($rout, $fileno, 1);
+
+        warn "   Entering read loop\n" if DEBUG;
+
+        READ: {
+            local $!;
+            my $rv = sysread($sock, $buf, $readlen, $offset);
+
+            unless ($rv) {
+                warn "   Read error: $!\n" if DEBUG;
+                next LOOP if $! == EAGAIN;
+            }
+
+            return $err->("read_error")       unless defined $rv;
+            return $err->("eof")              unless $rv;
+
+            unless ($rv >= $readlen) {
+                warn "   Partial read of $rv bytes, at offset $offset, readlen was $readlen\n" if DEBUG;
+                $offset += $rv;
+                $readlen -= $rv;
+                redo READ;
+            }
+
+            warn "   Finished reading\n" if DEBUG;
+        }
+
+        if (!defined $type) {
+            next unless length($buf) >= 12;
+            my $header = substr($buf, 0, 12, '');
+            ($magic, $type, $len) = unpack("a4NN", $header);
+            return $err->("malformed_magic") unless $magic eq "\0RES";
+            my $starting = length($buf);
+            $readlen = $len - $starting;
+            $offset = $starting;
+            goto READ if $readlen;
+        }
+
+        $type = $cmd{$type};
+        return $err->("bogus_command") unless $type;
+        return $err->("bogus_command_type") unless index($type->[0], "O") != -1;
+
+        warn " Fully formed res packet, returning; type=$type->[1] len=$len\n" if DEBUG;
+
+        IO::Handle::blocking($sock, 1);
+
+        return {
+            'type' => $type->[1],
+            'len' => $len,
+            'blobref' => \$buf,
+        };
     }
-
-    $type = $cmd{$type};
-    return $err->("bogus_command") unless $type;
-    return $err->("bogus_command_type") unless index($type->[0], "O") != -1;
-
-    return {
-        'type' => $type->[1],
-        'len' => $len,
-        'blobref' => \$buf,
-    };
 }
 
 sub read_text_status {
