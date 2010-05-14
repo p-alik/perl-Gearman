@@ -8,6 +8,7 @@ $VERSION = '1.11';
 use strict;
 use IO::Socket::INET;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
+use Time::HiRes;
 
 use Gearman::Objects;
 use Gearman::Task;
@@ -25,6 +26,7 @@ sub new {
     $self->{hooks} = {};
     $self->{prefix} = '';
     $self->{exceptions} = 0;
+    $self->{backoff_max} = 90;
 
     $self->debug($opts{debug}) if $opts{debug};
 
@@ -35,6 +37,9 @@ sub new {
         if exists $opts{exceptions};
 
     $self->prefix($opts{prefix}) if $opts{prefix};
+
+    $self->{backoff_max} = $opts{backoff_max}
+        if defined $opts{backoff_max};
 
     return $self;
 }
@@ -311,9 +316,21 @@ sub _get_js_sock {
         return $sock if $sock->connected;
     }
 
+    my $sockinfo = $self->{sock_info}{$hostport} ||= {};
+    my $disabled_until = $sockinfo->{disabled_until};
+    return if defined $disabled_until && $disabled_until > Time::HiRes::time();
+
     my $sock = IO::Socket::INET->new(PeerAddr => $hostport,
-                                     Timeout => 1)
-        or return undef;
+                                     Timeout => 1);
+
+    unless ($sock) {
+        my $count = ++$sockinfo->{failed_connects};
+        my $disable_for = $count ** 2;
+        my $max = $self->{backoff_max};
+        $disable_for = $disable_for > $max ? $max : $disable_for;
+        $sockinfo->{disabled_until} = $disable_for + Time::HiRes::time();
+        return;
+    }
 
     setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
     $sock->autoflush(1);
@@ -324,6 +341,9 @@ sub _get_js_sock {
         warn "Exceptions support denied by server, disabling.\n";
         $self->{exceptions} = 0;
     }
+
+    delete $sockinfo->{failed_connects}; # Success, mark the socket as such.
+    delete $sockinfo->{disabled_until};
 
     return $sock;
 }

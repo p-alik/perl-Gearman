@@ -183,14 +183,18 @@ sub add_task {
 
     $ts->run_hook('add_task', $ts, $task);
 
+    my $jssock = $task->{jssock};
+
+    return $task->fail unless ($jssock);
+
     my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
-    my $rv = $task->{jssock}->syswrite($req, $len);
+    my $rv = $jssock->syswrite($req, $len);
     die "Wrote $rv but expected to write $len" unless $rv == $len;
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
-        my $rv = $ts->_wait_for_packet($task->{jssock});
+        my $rv = $ts->_wait_for_packet($jssock);
         if (! $rv) {
             shift @{ $ts->{need_handle} };  # ditch it, it failed.
             # this will resubmit it if it failed.

@@ -1,3 +1,7 @@
+     -- When a connection to a gearman server fails, start counting how many failures we've had and
+        do an exponential backoff (1s, 4s, 9s, 16s...) to a maximum of 90 seconds (default) that we
+        treat the server as 'gone' quickly.
+
      -- Change dispatch_background to share code paths with other dispatching, this will make
         background jobs now be hashed to a particular server (rather than handed to a random server)
 

@@ -10,10 +10,12 @@ use fields (
             'job_servers',
             'js_count',
             'sock_cache',  # hostport -> socket
+            'sock_info',   # hostport -> hashref
             'hooks',       # hookname -> coderef
             'prefix',
             'debug',
             'exceptions',
+            'backoff_max',
             );
 
 package Gearman::Taskset;
