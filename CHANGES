@@ -1,3 +1,9 @@
+     -- Make $taskset->add_task use the command timeout to not hang during job submission.
+
+     -- Add a client option 'command_timeout' to indicate how long we should wait before considering a
+        gearman command to have failed. This not the same as a job timeout, and only affects commands
+        that should generally not block apart from the roundtrip on the network.
+
      -- When a connection to a gearman server fails, start counting how many failures we've had and
         do an exponential backoff (1s, 4s, 9s, 16s...) to a maximum of 90 seconds (default) that we
         treat the server as 'gone' quickly.

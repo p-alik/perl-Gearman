@@ -16,6 +16,7 @@ use fields (
             'debug',
             'exceptions',
             'backoff_max',
+            'command_timeout', # maximum time a gearman command should take to get a result (not a job timeout)
             );
 
 package Gearman::Taskset;

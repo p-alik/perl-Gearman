@@ -194,7 +194,7 @@ sub add_task {
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
-        my $rv = $ts->_wait_for_packet($jssock);
+        my $rv = $ts->_wait_for_packet($jssock, $ts->{client}->{command_timeout});
         if (! $rv) {
             shift @{ $ts->{need_handle} };  # ditch it, it failed.
             # this will resubmit it if it failed.

@@ -27,6 +27,7 @@ sub new {
     $self->{prefix} = '';
     $self->{exceptions} = 0;
     $self->{backoff_max} = 90;
+    $self->{command_timeout} = 30;
 
     $self->debug($opts{debug}) if $opts{debug};
 
@@ -40,6 +41,9 @@ sub new {
 
     $self->{backoff_max} = $opts{backoff_max}
         if defined $opts{backoff_max};
+
+    $self->{command_timeout} = $opts{command_timeout}
+        if defined $opts{command_timeout};
 
     return $self;
 }
