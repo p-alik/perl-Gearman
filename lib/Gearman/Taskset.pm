@@ -137,7 +137,7 @@ sub wait {
         $tries++;
 
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
-        my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left);
+        my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left); # TODO drop the eout.
         if ($timeout && $time_left <= 0) {
             $ts->cancel;
             return;
