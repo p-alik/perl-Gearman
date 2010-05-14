@@ -217,6 +217,7 @@ sub _get_default_sock {
     };
 
     my ($jst, $jss) = $ts->{client}->_get_random_js_sock($getter);
+    return unless $jss;
     $ts->{loaned_sock}{$jst} ||= $jss;
 
     $ts->{default_sock} = $jss;
