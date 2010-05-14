@@ -245,9 +245,10 @@ sub _get_hashed_sock {
 sub _wait_for_packet {
     my Gearman::Taskset $ts = shift;
     my $sock = shift;  # socket to singularly read from
+    my $timeout = shift;
 
     my ($res, $err);
-    $res = Gearman::Util::read_res_packet($sock, \$err);
+    $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
     return 0 unless $res;
     return $ts->_process_packet($res, $sock);
 }
