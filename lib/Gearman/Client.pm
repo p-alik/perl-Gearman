@@ -175,10 +175,12 @@ sub get_job_server_clients {
 sub _get_task_from_args {
     my Gearman::Task $task;
     if (ref $_[0]) {
-        $task = $_[0];
-        Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
+        $task = shift;
+        Carp::croak("Argument isn't a Gearman::Task") unless ref $task eq "Gearman::Task";
     } else {
-        my ($func, $arg_p, $opts) = @_;
+        my $func = shift;
+        my $arg_p = shift;
+        my $opts = shift;
         my $argref = ref $arg_p ? $arg_p : \$arg_p;
         Carp::croak("Function argument must be scalar or scalarref")
             unless ref $argref eq "SCALAR";

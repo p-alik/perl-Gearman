@@ -177,22 +177,8 @@ sub wait {
 
 sub add_task {
     my Gearman::Taskset $ts = shift;
-    my $task;
+    my $task = Gearman::Client::_get_task_from_args(@_);
 
-    if (ref $_[0]) {
-        $task = shift;
-    } else {
-        my $func = shift;
-        my $arg_p = shift;   # scalar or scalarref
-        my $opts = shift;    # $uniq or hashref of opts
-
-        my $argref = ref $arg_p ? $arg_p : \$arg_p;
-        unless (ref $opts eq "HASH") {
-            $opts = { uniq => $opts };
-        }
-
-        $task = Gearman::Task->new($func, $argref, $opts);
-    }
     $task->taskset($ts);
 
     $ts->run_hook('add_task', $ts, $task);
