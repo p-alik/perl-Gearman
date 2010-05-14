@@ -16,7 +16,7 @@ use Gearman::JobStatus;
 
 sub new {
     my ($class, %opts) = @_;
-    my $self = $class;
+    my Gearman::Client $self = $class;
     $self = fields::new($class) unless ref $self;
 
     $self->{job_servers} = [];
