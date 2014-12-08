@@ -1,7 +1,31 @@
-This is the debian package for the Gearman module.
-It was created by Jonathan Steinert <debian@hachi.kuiki.net> using dh-make-perl.
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Gearman
+Upstream-Contact: Alan Kasindorf <dormando@rydia.net>
+Source: https://metacpan.org/release/Gearman
 
-This copyright info was automatically extracted from the perl module.
-It may not be accurate, so you better check the module sources
-if don't want to get into legal troubles.
+Files: *
+Copyright: 2006-2007, Six Apart, Ltd.
+License: Artistic or GPL-1+
 
+Files: debian/*
+Copyright: 2007, Pascal Hakim <pasc@debian.org>
+ 2010, Jonathan Yu <jawnsy@cpan.org>
+ 2011, Richard Wallman <wallmari@bossolutions.co.uk>
+ 2013, gregor herrmann <gregoa@debian.org>
+License: Artistic or GPL-1+
+
+License: Artistic
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the Artistic License, which comes with Perl.
+ .
+ On Debian systems, the complete text of the Artistic License can be
+ found in `/usr/share/common-licenses/Artistic'.
+
+License: GPL-1+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 1, or (at your option)
+ any later version.
+ .
+ On Debian systems, the complete text of version 1 of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL-1'.

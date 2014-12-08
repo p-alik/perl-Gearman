@@ -1,0 +1,61 @@
+Description: use random ports when starting test gearman server
+ The defailt port of 9050 may be already taken, e.g. by tor, leading to test
+ hangs.
+Author: Damyan Ivanov <dmn@debian.org>
+Bug-Debian: http://bugs.debian.org/723940
+Bug: https://rt.cpan.org/Ticket/Display.html?id=91973
+
+--- a/t/TestGearman.pm
++++ b/t/TestGearman.pm
+@@ -9,8 +9,40 @@ use POSIX qw( :sys_wait_h );
+ our $Bin;
+ use FindBin qw( $Bin );
+ 
+-# TODO: use a variation of t/lib/GearTestLib::free_port to find 3 free ports
+-use constant PORT => 9050;
++our $_PORT;
++# find a sequence of three free ports and return the first
++sub PORT() {
++    #use Carp;
++    if ($_PORT) {
++        #Carp::cluck "# returning cached port $_PORT";
++        return $_PORT;
++    }
++
++    my $port = shift;
++    my $type = shift || "tcp";
++    my $sock;
++    SEQ:
++    while (1) {
++        for my $offset ( 0..2 ) {
++            $sock = IO::Socket::INET->new(
++                LocalAddr => '127.0.0.1',
++                LocalPort => $port + $offset,
++                Proto     => $type,
++                ReuseAddr => 1
++            );
++
++            unless ($sock) {
++                $port = int(rand(20000)) + 30000;
++                next SEQ;
++            }
++
++            undef($sock);
++        }
++
++        #Carp::cluck "# PORT = $port";
++        return $_PORT = $port;
++    }
++}
+ 
+ our $NUM_SERVERS = 1;
+ 
+@@ -33,6 +65,8 @@ sub start_server {
+         $ready = 1;
+     };
+ 
++    #use Carp;
++    #Carp::cluck "# Starting test server on port $port";
+     my $pid = start_child([ $server, '-p' => $port, '-n' => $$ ]);
+     $Children{$pid} = 'S';
+     while (!$ready) {

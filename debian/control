@@ -1,20 +1,32 @@
-Source: libgearman-perl
+Source: libgearman-client-perl
+Maintainer: Debian Perl Group <pkg-perl-maintainers@lists.alioth.debian.org>
+Uploaders: Jonathan Yu <jawnsy@cpan.org>
 Section: perl
 Priority: optional
-Build-Depends: debhelper (>= 4.0.2)
-Build-Depends-Indep: perl (>= 5.8.0-7)
-Maintainer: Jonathan Steinert <debian@hachi.kuiki.net>
-Standards-Version: 3.6.1
+Build-Depends: debhelper (>= 8)
+Build-Depends-Indep: perl,
+                     libstring-crc32-perl,
+                     gearman-server,
+                     netbase
+Build-Conflicts: gearman-server (<< 1.11)
+Standards-Version: 3.9.5
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-perl/packages/libgearman-client-perl.git
+Vcs-Git: git://anonscm.debian.org/pkg-perl/packages/libgearman-client-perl.git
+Homepage: https://metacpan.org/release/Gearman
 
-Package: libgearman-perl
+Package: libgearman-client-perl
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, libstring-crc32-perl
-Description:  Client for gearman distributed job system
- Gearman::Client is a client class for the Gearman distributed job
- system, providing a framework for sending jobs to one or more Gearman
- servers.  These jobs are then distributed out to a farm of workers.
+Depends: ${misc:Depends},
+         ${perl:Depends},
+         libstring-crc32-perl
+Breaks: gearman-server (<< 1.11)
+Description: client for the Gearman distributed job system
+ Gearman is a system to farm out work to other machines, dispatching function
+ calls to machines that are better suited to do work, to do work in parallel,
+ to load balance lots of function calls, or to call functions between
+ languages.
  .
- Callers instantiate a Gearman::Client object and from it dispatch
- single tasks, sets of tasks, or check on the status of tasks.
- .
- This description was automagically extracted from the module by dh-make-perl.
+ This package contains a client class for the Gearman distributed job system,
+ providing a framework for sending jobs to one or more Gearman servers. For
+ more information, see <URL:http://www.danga.com/gearman/>.
+
