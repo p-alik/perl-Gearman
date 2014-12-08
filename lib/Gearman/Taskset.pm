@@ -137,7 +137,7 @@ sub wait {
         $tries++;
 
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
-        my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left); # TODO drop the eout.
+        my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left);
         if ($timeout && $time_left <= 0) {
             $ts->cancel;
             return;
@@ -177,24 +177,34 @@ sub wait {
 
 sub add_task {
     my Gearman::Taskset $ts = shift;
-    my $task = Gearman::Client::_get_task_from_args(@_);
+    my $task;
 
+    if (ref $_[0]) {
+        $task = shift;
+    } else {
+        my $func = shift;
+        my $arg_p = shift;   # scalar or scalarref
+        my $opts = shift;    # $uniq or hashref of opts
+
+        my $argref = ref $arg_p ? $arg_p : \$arg_p;
+        unless (ref $opts eq "HASH") {
+            $opts = { uniq => $opts };
+        }
+
+        $task = Gearman::Task->new($func, $argref, $opts);
+    }
     $task->taskset($ts);
 
     $ts->run_hook('add_task', $ts, $task);
 
-    my $jssock = $task->{jssock};
-
-    return $task->fail unless ($jssock);
-
     my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
-    my $rv = $jssock->syswrite($req, $len);
+    my $rv = $task->{jssock}->syswrite($req, $len);
     die "Wrote $rv but expected to write $len" unless $rv == $len;
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
-        my $rv = $ts->_wait_for_packet($jssock, $ts->{client}->{command_timeout});
+        my $rv = $ts->_wait_for_packet($task->{jssock});
         if (! $rv) {
             shift @{ $ts->{need_handle} };  # ditch it, it failed.
             # this will resubmit it if it failed.
@@ -217,7 +227,6 @@ sub _get_default_sock {
     };
 
     my ($jst, $jss) = $ts->{client}->_get_random_js_sock($getter);
-    return unless $jss;
     $ts->{loaned_sock}{$jst} ||= $jss;
 
     $ts->{default_sock} = $jss;
@@ -245,10 +254,9 @@ sub _get_hashed_sock {
 sub _wait_for_packet {
     my Gearman::Taskset $ts = shift;
     my $sock = shift;  # socket to singularly read from
-    my $timeout = shift;
 
     my ($res, $err);
-    $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
+    $res = Gearman::Util::read_res_packet($sock, \$err);
     return 0 unless $res;
     return $ts->_process_packet($res, $sock);
 }
@@ -294,7 +302,6 @@ sub _process_packet {
         }
 
         $task->handle("$ipport//$shandle");
-        return 1 if $task->{background};
         push @{ $ts->{waiting}{$shandle} ||= [] }, $task;
         return 1;
     }

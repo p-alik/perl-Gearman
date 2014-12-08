@@ -2,12 +2,6 @@
 package Gearman::Util;
 use strict;
 
-use Errno qw(EAGAIN);
-use Time::HiRes qw();
-use IO::Handle;
-
-sub DEBUG () { 0 }
-
 # I: to jobserver
 # O: out of job server
 # W: worker
@@ -28,6 +22,7 @@ our %cmd = (
             7 =>  [ 'I', "submit_job" ],    # C->J  FUNC[0]UNIQ[0]ARGS
             21 =>  [ 'I', "submit_job_high" ],    # C->J  FUNC[0]UNIQ[0]ARGS
             18 => [ 'I', "submit_job_bg" ], # C->J     " "   "  " "
+            32 =>  [ 'I', "submit_job_high_bg" ],    # C->J  FUNC[0]UNIQ[0]ARGS
 
             8 =>  [ 'O', "job_created" ], # J->C HANDLE
             9 =>  [ 'I', "grab_job" ],    # W->J --
@@ -87,11 +82,11 @@ sub pack_res_command {
 
 # returns undef on closed socket or malformed packet
 sub read_res_packet {
-    warn " Entering read_res_packet" if DEBUG;
     my $sock = shift;
     my $err_ref = shift;
-    my $timeout = shift;
-    my $time_start = Time::HiRes::time();
+
+    my $buf;
+    my $rv;
 
     my $err = sub {
         my $code = shift;
@@ -100,113 +95,42 @@ sub read_res_packet {
         return undef;
     };
 
-    IO::Handle::blocking($sock, 0);
+    # read the header
+    $rv = sysread($sock, $buf, 12);
 
-    my $fileno = fileno($sock);
-    my $rin = '';
-    vec($rin, $fileno, 1) = 1;
+    return $err->("read_error")       unless defined $rv;
+    return $err->("eof")              unless $rv;
+    return $err->("malformed_header") unless $rv == 12;
 
-    my $readlen = 12;
-    my $offset = 0;
-    my $buf = '';
+    my ($magic, $type, $len) = unpack("a4NN", $buf);
+    return $err->("malformed_magic") unless $magic eq "\0RES";
 
-    my ($magic, $type, $len);
-
-    warn " Starting up event loop\n" if DEBUG;
-
-    LOOP: while (1) {
-        my $time_remaining = undef;
-        if (defined $timeout) {
-            warn "  We have a timeout of $timeout\n" if DEBUG;
-            $time_remaining = $time_start + $timeout - Time::HiRes::time();
-            return $err->("timeout") if $time_remaining < 0;
-        }
-
-        warn "  Selecting on fd $fileno\n" if DEBUG;
-        my $nfound = select((my $rout = $rin), undef, undef, $time_remaining);
-
-        warn "   Got $nfound fds back from select\n" if DEBUG;
-
-        next LOOP unless vec($rout, $fileno, 1);
-
-        warn "   Entering read loop\n" if DEBUG;
-
-        READ: {
-            local $!;
+    if ($len) {
+        my $readlen = $len;
+        my $offset = 0;
+        my $lim = 20 + int( $len / 2**10 );
+        for (my $i = 0; $readlen > 0 && $i < $lim; $i++) {
+            # Because we know the length of the data we need to read exactly, the
+            # most efficient way to do this in perl is with one giant buffer, and
+            # an appropriate offset passed to sysread.
             my $rv = sysread($sock, $buf, $readlen, $offset);
-
-            unless ($rv) {
-                warn "   Read error: $!\n" if DEBUG;
-                next LOOP if $! == EAGAIN;
-            }
-
-            return $err->("read_error")       unless defined $rv;
-            return $err->("eof")              unless $rv;
-
-            unless ($rv >= $readlen) {
-                warn "   Partial read of $rv bytes, at offset $offset, readlen was $readlen\n" if DEBUG;
-                $offset += $rv;
-                $readlen -= $rv;
-                redo READ;
-            }
-
-            warn "   Finished reading\n" if DEBUG;
+            return $err->("short_body") unless $rv > 0;
+            last unless $rv > 0;
+            $readlen -= $rv;
+            $offset += $rv;
         }
-
-        if (!defined $type) {
-            next unless length($buf) >= 12;
-            my $header = substr($buf, 0, 12, '');
-            ($magic, $type, $len) = unpack("a4NN", $header);
-            return $err->("malformed_magic") unless $magic eq "\0RES";
-            my $starting = length($buf);
-            $readlen = $len - $starting;
-            $offset = $starting;
-            goto READ if $readlen;
-        }
-
-        $type = $cmd{$type};
-        return $err->("bogus_command") unless $type;
-        return $err->("bogus_command_type") unless index($type->[0], "O") != -1;
-
-        warn " Fully formed res packet, returning; type=$type->[1] len=$len\n" if DEBUG;
-
-        IO::Handle::blocking($sock, 1);
-
-        return {
-            'type' => $type->[1],
-            'len' => $len,
-            'blobref' => \$buf,
-        };
+        return $err->("short_body") unless length($buf) == $len; 
     }
-}
 
-sub read_text_status {
-    my $sock = shift;
-    my $err_ref = shift;
+    $type = $cmd{$type};
+    return $err->("bogus_command") unless $type;
+    return $err->("bogus_command_type") unless index($type->[0], "O") != -1;
 
-    my $err = sub {
-        my $code = shift;
-        $sock->close() if $sock->connected;
-        $$err_ref = $code if ref $err_ref;
-        return undef;
+    return {
+        'type' => $type->[1],
+        'len' => $len,
+        'blobref' => \$buf,
     };
-
-    my @lines;
-    my $complete = 0;
-    while (my $line = <$sock>) {
-        chomp $line;
-        return $err->($1) if $line =~ /^ERR (\w+) /;
-
-        if ($line eq '.') {
-            $complete++;
-            last;
-        }
-
-        push @lines, $line;
-    }
-    return $err->("eof") unless $complete;
-
-    return @lines;
 }
 
 sub send_req {
