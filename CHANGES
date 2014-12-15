@@ -1,3 +1,5 @@
+     -- Repoint HACKING file.
+
      -- Make a jobserver connection use the command timeout during exception negotiation.
 
      -- Make $taskset->add_task use the command timeout to not hang during job submission.
