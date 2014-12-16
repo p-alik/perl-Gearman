@@ -3,7 +3,6 @@ use strict;
 use IO::Socket::INET;
 use Exporter 'import';
 use FindBin;
-use File::Basename 'dirname';
 use Carp qw(croak);
 use vars qw(@EXPORT);
 
@@ -41,6 +40,7 @@ sub start_child {
 
 package Test::GearServer;
 use List::Util qw(first);
+use File::Basename 'dirname';
 
 my $requested_port = 8999;
 
