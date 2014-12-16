@@ -1,3 +1,0 @@
-version=3
-https://metacpan.org/release/Gearman   .*/Gearman-v?(\d[\d.-]+)\.(?:tar(?:\.gz|\.bz2)?|tgz|zip)$
-
