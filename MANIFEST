@@ -14,6 +14,7 @@ MANIFEST			This list of files
 MANIFEST.SKIP			This list of files
 META.yml
 t/00-use.t
+t/09-connect.t
 t/10-all.t
 t/20-leaktest.t
 t/30-maxqueue.t
@@ -26,3 +27,4 @@ t/TestGearman.pm
 t/worker.pl
 t/65-responseparser.t
 TODO
+META.json                                Module JSON meta-data (added by MakeMaker)

@@ -7,6 +7,7 @@ WriteMakefile(
               'VERSION_FROM' => 'lib/Gearman/Client.pm',
               'PREREQ_PM' => {
                 String::CRC32 => 0,
+		Time::HiRes   => 0, # Usually core now
               }, # e.g., Module::Name => 1.1
               AUTHOR     => 'Brad Fitzpatrick <brad@danga.com>',
               ABSTRACT   => "Client and worker libraries for gearman job dispatch dispatch.  Server is in separate package.",

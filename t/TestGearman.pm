@@ -2,6 +2,7 @@ package TestGearman;
 use base qw(Exporter);
 @EXPORT = qw(start_server wait_for_port start_worker respawn_children pid_is_dead PORT %Children $NUM_SERVERS);
 use strict;
+use File::Basename 'dirname';
 use List::Util qw(first);;
 use IO::Socket::INET;
 use POSIX qw( :sys_wait_h );
@@ -22,6 +23,7 @@ sub start_server {
     my($port) = @_;
     my @loc = ("$Bin/../../../../server/gearmand",     # using svn
                "$Bin/../../../../../server/gearmand",  # using svn and 'disttest'
+               dirname($^X) . '/gearmand',     # local installs (e.g. perlbrew)
                '/usr/bin/gearmand',            # where some distros might put it
                '/usr/sbin/gearmand',           # where other distros might put it
                );

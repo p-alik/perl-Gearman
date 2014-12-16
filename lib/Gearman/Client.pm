@@ -3,11 +3,12 @@
 package Gearman::Client;
 
 our $VERSION;
-$VERSION = '1.11';
+$VERSION = '1.12';
 
 use strict;
 use IO::Socket::INET;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
+use Time::HiRes;
 
 use Gearman::Objects;
 use Gearman::Task;
@@ -16,7 +17,7 @@ use Gearman::JobStatus;
 
 sub new {
     my ($class, %opts) = @_;
-    my $self = $class;
+    my Gearman::Client $self = $class;
     $self = fields::new($class) unless ref $self;
 
     $self->{job_servers} = [];
@@ -25,6 +26,8 @@ sub new {
     $self->{hooks} = {};
     $self->{prefix} = '';
     $self->{exceptions} = 0;
+    $self->{backoff_max} = 90;
+    $self->{command_timeout} = 30;
 
     $self->debug($opts{debug}) if $opts{debug};
 
@@ -35,6 +38,12 @@ sub new {
         if exists $opts{exceptions};
 
     $self->prefix($opts{prefix}) if $opts{prefix};
+
+    $self->{backoff_max} = $opts{backoff_max}
+        if defined $opts{backoff_max};
+
+    $self->{command_timeout} = $opts{command_timeout}
+        if defined $opts{command_timeout};
 
     return $self;
 }
@@ -55,24 +64,132 @@ sub job_servers {
     $self->set_job_servers(@_);
 }
 
-sub set_job_servers {
-    my Gearman::Client $self = shift;
+sub _canonicalize_job_servers {
     my $list = ref $_[0] ? $_[0] : [ @_ ]; # take arrayref or array
-
-    $self->{js_count} = scalar @$list;
     foreach (@$list) {
         $_ .= ":7003" unless /:/;
     }
+    return $list;
+}
+
+sub set_job_servers {
+    my Gearman::Client $self = shift;
+    my $list = _canonicalize_job_servers(@_);
+
+    $self->{js_count} = scalar @$list;
     return $self->{job_servers} = $list;
+}
+
+sub _job_server_status_command {
+    my Gearman::Client $self = shift;
+    my $command = shift; # e.g. "status\n".
+    my $each_line_sub = shift; # A sub to be called on each line of response;
+                               # takes $hostport and the $line as args.
+
+    my $list = _canonicalize_job_servers(@_);
+    $list = $self->{job_servers} unless @$list;
+
+    foreach my $hostport (@$list) {
+        next unless grep { $_ eq $hostport } @{ $self->{job_servers} };
+
+        my $sock = $self->_get_js_sock($hostport)
+            or next;
+
+        my $rv = $sock->write($command);
+
+        my $err;
+        my @lines = Gearman::Util::read_text_status($sock, \$err);
+        next if $err;
+
+        $each_line_sub->($hostport, $_) foreach @lines;
+
+        $self->_put_js_sock($hostport, $sock);
+    }
+}
+
+sub get_job_server_status {
+    my Gearman::Client $self = shift;
+
+    my $js_status = {};
+    $self->_job_server_status_command(
+        "status\n",
+        sub {
+            my ($hostport, $line) = @_;
+
+            return unless $line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
+
+            my ($job, $queued, $running, $capable) = ($1, $2, $3, $4);
+            $js_status->{$hostport}->{$job} = {
+                queued  => $queued,
+                running => $running,
+                capable => $capable,
+            };
+        },
+        @_
+    );
+    return $js_status;
+}
+
+sub get_job_server_jobs {
+    my Gearman::Client $self = shift;
+
+    my $js_jobs = {};
+    $self->_job_server_status_command(
+        "jobs\n",
+        sub {
+            my ($hostport, $line) = @_;
+
+            # Yes, the unique key is sometimes omitted.
+            return unless $line =~ /^(\S+)\s+(\S*)\s+(\S+)\s+(\d+)$/;
+
+            my ($job, $key, $address, $listeners) = ($1, $2, $3, $4);
+            $js_jobs->{$hostport}->{$job} = {
+                key       => $key,
+                address   => $address,
+                listeners => $listeners,
+            };
+        },
+        @_
+    );
+    return $js_jobs;
+}
+
+sub get_job_server_clients {
+    my Gearman::Client $self = shift;
+
+    my $js_clients = {};
+    my $client;
+    $self->_job_server_status_command(
+        "clients\n",
+        sub {
+            my ($hostport, $line) = @_;
+
+            if ($line =~ /^(\S+)$/) {
+                $client = $1;
+                $js_clients->{$hostport}->{$client} ||= {};
+            }
+            elsif ($client && $line =~ /^\s+(\S+)\s+(\S*)\s+(\S+)$/) {
+                my ($job, $key, $address) = ($1, $2, $3);
+                $js_clients->{$hostport}->{$client}->{$job} = {
+                    key       => $key,
+                    address   => $address,
+                };
+            }
+        },
+        @_
+    );
+    return $js_clients;
 }
 
 sub _get_task_from_args {
     my Gearman::Task $task;
     if (ref $_[0]) {
-        $task = $_[0];
-        Carp::croak("Argument isn't a Gearman::Task") unless ref $_[0] eq "Gearman::Task";
+        $task = shift;
+        Carp::croak("Argument isn't a Gearman::Task") unless ref $task eq "Gearman::Task";
     } else {
-        my ($func, $arg_p, $opts) = @_;
+        my $func = shift;
+        my $arg_p = shift;
+        my $opts = shift;
         my $argref = ref $arg_p ? $arg_p : \$arg_p;
         Carp::croak("Function argument must be scalar or scalarref")
             unless ref $argref eq "SCALAR";
@@ -112,18 +229,10 @@ sub dispatch_background {
     my Gearman::Client $self = shift;
     my Gearman::Task $task = &_get_task_from_args;
 
-    my ($jst, $jss) = $self->_get_random_js_sock;
-    return 0 unless $jss;
+    $task->{background} = 1;
 
-    my $req = $task->pack_submit_packet($self, "background");
-    my $len = length($req);
-    my $rv = $jss->write($req, $len);
-
-    my $err;
-    my $res = Gearman::Util::read_res_packet($jss, \$err);
-    $self->_put_js_sock($jst, $jss);
-    return 0 unless $res && $res->{type} eq "job_created";
-    return "$jst//${$res->{blobref}}";
+    my $ts = $self->new_task_set;
+    return $ts->add_task($task);
 }
 
 sub run_hook {
@@ -189,7 +298,7 @@ sub _option_request {
     my $rv = $sock->write($req, $len);
 
     my $err;
-    my $res = Gearman::Util::read_res_packet($sock, \$err);
+    my $res = Gearman::Util::read_res_packet($sock, \$err, $self->{command_timeout});
 
     return unless $res;
 
@@ -211,9 +320,21 @@ sub _get_js_sock {
         return $sock if $sock->connected;
     }
 
+    my $sockinfo = $self->{sock_info}{$hostport} ||= {};
+    my $disabled_until = $sockinfo->{disabled_until};
+    return if defined $disabled_until && $disabled_until > Time::HiRes::time();
+
     my $sock = IO::Socket::INET->new(PeerAddr => $hostport,
-                                     Timeout => 1)
-        or return undef;
+                                     Timeout => 1);
+
+    unless ($sock) {
+        my $count = ++$sockinfo->{failed_connects};
+        my $disable_for = $count ** 2;
+        my $max = $self->{backoff_max};
+        $disable_for = $disable_for > $max ? $max : $disable_for;
+        $sockinfo->{disabled_until} = $disable_for + Time::HiRes::time();
+        return;
+    }
 
     setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
     $sock->autoflush(1);
@@ -224,6 +345,9 @@ sub _get_js_sock {
         warn "Exceptions support denied by server, disabling.\n";
         $self->{exceptions} = 0;
     }
+
+    delete $sockinfo->{failed_connects}; # Success, mark the socket as such.
+    delete $sockinfo->{disabled_until};
 
     return $sock;
 }

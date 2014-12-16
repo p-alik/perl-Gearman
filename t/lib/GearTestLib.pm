@@ -3,6 +3,7 @@ use strict;
 use IO::Socket::INET;
 use Exporter 'import';
 use FindBin;
+use File::Basename 'dirname';
 use Carp qw(croak);
 use vars qw(@EXPORT);
 
@@ -33,7 +34,7 @@ sub start_child {
     my $pid = fork();
     die $! unless defined $pid;
     unless ($pid) {
-        exec 'perl', '-Iblib/lib', '-Ilib', @$cmd or die $!;
+        exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
     }
     $pid;
 }
@@ -48,6 +49,7 @@ sub new {
     my $port = GearTestLib::free_port(++$requested_port);
 
     my @loc = ("$FindBin::Bin/../../../../server/gearmand",  # using svn
+               dirname($^X) . '/gearmand',     # local installs (e.g. perlbrew)
                '/usr/bin/gearmand',            # where some distros might put it
                '/usr/sbin/gearmand',           # where other distros might put it
                );

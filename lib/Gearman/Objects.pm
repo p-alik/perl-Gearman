@@ -10,10 +10,13 @@ use fields (
             'job_servers',
             'js_count',
             'sock_cache',  # hostport -> socket
+            'sock_info',   # hostport -> hashref
             'hooks',       # hookname -> coderef
             'prefix',
             'debug',
             'exceptions',
+            'backoff_max',
+            'command_timeout', # maximum time a gearman command should take to get a result (not a job timeout)
             );
 
 package Gearman::Taskset;
@@ -50,6 +53,7 @@ use fields (
             'timeout',
             'try_timeout',
             'high_priority',
+            'background',
 
             # from server:
             'handle',
