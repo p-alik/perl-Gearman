@@ -58,11 +58,11 @@ sub handle {
 }
 
 package Gearman::Worker;
+use base 'Gearman::Base';
+
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
 
 use fields (
-            'job_servers',
-            'js_count',
             'prefix',
             'debug',
             'sock_cache',        # host:port -> IO::Socket::INET
@@ -96,8 +96,8 @@ sub new {
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
-    $self->{job_servers} = [];
-    $self->{js_count} = 0;
+    $self->SUPER::new(debug => delete $opts{debug});
+
     $self->{sock_cache} = {};
     $self->{last_connect_fail} = {};
     $self->{down_since} = {};
@@ -106,7 +106,6 @@ sub new {
     $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
     $self->{prefix}   = undef;
 
-    $self->debug($opts{debug}) if $opts{debug};
 
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
         open my $sock, '+<&', \*STDIN or die "Unable to dup STDIN to socket for worker to use.";
@@ -479,25 +478,14 @@ sub _register_all {
 sub job_servers {
     my Gearman::Worker $self = shift;
     return if ($ENV{GEARMAN_WORKER_USE_STDIO});
-    return $self->{job_servers} unless @_;
-    my $list = [ @_ ];
-    $self->{js_count} = scalar @$list;
-    foreach (@$list) {
-        $_ .= ":7003" unless /:/;
-    }
-    return $self->{job_servers} = $list;
+
+    return $self->SUPER::job_servers(@_);
 }
 
 sub prefix {
     my Gearman::Worker $self = shift;
     return $self->{prefix} unless @_;
     $self->{prefix} = shift;
-}
-
-sub debug {
-    my Gearman::Worker $self = shift;
-    $self->{debug} = shift if @_;
-    return $self->{debug} || 0;
 }
 
 1;
@@ -557,9 +545,9 @@ Initializes the worker I<$worker> with the list of job servers in I<@servers>.
 I<@servers> should contain a list of IP addresses, with optional port numbers.
 For example:
 
-    $worker->job_servers('127.0.0.1', '192.168.1.100:7003');
+    $worker->job_servers('127.0.0.1', '192.168.1.100:4730');
 
-If the port number is not provided, 7003 is used as the default.
+If the port number is not provided, 4730 is used as the default.
 
 Calling this method will do nothing in a worker that is running as a child
 process of a gearman server.
