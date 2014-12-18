@@ -30,8 +30,6 @@ sub new {
     $self->{backoff_max} = 90;
     $self->{command_timeout} = 30;
 
-    $self->debug($opts{debug}) if $opts{debug};
-
     $self->{exceptions} = delete $opts{exceptions}
         if exists $opts{exceptions};
 
@@ -356,12 +354,6 @@ sub prefix {
     my Gearman::Client $self = shift;
     return $self->{prefix} unless @_;
     $self->{prefix} = shift;
-}
-
-sub debug {
-    my Gearman::Client $self = shift;
-    $self->{debug} = shift if @_;
-    return $self->{debug} || 0;
 }
 
 1;
