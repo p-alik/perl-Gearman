@@ -1,0 +1,119 @@
+1.11 (2010-01-17)
+
+     -- Switch read_res_packet to use sysread with a large buffer and offsets. This improves
+        memory usage (sometimes drastically) and performance.
+
+     -- Fix from Martin Atkins, don't print() in the Gearman::Util code and close sockets
+        when you have an error of some kind (indicating we're out of sync)
+
+1.10 (2009-10-04)
+
+     -- Make workers wake up periodically for a particular server to make sure they aren't
+        stale connections. This happened naturally (although at relatively low interval) in
+        previous releases.
+
+     -- Help prevent leaks when Gearman::Task->add_hook is used.
+
+     -- Change worker to only 'wake up' against a gearmand that has woken it up, this prevents
+        a constant flood of pre-sleep command from arriving at an otherwise silent gearmand.
+
+     -- Fix issue where prefixes were double-prepended on function names on worker
+        upon reconnect.
+
+     -- Fix issue where the other response parser code in Util would silently truncate
+        argument strings longer than 20*the socket buffer size.
+
+     -- Fix issue where the ResponseParser class would not correctly handle messages with
+        zero-length bodies.
+
+     -- Make the Gearman::Task class autoload Storable and fail gracefully when it's not
+        loadable.
+
+     -- Initial fold-in of exceptions support in the gearman client, makes an option
+        to the gearman server to enable it, and is disabled by default. Workers will
+        will attempt to throw exceptions anytime Storable is available.
+
+     -- fix jobs of > 32kilobytes in size so they work properly (workers would disconnect
+        when a job greater than 32kb would arrive.)
+
+     -- expose the time that the last job was processed in the stop_if hook of worker.
+        Since a jobserver wakes up all workers in the case of a new job to be processed
+        the concept of is_idle doesn't actually reflect if a worker has procssed jobs,
+        rather it indicates whether the jobserver has been silent for 10 seconds.
+
+     -- change server polling order in workers to start at a random point in the list
+        during every worker pass. So we drain jobs from all servers rather than
+        working on each of them in order.
+
+1.09 (2007-06-29)
+
+     -- document the license and copyright
+
+1.08 (2007-05-21)
+
+     -- add "package Gearman::Objects" line to Objects.pm, to ease RPM
+        building
+
+     -- reserve the packet number for "all_yours", not yet implemented
+
+     -- In pack_res_command, silence any warnings about 'undefined' or 'uninitialized'
+        variables if we aren't sending an argument along with the command.
+
+1.07 (2007-05-07)
+
+     -- continued improved support for child processes as workers,
+        making workers go away cleanly if parent pipe dies/EPIPEs.
+
+1.06 (2007-05-04)
+
+     -- better support for Gearman::Workers as child processes talking
+        to a Gearman::Server over unix pipe to parent
+
+     -- In worker class, broke out the on connection work, and use that better
+        in the case of being a sub process of the gearmand.
+
+1.05 (2007-04-26)
+
+     -- update the prefix code to not break Gearman::Client::Async, which
+        was also updated to be compatible.
+
+     -- Add ability for workers to be launched as sub processes of the
+        gearmand, using a duped socketpair for communication.
+
+     -- just some extra debugging/deaths during weird cases (helped find
+        bugs when server code was massively refactored)
+
+1.04 (2007-04-16)
+
+     -- Let Gearman::Worker use hostnames for job_servers (like
+        Gearman::Client does)  (Ask)
+
+     -- Add prefix setting to Gearman::Client and Gearman::Worker for simple
+        namespace separation of different instances of the same worker and
+        client code sharing job servers. (Ask Bjoern Hansen)
+
+     -- Refactor tests to have less duplicate code (Ask Bjoern Hansen)
+
+     -- Make Gearman::Client / Gearman::Worker tests use $^X instead
+        of hardcoded 'perl' to start gearmand (Ask Bjoern Hansen)
+
+1.03
+     -- Workers can now specify a timeout that when a task exceeds the time, the
+        jobserver will reassign the task and ignore results from the defunct job.
+
+1.02
+     -- Task objects weren't reusable before anyway, and now they're really not:
+        when they complete or fail, they wipe all their internal subref members
+        to break any potential loops.  also now support a new internal hook
+        that happens after your on_complete or on_failure callback.  this
+        is used by Gearman::Client::Async now, for cancelling timers.
+
+1.01
+     -- when workers are writing status messages up to parent, die on SIGPIPE,
+        or really any write errors, but just trap SIGPIPE now, if parent goes away.
+        fixes a bug found via Gearman::Client::Async's test suite.
+
+1.00
+     -- finally package it up and call it 1.00 now that we've been using
+        it in (LiveJournal) production for quite a while, finding/fixing
+        the bugs that happen when you put something into production.
