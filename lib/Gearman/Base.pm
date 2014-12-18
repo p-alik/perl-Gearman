@@ -5,6 +5,7 @@ use warnings;
 use constant DEFAULT_PORT => 4730;
 
 use fields qw/
+    debug
     job_servers
     js_count
     /;
@@ -18,8 +19,8 @@ sub new {
     $self->{job_servers} = [];
     $self->{js_count}    = 0;
 
-    $self->set_job_servers(@{ $opts{job_servers} })
-        if $opts{job_servers};
+    $opts{job_servers} && $self->set_job_servers(@{ $opts{job_servers} });
+    $opts{debug} && $self->debug($opts{debug});
 
     return $self;
 } ## end sub new
@@ -48,5 +49,11 @@ sub canonicalize_job_servers {
     }
     return $list;
 } ## end sub canonicalize_job_servers
+
+sub debug {
+    my $self = shift;
+    $self->{debug} = shift if @_;
+    return $self->{debug} || 0;
+}
 
 1;
