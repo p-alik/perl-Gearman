@@ -28,6 +28,7 @@ our %cmd = (
             7 =>  [ 'I', "submit_job" ],    # C->J  FUNC[0]UNIQ[0]ARGS
             21 =>  [ 'I', "submit_job_high" ],    # C->J  FUNC[0]UNIQ[0]ARGS
             18 => [ 'I', "submit_job_bg" ], # C->J     " "   "  " "
+            32 =>  [ 'I', "submit_job_high_bg" ],    # C->J  FUNC[0]UNIQ[0]ARGS
 
             8 =>  [ 'O', "job_created" ], # J->C HANDLE
             9 =>  [ 'I', "grab_job" ],    # W->J --

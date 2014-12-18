@@ -128,7 +128,9 @@ sub pack_submit_packet {
     my Gearman::Client $client = shift;
 
     my $mode = $task->{background} ?
-        "submit_job_bg" :
+        ($task->{high_priority} ?
+         "submit_job_high_bg" :
+         "submit_job_bg") :
         ($task->{high_priority} ?
          "submit_job_high" :
          "submit_job");
