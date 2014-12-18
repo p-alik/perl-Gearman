@@ -63,8 +63,6 @@ use base 'Gearman::Base';
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
 
 use fields (
-            'prefix',
-            'debug',
             'sock_cache',        # host:port -> IO::Socket::INET
             'last_connect_fail', # host:port -> unixtime
             'down_since',        # host:port -> unixtime
@@ -96,7 +94,7 @@ sub new {
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
-    $self->SUPER::new(debug => delete $opts{debug});
+    $self->SUPER::new(debug => delete $opts{debug}, prefix => delete $opts{prefix});
 
     $self->{sock_cache} = {};
     $self->{last_connect_fail} = {};
@@ -104,7 +102,6 @@ sub new {
     $self->{can} = {};
     $self->{timeouts} = {};
     $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1..30));
-    $self->{prefix}   = undef;
 
 
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
@@ -482,11 +479,6 @@ sub job_servers {
     return $self->SUPER::job_servers(@_);
 }
 
-sub prefix {
-    my Gearman::Worker $self = shift;
-    return $self->{prefix} unless @_;
-    $self->{prefix} = shift;
-}
 
 1;
 __END__

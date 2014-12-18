@@ -20,7 +20,9 @@ is(@{ $c->canonicalize_job_servers('foo') }[0],
 is(@{ $c->canonicalize_job_servers('foo:123') }[0],
     'foo:123', 'canonicalize_job_servers(foo:123)');
 
-is($c->debug(),  0, 'debug()');
-is($c->debug(1), 1, 'debug(1)');
+is($c->debug(),       0,     'debug()');
+is($c->debug(1),      1,     'debug(1)');
+is($c->prefix(),      undef, 'prefix');
+is($c->prefix('foo'), 'foo', 'prefix(foo)');
 
 done_testing();

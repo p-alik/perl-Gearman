@@ -25,15 +25,12 @@ sub new {
 
     $self->{sock_cache} = {};
     $self->{hooks} = {};
-    $self->{prefix} = '';
     $self->{exceptions} = 0;
     $self->{backoff_max} = 90;
     $self->{command_timeout} = 30;
 
     $self->{exceptions} = delete $opts{exceptions}
         if exists $opts{exceptions};
-
-    $self->prefix($opts{prefix}) if $opts{prefix};
 
     $self->{backoff_max} = $opts{backoff_max}
         if defined $opts{backoff_max};
@@ -348,12 +345,6 @@ sub _get_random_js_sock {
         return ($hostport, $sock);
     }
     return ();
-}
-
-sub prefix {
-    my Gearman::Client $self = shift;
-    return $self->{prefix} unless @_;
-    $self->{prefix} = shift;
 }
 
 1;

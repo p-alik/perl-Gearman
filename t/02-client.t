@@ -7,8 +7,6 @@ unless ($ENV{GEARMAN_SERVERS}) {
     exit;
 }
 
-my @servers = split /,/, $ENV{GEARMAN_SERVERS};
-
 use_ok('Gearman::Client');
 
 can_ok(
@@ -22,7 +20,8 @@ can_ok(
         /
 );
 
-my $c = new_ok('Gearman::Client', [job_servers => [@servers]]);
+my $c = new_ok('Gearman::Client',
+    [job_servers => [split /,/, $ENV{GEARMAN_SERVERS}]]);
 isa_ok($c, 'Gearman::Base');
 
 isa_ok($c->new_task_set(), 'Gearman::Taskset');

@@ -8,6 +8,7 @@ use fields qw/
     debug
     job_servers
     js_count
+    prefix
     /;
 
 sub new {
@@ -18,9 +19,11 @@ sub new {
     }
     $self->{job_servers} = [];
     $self->{js_count}    = 0;
+    $self->{prefix}      = undef;
 
     $opts{job_servers} && $self->set_job_servers(@{ $opts{job_servers} });
-    $opts{debug} && $self->debug($opts{debug});
+    $opts{debug}       && $self->debug($opts{debug});
+    $opts{prefix}      && $self->prefix($opts{prefix});
 
     return $self;
 } ## end sub new
@@ -54,6 +57,12 @@ sub debug {
     my $self = shift;
     $self->{debug} = shift if @_;
     return $self->{debug} || 0;
+}
+
+sub prefix {
+    my $self = shift;
+    return $self->{prefix} unless @_;
+    $self->{prefix} = shift;
 }
 
 1;
