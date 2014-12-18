@@ -10,6 +10,7 @@ use IO::Socket::INET;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
 use Time::HiRes;
 
+use base 'Gearman::Base';
 use Gearman::Objects;
 use Gearman::Task;
 use Gearman::Taskset;
@@ -20,8 +21,8 @@ sub new {
     my Gearman::Client $self = $class;
     $self = fields::new($class) unless ref $self;
 
-    $self->{job_servers} = [];
-    $self->{js_count} = 0;
+    $self->SUPER::new(%opts);
+
     $self->{sock_cache} = {};
     $self->{hooks} = {};
     $self->{prefix} = '';
@@ -30,9 +31,6 @@ sub new {
     $self->{command_timeout} = 30;
 
     $self->debug($opts{debug}) if $opts{debug};
-
-    $self->set_job_servers(@{ $opts{job_servers} })
-        if $opts{job_servers};
 
     $self->{exceptions} = delete $opts{exceptions}
         if exists $opts{exceptions};
@@ -55,38 +53,13 @@ sub new_task_set {
     return $taskset;
 }
 
-# getter/setter
-sub job_servers {
-    my Gearman::Client $self = shift;
-    unless (@_) {
-        return wantarray ? @{$self->{job_servers}} : $self->{job_servers};
-    }
-    $self->set_job_servers(@_);
-}
-
-sub _canonicalize_job_servers {
-    my $list = ref $_[0] ? $_[0] : [ @_ ]; # take arrayref or array
-    foreach (@$list) {
-        $_ .= ":7003" unless /:/;
-    }
-    return $list;
-}
-
-sub set_job_servers {
-    my Gearman::Client $self = shift;
-    my $list = _canonicalize_job_servers(@_);
-
-    $self->{js_count} = scalar @$list;
-    return $self->{job_servers} = $list;
-}
-
 sub _job_server_status_command {
     my Gearman::Client $self = shift;
     my $command = shift; # e.g. "status\n".
     my $each_line_sub = shift; # A sub to be called on each line of response;
                                # takes $hostport and the $line as args.
 
-    my $list = _canonicalize_job_servers(@_);
+    my $list = $self->canonicalize_job_servers(@_);
     $list = $self->{job_servers} unless @$list;
 
     foreach my $hostport (@$list) {
@@ -456,9 +429,9 @@ Initializes the client I<$client> with the list of job servers in I<@servers>.
 I<@servers> should contain a list of IP addresses, with optional port
 numbers. For example:
 
-    $client->job_servers('127.0.0.1', '192.168.1.100:7003');
+    $client->job_servers('127.0.0.1', '192.168.1.100:4730');
 
-If the port number is not provided, C<7003> is used as the default.
+If the port number is not provided, C<4730> is used as the default.
 
 =head2 $client-E<gt>do_task($task)
 
