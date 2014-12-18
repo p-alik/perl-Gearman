@@ -14,6 +14,7 @@ BEGIN {
     $storable ||= 0;
 
     if (defined &RECEIVE_EXCEPTIONS) {
+        #TODO perl -c died here
         die "Exceptions support requires Storable: $@";
     } else {
         eval "sub RECEIVE_EXCEPTIONS () { $storable }";
