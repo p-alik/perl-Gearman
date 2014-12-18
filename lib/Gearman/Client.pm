@@ -230,6 +230,11 @@ sub get_status {
     my Gearman::Client $self = shift;
     my $handle = shift;
     my ($hostport, $shandle) = split(m!//!, $handle);
+
+    #TODO simple check for $hostport in job_server doesn't work if
+    # $hostport is not contained in job_servers
+    # job_servers = ["localhost:4730"]
+    # handle = 127.0.0.1:4730//H:...
     return undef unless grep { $hostport eq $_ } @{ $self->{job_servers} };
 
     my $sock = $self->_get_js_sock($hostport)
@@ -239,7 +244,6 @@ sub get_status {
                                               $shandle);
     my $len = length($req);
     my $rv = $sock->write($req, $len);
-
     my $err;
     my $res = Gearman::Util::read_res_packet($sock, \$err);
 
