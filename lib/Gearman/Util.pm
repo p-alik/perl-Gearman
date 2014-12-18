@@ -161,6 +161,8 @@ sub read_res_packet {
             my $starting = length($buf);
             $readlen = $len - $starting;
             $offset = $starting;
+            #TODO rm goto
+            no warnings 'deprecated';
             goto READ if $readlen;
         }
 
