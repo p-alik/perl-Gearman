@@ -42,12 +42,14 @@ ok($r = $c->get_job_server_clients, 'get_job_server_clients');
 note 'get_job_server_clients result: ', explain $r;
 
 my $starttime = [Time::HiRes::gettimeofday];
-my $timeout   = 5;
-pass("do_task('foo', 'bar', {timeout => $timeout})");
-$c->do_task('foo', 'bar', { timeout => $timeout });
+my ($tn, $args, $timeout) = qw/foo bar 2/;
+pass("do_task($tn, $args, {timeout => $timeout})");
+$c->do_task($tn, $args, { timeout => $timeout });
 is(int(Time::HiRes::tv_interval($starttime)), $timeout, 'do_task timeout');
 
-#ok($r = $c->get_status, 'get_status');
-#note 'get_status result: ', explain $r;
+ok(my $h = $c->dispatch_background($tn, $args),
+    "dispatch_background($tn, $args)");
+$h && ok($r = $c->get_status($h), "get_status($h)");
+note 'get_status result: ', explain $r;
 
 done_testing();
