@@ -1,3 +1,13 @@
+1.12.001 (2014-12-19)
+
+     -- attempt to fix bugs: 89037, 100594, 101012
+
+     -- cpan tester report 586f5968-8489-11e4-adb9-802de0bfc7aa is - ugly - fixed too
+
+     -- refactoring: Client/Worker base class added
+
+     -- dynamic tests by using environment variable GEARMAN_SERVERS
+
 1.12 (2014-12-14)
 
      -- Repoint HACKING file.
