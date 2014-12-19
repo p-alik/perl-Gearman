@@ -128,21 +128,13 @@ sub pack_submit_packet {
     my Gearman::Task $task = shift;
     my Gearman::Client $client = shift;
 
-    my $mode = $task->{background} ?
-        ($task->{high_priority} ?
-         "submit_job_high_bg" :
-         "submit_job_bg") :
-        ($task->{high_priority} ?
-         "submit_job_high" :
-         "submit_job");
-
     my $func = $task->{func};
 
     if (my $prefix = $client && $client->prefix) {
         $func = join "\t", $prefix, $task->{func};
     }
 
-    return Gearman::Util::pack_req_command($mode,
+    return Gearman::Util::pack_req_command($task->mode,
                                            join("\0",
                                                 $func || '',
                                                 $task->{uniq} || '',
@@ -246,6 +238,18 @@ sub timeout {
     return $task->{timeout} unless @_;
     return $task->{timeout} = shift;
 }
+
+sub mode {
+    my Gearman::Task $task = shift;
+    return $task->{background} ?
+        ($task->{high_priority} ?
+         "submit_job_high_bg" :
+         "submit_job_bg") :
+        ($task->{high_priority} ?
+         "submit_job_high" :
+         "submit_job");
+}
+
 1;
 __END__
 
