@@ -503,5 +503,3 @@ This is free software.  This comes with no warranty whatsoever.
  Jonathan Steinert (hachi@cpan.org)
 
 =cut
-
-=cut
