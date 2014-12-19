@@ -20,4 +20,4 @@ no_index:
 requires:
   String::CRC32: 0
   Time::HiRes: 0
-version: 1.12
+version: 1.12.001
