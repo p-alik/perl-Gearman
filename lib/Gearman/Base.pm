@@ -21,9 +21,13 @@ sub new {
     $self->{js_count}    = 0;
     $self->{prefix}      = undef;
 
-    $opts{job_servers} && $self->set_job_servers(@{ $opts{job_servers} });
-    $opts{debug}       && $self->debug($opts{debug});
-    $opts{prefix}      && $self->prefix($opts{prefix});
+    $opts{job_servers}
+        && $self->set_job_servers(
+        ref($opts{job_servers})
+        ? @{ $opts{job_servers} }
+        : [$opts{job_servers}]);
+    $opts{debug}  && $self->debug($opts{debug});
+    $opts{prefix} && $self->prefix($opts{prefix});
 
     return $self;
 } ## end sub new
