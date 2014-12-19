@@ -2,11 +2,6 @@ use strict;
 use warnings;
 use Test::More;
 
-#unless ($ENV{GEARMAN_SERVERS}) {
-#    plan skip_all => 'Gearman::Worker tests without $ENV{GEARMAN_SERVERS}';
-#    exit;
-#}
-
 use_ok('Gearman::Task');
 
 my $c = new_ok('Gearman::Task', ['foo', \'bar', { timeout => 0 }]);
@@ -22,5 +17,4 @@ is($c->mode, 'submit_job_high_bg', 'submit_job_high_bg');
 is($c->{high_priority} = 0, 0, '!high_priority');
 is($c->mode, 'submit_job_bg', 'submit_job_bg');
 
-#Gearman::Task->new($func, $argref, $opts);
 done_testing();
