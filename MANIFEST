@@ -1,5 +1,6 @@
 CHANGES
 HACKING
+lib/Gearman/Base.pm
 lib/Gearman/Client.pm
 lib/Gearman/JobStatus.pm
 lib/Gearman/Objects.pm
