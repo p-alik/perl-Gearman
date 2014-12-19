@@ -69,7 +69,7 @@ use fields (
             'connecting',        # host:port -> unixtime connect started at
             'can',               # ability -> subref     (ability is func with optional prefix)
             'timeouts',          # ability -> timeouts
-            'client_id',         # random identifer string, no whitespace
+            'client_id',         # random identifier string, no whitespace
             'parent_pipe',       # bool/obj:  if we're a child process of a gearman server,
                                  #   this is socket to our parent process.  also means parent
                                  #   sock can never disconnect or timeout, etc..
@@ -232,7 +232,7 @@ sub uncache_sock {
     # parent process respawns us...
     die "Error/timeout talking to gearman parent process: [$reason]" if $self->{parent_pipe};
 
-    # normal case, we just close this TCP connectiona and we'll reconnect later.
+    # normal case, we just close this TCP connection and we'll reconnect later.
     delete $self->{sock_cache}{$ipport};
 }
 
@@ -573,7 +573,7 @@ instances of the same application (different development sandboxes for
 example).
 
 The namespace is currently implemented as a simple tab separated
-concatentation of the prefix and the function name.
+concatenation of the prefix and the function name.
 
 =head2 Gearman::Job->arg
 
@@ -592,7 +592,7 @@ You can pass "on_start" "on_complete" and "on_fail" callbacks in I<%opts>.
 
 =head1 WORKERS AS CHILD PROCESSES
 
-Gearman workers can be run run as child processes of a parent process
+Gearman workers can be run as child processes of a parent process
 which embeds L<Gearman::Server>.  When such a parent process
 fork/execs a worker, it sets the environment variable
 GEARMAN_WORKER_USE_STDIO to true before launching the worker. If this

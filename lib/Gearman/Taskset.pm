@@ -155,7 +155,7 @@ sub wait {
 
             if ($@) {
                 # TODO this should remove the fd from the list, and reassign any tasks to other jobserver, or bail.
-                # We're not in an accessable place here, so if all job servers fail we must die to prevent hanging.
+                # We're not in an accessible place here, so if all job servers fail we must die to prevent hanging.
                 die( "Job server failure: $@" );
             }
         }

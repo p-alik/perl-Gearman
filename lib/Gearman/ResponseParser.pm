@@ -44,7 +44,7 @@ sub reset {
 
 # don't override:
 # FUTURE OPTIMIZATION: let caller say "you can own this scalarref", and then we can keep it
-#  on the initial settin of $self->{data} and avoid copying into our own.  overkill for now.
+#  on the initial setting of $self->{data} and avoid copying into our own.  overkill for now.
 sub parse_data {
     my ($self, $data) = @_;  # where $data is a scalar or scalarref to parse
     my $dataref = ref $data ? $data : \$data;
