@@ -6,7 +6,7 @@ use Errno qw(EAGAIN);
 use Time::HiRes qw();
 use IO::Handle;
 
-sub DEBUG () { 0 }
+sub DEBUG () {0}
 
 # I: to jobserver
 # O: out of job server
@@ -14,55 +14,55 @@ sub DEBUG () { 0 }
 # C: client of job server
 # J: jobserver
 our %cmd = (
-            1 =>  [ 'I', "can_do" ],     # from W:  [FUNC]
-            23 => [ 'I', "can_do_timeout" ], # from W: FUNC[0]TIMEOUT
-            2 =>  [ 'I', "cant_do" ],    # from W:  [FUNC]
-            3 =>  [ 'I', "reset_abilities" ],  # from W:  ---
-            22 => [ 'I', "set_client_id" ],    # W->J: [RANDOM_STRING_NO_WHITESPACE]
-            4 =>  [ 'I', "pre_sleep" ],  # from W: ---
+    1  => ['I', "can_do"],             # from W:  [FUNC]
+    23 => ['I', "can_do_timeout"],     # from W: FUNC[0]TIMEOUT
+    2  => ['I', "cant_do"],            # from W:  [FUNC]
+    3  => ['I', "reset_abilities"],    # from W:  ---
+    22 => ['I', "set_client_id"],      # W->J: [RANDOM_STRING_NO_WHITESPACE]
+    4  => ['I', "pre_sleep"],          # from W: ---
 
-            26 => [ 'I', "option_req" ], # C->J: [OPT]
-            27 => [ 'O', "option_res" ], # J->C: [OPT]
+    26 => ['I', "option_req"],         # C->J: [OPT]
+    27 => ['O', "option_res"],         # J->C: [OPT]
 
-            6 =>  [ 'O', "noop" ],        # J->W  ---
-            7 =>  [ 'I', "submit_job" ],    # C->J  FUNC[0]UNIQ[0]ARGS
-            21 =>  [ 'I', "submit_job_high" ],    # C->J  FUNC[0]UNIQ[0]ARGS
-            18 => [ 'I', "submit_job_bg" ], # C->J     " "   "  " "
-            32 =>  [ 'I', "submit_job_high_bg" ],    # C->J  FUNC[0]UNIQ[0]ARGS
+    6  => ['O', "noop"],               # J->W  ---
+    7  => ['I', "submit_job"],         # C->J  FUNC[0]UNIQ[0]ARGS
+    21 => ['I', "submit_job_high"],    # C->J  FUNC[0]UNIQ[0]ARGS
+    18 => ['I', "submit_job_bg"],      # C->J     " "   "  " "
+    32 => ['I', "submit_job_high_bg"], # C->J  FUNC[0]UNIQ[0]ARGS
 
-            8 =>  [ 'O', "job_created" ], # J->C HANDLE
-            9 =>  [ 'I', "grab_job" ],    # W->J --
-            10 => [ 'O', "no_job" ],      # J->W --
-            11 => [ 'O', "job_assign" ],  # J->W HANDLE[0]FUNC[0]ARG
+    8  => ['O', "job_created"],        # J->C HANDLE
+    9  => ['I', "grab_job"],           # W->J --
+    10 => ['O', "no_job"],             # J->W --
+    11 => ['O', "job_assign"],         # J->W HANDLE[0]FUNC[0]ARG
 
-            12 => [ 'IO',  "work_status" ],   # W->J/C: HANDLE[0]NUMERATOR[0]DENOMINATOR
-            13 => [ 'IO',  "work_complete" ], # W->J/C: HANDLE[0]RES
-            14 => [ 'IO',  "work_fail" ],     # W->J/C: HANDLE
-            25 => [ 'IO',  "work_exception" ], # W->J/C: HANDLE[0]EXCEPTION
+    12 => ['IO', "work_status"],      # W->J/C: HANDLE[0]NUMERATOR[0]DENOMINATOR
+    13 => ['IO', "work_complete"],    # W->J/C: HANDLE[0]RES
+    14 => ['IO', "work_fail"],        # W->J/C: HANDLE
+    25 => ['IO', "work_exception"],   # W->J/C: HANDLE[0]EXCEPTION
 
-            15 => [ 'I',  "get_status" ],  # C->J: HANDLE
-            20 => [ 'O',  "status_res" ],  # C->J: HANDLE[0]KNOWN[0]RUNNING[0]NUM[0]DENOM
+    15 => ['I', "get_status"],    # C->J: HANDLE
+    20 => ['O', "status_res"],    # C->J: HANDLE[0]KNOWN[0]RUNNING[0]NUM[0]DENOM
 
-            16 => [ 'I',  "echo_req" ],    # ?->J TEXT
-            17 => [ 'O',  "echo_res" ],    # J->? TEXT
+    16 => ['I', "echo_req"],      # ?->J TEXT
+    17 => ['O', "echo_res"],      # J->? TEXT
 
-            19 => [ 'O',  "error" ],       # J->? ERRCODE[0]ERR_TEXT
+    19 => ['O', "error"],         # J->? ERRCODE[0]ERR_TEXT
 
-            # for worker to declare to the jobserver that this worker is only connected
-            # to one jobserver, so no polls/grabs will take place, and server is free
-            # to push "job_assign" packets back down.
-            24 => [ 'I', "all_yours" ],    # W->J ---
-            );
+    # for worker to declare to the jobserver that this worker is only connected
+    # to one jobserver, so no polls/grabs will take place, and server is free
+    # to push "job_assign" packets back down.
+    24 => ['I', "all_yours"],    # W->J ---
+);
 
-our %num;  # name -> num
+our %num;                        # name -> num
 while (my ($num, $ary) = each %cmd) {
-    die if $num{$ary->[1]};
-    $num{$ary->[1]} = $num;
+    die if $num{ $ary->[1] };
+    $num{ $ary->[1] } = $num;
 }
 
 sub cmd_name {
     my $num = shift;
-    my $c = $cmd{$num};
+    my $c   = $cmd{$num};
     return $c ? $c->[1] : undef;
 }
 
@@ -73,7 +73,7 @@ sub pack_req_command {
     my $arg = $_[0] || '';
     my $len = length($arg);
     return "\0REQ" . pack("NN", $type, $len) . $arg;
-}
+} ## end sub pack_req_command
 
 sub pack_res_command {
     my $type_arg = shift;
@@ -84,14 +84,14 @@ sub pack_res_command {
     $_[0] = '' unless defined $_[0];
     my $len = length($_[0]);
     return "\0RES" . pack("NN", $type, $len) . $_[0];
-}
+} ## end sub pack_res_command
 
 # returns undef on closed socket or malformed packet
 sub read_res_packet {
     warn " Entering read_res_packet" if DEBUG;
-    my $sock = shift;
-    my $err_ref = shift;
-    my $timeout = shift;
+    my $sock       = shift;
+    my $err_ref    = shift;
+    my $timeout    = shift;
     my $time_start = Time::HiRes::time();
 
     my $err = sub {
@@ -104,18 +104,18 @@ sub read_res_packet {
     IO::Handle::blocking($sock, 0);
 
     my $fileno = fileno($sock);
-    my $rin = '';
+    my $rin    = '';
     vec($rin, $fileno, 1) = 1;
 
     my $readlen = 12;
-    my $offset = 0;
-    my $buf = '';
+    my $offset  = 0;
+    my $buf     = '';
 
     my ($magic, $type, $len);
 
     warn " Starting up event loop\n" if DEBUG;
 
-    LOOP: while (1) {
+LOOP: while (1) {
         my $time_remaining = undef;
         if (defined $timeout) {
             warn "  We have a timeout of $timeout\n" if DEBUG;
@@ -132,7 +132,7 @@ sub read_res_packet {
 
         warn "   Entering read loop\n" if DEBUG;
 
-        READ: {
+    READ: {
             local $!;
             my $rv = sysread($sock, $buf, $readlen, $offset);
 
@@ -141,18 +141,20 @@ sub read_res_packet {
                 next LOOP if $! == EAGAIN;
             }
 
-            return $err->("read_error")       unless defined $rv;
-            return $err->("eof")              unless $rv;
+            return $err->("read_error") unless defined $rv;
+            return $err->("eof") unless $rv;
 
             unless ($rv >= $readlen) {
-                warn "   Partial read of $rv bytes, at offset $offset, readlen was $readlen\n" if DEBUG;
+                warn
+                    "   Partial read of $rv bytes, at offset $offset, readlen was $readlen\n"
+                    if DEBUG;
                 $offset += $rv;
                 $readlen -= $rv;
                 redo READ;
-            }
+            } ## end unless ($rv >= $readlen)
 
             warn "   Finished reading\n" if DEBUG;
-        }
+        } ## end READ:
 
         if (!defined $type) {
             next unless length($buf) >= 12;
@@ -161,30 +163,32 @@ sub read_res_packet {
             return $err->("malformed_magic") unless $magic eq "\0RES";
             my $starting = length($buf);
             $readlen = $len - $starting;
-            $offset = $starting;
+            $offset  = $starting;
+
             #TODO rm goto
             no warnings 'deprecated';
             goto READ if $readlen;
-        }
+        } ## end if (!defined $type)
 
         $type = $cmd{$type};
         return $err->("bogus_command") unless $type;
         return $err->("bogus_command_type") unless index($type->[0], "O") != -1;
 
-        warn " Fully formed res packet, returning; type=$type->[1] len=$len\n" if DEBUG;
+        warn " Fully formed res packet, returning; type=$type->[1] len=$len\n"
+            if DEBUG;
 
         IO::Handle::blocking($sock, 1);
 
         return {
-            'type' => $type->[1],
-            'len' => $len,
+            'type'    => $type->[1],
+            'len'     => $len,
             'blobref' => \$buf,
         };
-    }
-}
+    } ## end LOOP: while (1)
+} ## end sub read_res_packet
 
 sub read_text_status {
-    my $sock = shift;
+    my $sock    = shift;
     my $err_ref = shift;
 
     my $err = sub {
@@ -206,11 +210,11 @@ sub read_text_status {
         }
 
         push @lines, $line;
-    }
+    } ## end while (my $line = <$sock>)
     return $err->("eof") unless $complete;
 
     return @lines;
-}
+} ## end sub read_text_status
 
 sub send_req {
     my ($sock, $reqref) = @_;
@@ -221,7 +225,7 @@ sub send_req {
     my $rv = $sock->syswrite($$reqref, $len);
     return 0 unless $rv == $len;
     return 1;
-}
+} ## end sub send_req
 
 # given a file descriptor number and a timeout, wait for that descriptor to
 # become readable; returns 0 or 1 on if it did or not
@@ -235,6 +239,6 @@ sub wait_for_readability {
 
     # nfound can be undef or 0, both failures, or 1, a success
     return $nfound ? 1 : 0;
-}
+} ## end sub wait_for_readability
 
 1;
