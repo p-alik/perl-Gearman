@@ -3,7 +3,6 @@ HACKING
 lib/Gearman/Base.pm
 lib/Gearman/Client.pm
 lib/Gearman/JobStatus.pm
-lib/Gearman/Objects.pm
 lib/Gearman/ResponseParser.pm
 lib/Gearman/ResponseParser/Taskset.pm
 lib/Gearman/Task.pm
@@ -25,6 +24,5 @@ t/51-large_args.t
 t/60-stop-if.t
 t/lib/GearTestLib.pm
 t/TestGearman.pm
-t/worker.pl
 t/65-responseparser.t
 TODO
