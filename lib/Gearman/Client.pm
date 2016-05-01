@@ -1,9 +1,5 @@
-#!/usr/bin/perl
-
 package Gearman::Client;
-
-our $VERSION;
-$VERSION = '1.12.002';
+$Gearman::Client::VERSION = '1.12.003';
 
 use strict;
 
