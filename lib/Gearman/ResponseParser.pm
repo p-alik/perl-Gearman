@@ -1,5 +1,6 @@
 package Gearman::ResponseParser;
 use strict;
+use warnings;
 
 # this is an abstract base class.  See:
 #    Gearman::ResponseParser::Taskset  (for Gearman::Client, the sync version), or

@@ -1,8 +1,12 @@
 package Gearman::ResponseParser::Taskset;
 
 use strict;
-use base 'Gearman::ResponseParser';
+use warnings;
+
 use Gearman::Taskset;
+use base 'Gearman::ResponseParser';
+
+no warnings "redefine";
 
 sub new {
     my ($class, %opts) = @_;
