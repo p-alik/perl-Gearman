@@ -6,12 +6,21 @@ our $VERSION;
 $VERSION = '1.12.002';
 
 use strict;
+
+use base 'Gearman::Base';
+
+use fields (
+            'sock_cache',  # hostport -> socket
+            'sock_info',   # hostport -> hashref
+            'hooks',       # hookname -> coderef
+            'exceptions',
+            'backoff_max',
+            'command_timeout', # maximum time a gearman command should take to get a result (not a job timeout)
+            );
 use IO::Socket::INET;
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
 use Time::HiRes;
 
-use base 'Gearman::Base';
-use Gearman::Objects;
 use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
