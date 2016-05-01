@@ -1,6 +1,8 @@
 package Gearman::Taskset;
 
 use strict;
+use warnings;
+no warnings "redefine";
 
 use fields (
     'waiting',        # { handle => [Task, ...] }
