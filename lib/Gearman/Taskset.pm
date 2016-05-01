@@ -1,6 +1,20 @@
 package Gearman::Taskset;
 
 use strict;
+
+use fields (
+            'waiting',  # { handle => [Task, ...] }
+            'client',   # Gearman::Client
+            'need_handle',  # arrayref
+
+            'default_sock',     # default socket (non-merged requests)
+            'default_sockaddr', # default socket's ip/port
+
+            'loaned_sock',      # { hostport => socket }
+            'cancelled',        # bool, if taskset has been cancelled mid-processing
+            'hooks',       # hookname -> coderef
+            );
+
 use Carp ();
 use Gearman::Client;
 use Gearman::Util;
