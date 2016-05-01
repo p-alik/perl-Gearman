@@ -1,3 +1,16 @@
+1.12.003 (2016-05-01)
+
+     -- tested with perl5-22-1 to improve cpan tester resport
+        5324ce04-0bae-11e6-a317-839d20bbf307
+
+     -- fields moved from Gearman::Objects to proper modules
+
+     -- rm obsolete Gearman::Objects
+
+     -- use warnings (except redefine)
+
+     -- perltidy applied to all modules
+
 1.12.002 (2014-12-19)
 
      -- attempt to fix bugs: 89037, 100594, 101012
