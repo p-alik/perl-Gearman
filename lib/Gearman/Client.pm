@@ -2,6 +2,8 @@ package Gearman::Client;
 $Gearman::Client::VERSION = '1.12.003';
 
 use strict;
+use warnings;
+no warnings "redefine";
 
 use base 'Gearman::Base';
 
