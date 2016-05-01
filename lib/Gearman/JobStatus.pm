@@ -1,6 +1,7 @@
 package Gearman::JobStatus;
 
 use strict;
+use warnings;
 
 sub new {
     my ($class, $known, $running, $nu, $de) = @_;
