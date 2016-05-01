@@ -1,8 +1,9 @@
-#!/usr/bin/perl
-
-#TODO: retries?
 
 use strict;
+use warnings;
+
+#TODO: retries?
+#
 use Gearman::Util;
 use Carp             ();
 use IO::Socket::INET ();
@@ -14,7 +15,6 @@ use fields (
     'func',
     'argref',
     'handle',
-
     'jss',    # job server's socket
 );
 
