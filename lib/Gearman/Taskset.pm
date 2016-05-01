@@ -3,23 +3,24 @@ package Gearman::Taskset;
 use strict;
 
 use fields (
-            'waiting',  # { handle => [Task, ...] }
-            'client',   # Gearman::Client
-            'need_handle',  # arrayref
+    'waiting',        # { handle => [Task, ...] }
+    'client',         # Gearman::Client
+    'need_handle',    # arrayref
 
-            'default_sock',     # default socket (non-merged requests)
-            'default_sockaddr', # default socket's ip/port
+    'default_sock',        # default socket (non-merged requests)
+    'default_sockaddr',    # default socket's ip/port
 
-            'loaned_sock',      # { hostport => socket }
-            'cancelled',        # bool, if taskset has been cancelled mid-processing
-            'hooks',       # hookname -> coderef
-            );
+    'loaned_sock',         # { hostport => socket }
+    'cancelled',           # bool, if taskset has been cancelled mid-processing
+    'hooks',               # hookname -> coderef
+);
 
 use Carp ();
 use Gearman::Client;
 use Gearman::Util;
 use Gearman::ResponseParser::Taskset;
-use Scalar::Util ();  # i thought about weakening taskset's client, but might be too weak.
+use Scalar::Util ()
+    ;    # i thought about weakening taskset's client, but might be too weak.
 use Time::HiRes ();
 
 sub new {
@@ -37,7 +38,7 @@ sub new {
     $self->{hooks}       = {};
 
     return $self;
-}
+} ## end sub new
 
 sub DESTROY {
     my Gearman::Taskset $ts = shift;
@@ -46,13 +47,14 @@ sub DESTROY {
     return unless $ts->{client};
 
     if ($ts->{default_sock}) {
-        $ts->{client}->_put_js_sock($ts->{default_sockaddr}, $ts->{default_sock});
+        $ts->{client}
+            ->_put_js_sock($ts->{default_sockaddr}, $ts->{default_sock});
     }
 
     while (my ($hp, $sock) = each %{ $ts->{loaned_sock} }) {
         $ts->{client}->_put_js_sock($hp, $sock);
     }
-}
+} ## end sub DESTROY
 
 sub run_hook {
     my Gearman::Taskset $self = shift;
@@ -64,7 +66,7 @@ sub run_hook {
     eval { $hook->(@_) };
 
     warn "Gearman::Taskset hook '$hookname' threw error: $@\n" if $@;
-}
+} ## end sub run_hook
 
 sub add_hook {
     my Gearman::Taskset $self = shift;
@@ -72,10 +74,11 @@ sub add_hook {
 
     if (@_) {
         $self->{hooks}->{$hookname} = shift;
-    } else {
+    }
+    else {
         delete $self->{hooks}->{$hookname};
     }
-}
+} ## end sub add_hook
 
 # this method is part of the "Taskset" interface, also implemented by
 # Gearman::Client::Async, where no tasksets make sense, so instead the
@@ -105,7 +108,7 @@ sub cancel {
     $ts->{waiting}     = {};
     $ts->{need_handle} = [];
     $ts->{client}      = undef;
-}
+} ## end sub cancel
 
 sub _get_loaned_sock {
     my Gearman::Taskset $ts = shift;
@@ -117,7 +120,7 @@ sub _get_loaned_sock {
 
     my $sock = $ts->{client}->_get_js_sock($hostport);
     return $ts->{loaned_sock}{$hostport} = $sock;
-}
+} ## end sub _get_loaned_sock
 
 # event loop for reading in replies
 sub wait {
@@ -131,10 +134,12 @@ sub wait {
         $timeout += Time::HiRes::time() if defined $timeout;
     }
 
-    Carp::carp "Unknown options: " . join(',', keys %opts) . " passed to Taskset->wait."
+    Carp::carp "Unknown options: "
+        . join(',', keys %opts)
+        . " passed to Taskset->wait."
         if keys %opts;
 
-    my %parser;  # fd -> Gearman::ResponseParser object
+    my %parser;    # fd -> Gearman::ResponseParser object
 
     my ($rin, $rout, $eout) = ('', '', '');
     my %watching;
@@ -144,38 +149,44 @@ sub wait {
         my $fd = $sock->fileno;
         vec($rin, $fd, 1) = 1;
         $watching{$fd} = $sock;
-    }
+    } ## end for my $sock ($ts->{default_sock...})
 
     my $tries = 0;
-    while (!$ts->{cancelled} && keys %{$ts->{waiting}}) {
+    while (!$ts->{cancelled} && keys %{ $ts->{waiting} }) {
         $tries++;
 
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
-        my $nfound = select($rout=$rin, undef, $eout=$rin, $time_left); # TODO drop the eout.
+        my $nfound = select($rout = $rin, undef, $eout = $rin, $time_left)
+            ;    # TODO drop the eout.
         if ($timeout && $time_left <= 0) {
             $ts->cancel;
             return;
         }
-        next if ! $nfound;
+        next if !$nfound;
 
         foreach my $fd (keys %watching) {
             next unless vec($rout, $fd, 1);
+
             # TODO: deal with error vector
 
             my $sock   = $watching{$fd};
-            my $parser = $parser{$fd} ||= Gearman::ResponseParser::Taskset->new(source  => $sock,
-                                                                                taskset => $ts);
+            my $parser = $parser{$fd}
+                ||= Gearman::ResponseParser::Taskset->new(
+                source  => $sock,
+                taskset => $ts
+                );
             eval { $parser->parse_sock($sock); };
 
             if ($@) {
+
                 # TODO this should remove the fd from the list, and reassign any tasks to other jobserver, or bail.
                 # We're not in an accessible place here, so if all job servers fail we must die to prevent hanging.
-                die( "Job server failure: $@" );
-            }
-        }
+                die("Job server failure: $@");
+            } ## end if ($@)
+        } ## end foreach my $fd (keys %watching)
 
-    }
-}
+    } ## end while (!$ts->{cancelled} ...)
+} ## end sub wait
 
 # ->add_task($func, <$scalar | $scalarref>, <$uniq | $opts_hashref>
 #      opts:
@@ -203,21 +214,22 @@ sub add_task {
 
     my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
-    my $rv = $jssock->syswrite($req, $len);
+    my $rv  = $jssock->syswrite($req, $len);
     die "Wrote $rv but expected to write $len" unless $rv == $len;
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
-        my $rv = $ts->_wait_for_packet($jssock, $ts->{client}->{command_timeout});
-        if (! $rv) {
-            shift @{ $ts->{need_handle} };  # ditch it, it failed.
-            # this will resubmit it if it failed.
+        my $rv
+            = $ts->_wait_for_packet($jssock, $ts->{client}->{command_timeout});
+        if (!$rv) {
+            shift @{ $ts->{need_handle} }; # ditch it, it failed.
+                                           # this will resubmit it if it failed.
             return $task->fail;
         }
-    }
+    } ## end while (@{ $ts->{need_handle...}})
 
     return $task->handle;
-}
+} ## end sub add_task
 
 sub _get_default_sock {
     my Gearman::Taskset $ts = shift;
@@ -225,19 +237,18 @@ sub _get_default_sock {
 
     my $getter = sub {
         my $hostport = shift;
-        return
-            $ts->{loaned_sock}{$hostport} ||
-            $ts->{client}->_get_js_sock($hostport);
+        return $ts->{loaned_sock}{$hostport}
+            || $ts->{client}->_get_js_sock($hostport);
     };
 
     my ($jst, $jss) = $ts->{client}->_get_random_js_sock($getter);
     return unless $jss;
     $ts->{loaned_sock}{$jst} ||= $jss;
 
-    $ts->{default_sock} = $jss;
+    $ts->{default_sock}     = $jss;
     $ts->{default_sockaddr} = $jst;
     return $jss;
-}
+} ## end sub _get_default_sock
 
 sub _get_hashed_sock {
     my Gearman::Taskset $ts = shift;
@@ -252,20 +263,20 @@ sub _get_hashed_sock {
     }
 
     return undef;
-}
+} ## end sub _get_hashed_sock
 
 # returns boolean when given a sock to wait on.
 # otherwise, return value is undefined.
 sub _wait_for_packet {
     my Gearman::Taskset $ts = shift;
-    my $sock = shift;  # socket to singularly read from
-    my $timeout = shift;
+    my $sock                = shift;    # socket to singularly read from
+    my $timeout             = shift;
 
     my ($res, $err);
     $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
     return 0 unless $res;
     return $ts->_process_packet($res, $sock);
-}
+} ## end sub _wait_for_packet
 
 sub _ip_port {
     my $sock = shift;
@@ -273,36 +284,36 @@ sub _ip_port {
     my $pn = getpeername($sock) or return undef;
     my ($port, $iaddr) = Socket::sockaddr_in($pn);
     return Socket::inet_ntoa($iaddr) . ":$port";
-}
+} ## end sub _ip_port
 
 # note the failure of a task given by its jobserver-specific handle
 sub _fail_jshandle {
     my Gearman::Taskset $ts = shift;
     my $shandle = shift;
 
-    my $task_list = $ts->{waiting}{$shandle} or
-        die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
+    my $task_list = $ts->{waiting}{$shandle}
+        or die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
 
-    my Gearman::Task $task = shift @$task_list or
-        die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
+    my Gearman::Task $task = shift @$task_list
+        or die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
 
     $task->fail;
     delete $ts->{waiting}{$shandle} unless @$task_list;
-}
+} ## end sub _fail_jshandle
 
 sub _process_packet {
     my Gearman::Taskset $ts = shift;
     my ($res, $sock) = @_;
 
     if ($res->{type} eq "job_created") {
-        my Gearman::Task $task = shift @{ $ts->{need_handle} } or
-            die "Um, got an unexpected job_created notification";
+        my Gearman::Task $task = shift @{ $ts->{need_handle} }
+            or die "Um, got an unexpected job_created notification";
 
         my $shandle = ${ $res->{'blobref'} };
-        my $ipport = _ip_port($sock);
+        my $ipport  = _ip_port($sock);
 
         # did sock become disconnected in the meantime?
-        if (! $ipport) {
+        if (!$ipport) {
             $ts->_fail_jshandle($shandle);
             return 1;
         }
@@ -311,7 +322,7 @@ sub _process_packet {
         return 1 if $task->{background};
         push @{ $ts->{waiting}{$shandle} ||= [] }, $task;
         return 1;
-    }
+    } ## end if ($res->{type} eq "job_created")
 
     if ($res->{type} eq "work_fail") {
         my $shandle = ${ $res->{'blobref'} };
@@ -324,38 +335,40 @@ sub _process_packet {
             or die "Bogus work_complete from server";
         my $shandle = $1;
 
-        my $task_list = $ts->{waiting}{$shandle} or
-            die "Uhhhh:  got work_complete for unknown handle: $shandle\n";
+        my $task_list = $ts->{waiting}{$shandle}
+            or die "Uhhhh:  got work_complete for unknown handle: $shandle\n";
 
-        my Gearman::Task $task = shift @$task_list or
-            die "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
+        my Gearman::Task $task = shift @$task_list
+            or die
+            "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
 
         $task->complete($res->{'blobref'});
         delete $ts->{waiting}{$shandle} unless @$task_list;
 
         return 1;
-    }
+    } ## end if ($res->{type} eq "work_complete")
 
     if ($res->{type} eq "work_exception") {
         ${ $res->{'blobref'} } =~ s/^(.+?)\0//
             or die "Bogus work_exception from server";
-        my $shandle = $1;
-        my $task_list = $ts->{waiting}{$shandle} or
-            die "Uhhhh:  got work_exception for unknown handle: $shandle\n";
+        my $shandle   = $1;
+        my $task_list = $ts->{waiting}{$shandle}
+            or die "Uhhhh:  got work_exception for unknown handle: $shandle\n";
 
-        my Gearman::Task $task = $task_list->[0] or
-            die "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
+        my Gearman::Task $task = $task_list->[0]
+            or die
+            "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
 
         $task->exception($res->{'blobref'});
 
         return 1;
-    }
+    } ## end if ($res->{type} eq "work_exception")
 
     if ($res->{type} eq "work_status") {
         my ($shandle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
 
-        my $task_list = $ts->{waiting}{$shandle} or
-            die "Uhhhh:  got work_status for unknown handle: $shandle\n";
+        my $task_list = $ts->{waiting}{$shandle}
+            or die "Uhhhh:  got work_status for unknown handle: $shandle\n";
 
         # FIXME: the server is (probably) sending a work_status packet for each
         # interested client, even if the clients are the same, so probably need
@@ -366,10 +379,10 @@ sub _process_packet {
         }
 
         return 1;
-    }
+    } ## end if ($res->{type} eq "work_status")
 
     die "Unknown/unimplemented packet type: $res->{type} [${$res->{blobref}}]";
 
-}
+} ## end sub _process_packet
 
 1;
