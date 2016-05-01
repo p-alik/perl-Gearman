@@ -1,6 +1,7 @@
 package Gearman::Task;
 
 use strict;
+use warnings;
 
 use Carp          ();
 use String::CRC32 ();
@@ -41,6 +42,8 @@ use fields (
              # but not w/ tasks in other tasksets using the same Gearman::Client
     'hooks', # hookname -> coderef
 );
+
+no warnings "redefine";
 
 # constructor, given: ($func, $argref, $opts);
 sub new {
