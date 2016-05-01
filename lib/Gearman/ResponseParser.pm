@@ -9,16 +9,17 @@ use strict;
 sub new {
     my $class = shift;
     my %opts  = @_;
-    my $src = delete $opts{'source'};
+    my $src   = delete $opts{'source'};
     die if %opts;
 
     my $self = bless {
-        source => $src,  # the source object/socket that is primarily feeding this.
+        source =>
+            $src,    # the source object/socket that is primarily feeding this.
     }, $class;
 
     $self->reset;
     return $self;
-}
+} ## end sub new
 
 sub source {
     my $self = shift;
@@ -32,9 +33,10 @@ sub on_packet {
 
 sub on_error {
     my ($self, $errmsg, $parser) = @_;
+
     # NOTE: this interface will evolve.
     die "SUBCLASSES SHOULD OVERRIDE THIS";
-}
+} ## end sub on_error
 
 sub reset {
     my $self = shift;
@@ -46,7 +48,7 @@ sub reset {
 # FUTURE OPTIMIZATION: let caller say "you can own this scalarref", and then we can keep it
 #  on the initial setting of $self->{data} and avoid copying into our own.  overkill for now.
 sub parse_data {
-    my ($self, $data) = @_;  # where $data is a scalar or scalarref to parse
+    my ($self, $data) = @_;    # where $data is a scalar or scalarref to parse
     my $dataref = ref $data ? $data : \$data;
 
     my $err = sub {
@@ -64,65 +66,71 @@ sub parse_data {
             $self->{header} .= substr($$dataref, 0, $need, '');
             next unless length $self->{header} == 12;
 
-            my ($magic, $type, $len) = unpack( "a4NN", $self->{header} );
+            my ($magic, $type, $len) = unpack("a4NN", $self->{header});
             return $err->("malformed_magic") unless $magic eq "\0RES";
 
             my $blob = "";
             $self->{pkt} = {
-                type => Gearman::Util::cmd_name($type),
-                len  => $len,
+                type    => Gearman::Util::cmd_name($type),
+                len     => $len,
                 blobref => \$blob,
             };
             next;
-        }
+        } ## end unless ($hdr_len == 12)
 
         # how much data haven't we read for the current packet?
         my $need = $self->{pkt}{len} - length(${ $self->{pkt}{blobref} });
+
         # copy the MAX(need, have)
         my $to_copy = $lendata > $need ? $need : $lendata;
 
-        ${$self->{pkt}{blobref}} .= substr($$dataref, 0, $to_copy, '');
+        ${ $self->{pkt}{blobref} } .= substr($$dataref, 0, $to_copy, '');
 
         if ($to_copy == $need) {
             $self->on_packet($self->{pkt}, $self);
             $self->reset;
         }
-    }
+    } ## end while (my $lendata = length...)
 
-    if (defined($self->{pkt}) && length(${ $self->{pkt}{blobref} }) == $self->{pkt}{len}) {
+    if (defined($self->{pkt})
+        && length(${ $self->{pkt}{blobref} }) == $self->{pkt}{len})
+    {
         $self->on_packet($self->{pkt}, $self);
         $self->reset;
-    }
-}
+    } ## end if (defined($self->{pkt...}))
+} ## end sub parse_data
 
 # don't override:
 sub eof {
     my $self = shift;
 
     $self->on_error("EOF");
+
     # ERROR if in middle of packet
-}
+} ## end sub eof
 
 # don't override:
 sub parse_sock {
-    my ($self, $sock) = @_;  # $sock is readable, we should sysread it and feed it to $self->parse_data
+    my ($self, $sock)
+        = @_
+        ; # $sock is readable, we should sysread it and feed it to $self->parse_data
 
     my $data;
     my $rv = sysread($sock, $data, 128 * 1024);
 
-    if (! defined $rv) {
+    if (!defined $rv) {
         $self->on_error("read_error: $!");
         return;
     }
 
     # FIXME:  EAGAIN , EWOULDBLOCK
 
-    if (! $rv) {
+    if (!$rv) {
         $self->eof;
         return;
     }
 
     $self->parse_data(\$data);
-}
+} ## end sub parse_sock
 
 1;
