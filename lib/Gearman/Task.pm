@@ -1,6 +1,7 @@
 package Gearman::Task;
 
 use strict;
+
 use Carp ();
 use String::CRC32 ();
 
@@ -8,6 +9,35 @@ use Gearman::Taskset;
 use Gearman::Util;
 use Storable;
 
+use fields (
+            # from client:
+            'func',
+            'argref',
+            # opts from client:
+            'uniq',
+            'on_complete',
+            'on_fail',
+            'on_exception',
+            'on_retry',
+            'on_status',
+            'on_post_hooks',   # used internally, when other hooks are done running, prior to cleanup
+            'retry_count',
+            'timeout',
+            'try_timeout',
+            'high_priority',
+            'background',
+
+            # from server:
+            'handle',
+
+            # maintained by this module:
+            'retries_done',
+            'is_finished',
+            'taskset',
+            'jssock',  # jobserver socket.  shared by other tasks in the same taskset,
+                       # but not w/ tasks in other tasksets using the same Gearman::Client
+            'hooks',       # hookname -> coderef
+            );
 # constructor, given: ($func, $argref, $opts);
 sub new {
     my $class = shift;
