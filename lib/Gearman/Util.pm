@@ -1,6 +1,6 @@
-
 package Gearman::Util;
 use strict;
+use warnings;
 
 use Errno qw(EAGAIN);
 use Time::HiRes qw();
