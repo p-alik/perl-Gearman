@@ -7,3 +7,18 @@ perl:
   - "5.14"
   - "5.12"
   - "5.10"
+
+sudo: false
+
+matrix:
+  include:
+    - perl: 5.18
+      env: COVERAGE=1
+
+script:
+  - perl Makefile.PL
+  - make
+  - prove -b -r -s -j$(test-jobs) $(test-files)
+
+after_success:
+  - coverage-report
