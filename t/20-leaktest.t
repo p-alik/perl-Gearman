@@ -31,9 +31,10 @@ my $client = Gearman::Client->new;
 $client->job_servers($s1->ipport);
 
 my $tasks = $client->new_task_set;
-my $handle = $tasks->add_task(dummy => 'xxxx',
+my $handle = $tasks->add_task(dummy => 'xxxx', {
                               on_complete => sub { die "shouldn't complete"; },
-                              on_fail => sub { warn "Failed...\n"; });
+                              on_fail => sub { warn "Failed...\n"; }
+                            });
 
 
 ok($handle, "got handle");
