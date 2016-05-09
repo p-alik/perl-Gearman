@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
 use strict;
+use warnings;
+
 use Gearman::Client;
 use Test::More;
 use lib 't';
