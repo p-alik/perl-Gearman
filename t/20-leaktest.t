@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
 use strict;
+use warnings;
+
 our $Bin;
 use FindBin qw( $Bin );
 use Gearman::Client;
