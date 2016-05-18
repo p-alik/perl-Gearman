@@ -1,8 +1,12 @@
-perl-Gearman-Client
+Gearman
 ===================
 
-[![Build Status](https://travis-ci.org/p-alik/perl-Gearman-Client.png)](https://travis-ci.org/p-alik/perl-Gearman-Client)
+[![Build Status](https://travis-ci.org/p-alik/Gearman.png)](https://travis-ci.org/p-alik/Gearman)
 
-This repository is a fork of [Gearman-1.12](http://search.cpan.org/~dormando/Gearman/). It was created with the aim to bug fix hot issues and add missed <a href="https://rt.cpan.org/Public/Bug/Display.html?id=100594">SUBMIT_JOB_HIGH_BG</a> implementation.
+This repository contains perl (Gearman)[http://gearman.org] Client/Worker implementation
 
-For more information see [Changes](https://github.com/p-alik/perl-Gearman-Client/blob/upstream/CHANGES)
+perl Modules
+Gearman::Client - Client for gearman distributed job system
+Gearman::Task - a task in Gearman, from the point of view of a client
+Gearman::Worker - Worker for gearman distributed job system
+
