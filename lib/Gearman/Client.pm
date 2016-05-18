@@ -1,5 +1,5 @@
 package Gearman::Client;
-$Gearman::Client::VERSION = '1.12.005';
+$Gearman::Client::VERSION = '1.12.006';
 
 use strict;
 use warnings;
@@ -475,7 +475,7 @@ everything has finished running or failing.
 
 =head2 $client-E<gt>prefix($prefix)
 
-Sets the namespace / prefix for the function names. 
+Sets the namespace / prefix for the function names.
 
 See L<Gearman::Worker> for more details.
 
@@ -514,5 +514,10 @@ This is free software.  This comes with no warranty whatsoever.
 
  Brad Fitzpatrick (brad@danga.com)
  Jonathan Steinert (hachi@cpan.org)
+ Alexei Pastuchov (<palik at cpan.org>)
+
+=head1 REPOSITORY
+
+L<https://github.com/p-alik/perl-Gearman.git>
 
 =cut
