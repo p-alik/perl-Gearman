@@ -30,7 +30,8 @@ install:
 script:
   - perl Makefile.PL
   - make
-  - prove -b -r -s -j$(test-jobs) $(test-files)
+  - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -b -r -s t
+  - cover
 
 after_success:
   - cover -report coveralls
@@ -38,4 +39,4 @@ after_success:
 branches:
   only:
     - master
-    - upstream
+    # - upstream
