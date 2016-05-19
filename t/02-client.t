@@ -43,7 +43,7 @@ subtest "do tast", sub {
     $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
     $ENV{GEARMAN_SERVERS}
         || plan skip_all =>
-        'Gearman::Client tests without $ENV{GEARMAN_SERVERS}';
+        'without $ENV{GEARMAN_SERVERS}';
 
     my $starttime = [Time::HiRes::gettimeofday];
 
@@ -57,7 +57,7 @@ subtest "dispatch background", sub {
     $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
     $ENV{GEARMAN_SERVERS}
         || plan skip_all =>
-        'Gearman::Client tests without $ENV{GEARMAN_SERVERS}';
+        'without $ENV{GEARMAN_SERVERS}';
 
 
     ok(my $h = $c->dispatch_background($tn, $args),
