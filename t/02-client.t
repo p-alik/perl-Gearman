@@ -8,10 +8,7 @@ use Time::HiRes qw/
 
 use Test::More;
 
-unless ($ENV{GEARMAN_SERVERS}) {
-    plan skip_all => 'Gearman::Client tests without $ENV{GEARMAN_SERVERS}';
-    exit;
-}
+my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
 
 use_ok('Gearman::Client');
 
@@ -26,8 +23,7 @@ can_ok(
         /
 );
 
-my $c = new_ok('Gearman::Client',
-    [job_servers => [split /,/, $ENV{GEARMAN_SERVERS}]]);
+my $c = new_ok('Gearman::Client', [job_servers => [@js]]);
 isa_ok($c, 'Gearman::Base');
 
 isa_ok($c->new_task_set(), 'Gearman::Taskset');
@@ -41,15 +37,33 @@ note 'get_job_server_jobs result: ', explain $r;
 ok($r = $c->get_job_server_clients, 'get_job_server_clients');
 note 'get_job_server_clients result: ', explain $r;
 
-my $starttime = [Time::HiRes::gettimeofday];
 my ($tn, $args, $timeout) = qw/foo bar 2/;
-pass("do_task($tn, $args, {timeout => $timeout})");
-$c->do_task($tn, $args, { timeout => $timeout });
-is(int(Time::HiRes::tv_interval($starttime)), $timeout, 'do_task timeout');
 
-ok(my $h = $c->dispatch_background($tn, $args),
-    "dispatch_background($tn, $args)");
-$h && ok($r = $c->get_status($h), "get_status($h)");
-note 'get_status result: ', explain $r;
+subtest "do tast", sub {
+    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+    $ENV{GEARMAN_SERVERS}
+        || plan skip_all =>
+        'Gearman::Client tests without $ENV{GEARMAN_SERVERS}';
+
+    my $starttime = [Time::HiRes::gettimeofday];
+
+    pass("do_task($tn, $args, {timeout => $timeout})");
+    $c->do_task($tn, $args, { timeout => $timeout });
+
+    is(int(Time::HiRes::tv_interval($starttime)), $timeout, 'do_task timeout');
+};
+
+subtest "dispatch background", sub {
+    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+    $ENV{GEARMAN_SERVERS}
+        || plan skip_all =>
+        'Gearman::Client tests without $ENV{GEARMAN_SERVERS}';
+
+
+    ok(my $h = $c->dispatch_background($tn, $args),
+        "dispatch_background($tn, $args)");
+    $h && ok($r = $c->get_status($h), "get_status($h)");
+    note 'get_status result: ', explain $r;
+};
 
 done_testing();
