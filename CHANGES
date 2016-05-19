@@ -1,3 +1,7 @@
+1.12.006 (2016-05-19)
+     -- tests refactoring
+     -- execute some tests only if AUTHOR_TESTING env is defined
+
 1.12.005 (2016-05-06)
      -- rm META.*
 
