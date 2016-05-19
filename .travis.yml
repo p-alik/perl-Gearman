@@ -25,7 +25,7 @@ before_install:
 
 install:
   - cpanm --quiet --notest Devel::Cover::Report::Coveralls
-  - cpanm --quiet --notest --installdep
+  - cpanm --quiet --notest --installdeps .
 
 script:
   - perl Makefile.PL
