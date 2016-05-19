@@ -2,17 +2,11 @@ use strict;
 use warnings;
 use Test::More;
 
-unless ($ENV{GEARMAN_SERVERS}) {
-    plan skip_all => 'Gearman::Worker tests without $ENV{GEARMAN_SERVERS}';
-    exit;
-}
-
-my @servers = split /,/, $ENV{GEARMAN_SERVERS};
+my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
 
 use_ok('Gearman::Worker');
 
-my $c = new_ok('Gearman::Worker',
-    [job_servers => [split /,/, $ENV{GEARMAN_SERVERS}],]);
+my $c = new_ok('Gearman::Worker', [job_servers => [@js]]);
 isa_ok($c, 'Gearman::Base');
 
 my ($tn) = qw/foo/;
@@ -26,6 +20,14 @@ ok(
     ),
     "register_function($tn)"
 );
-$c->work(stop_if => sub { return shift; });
+
+subtest "work", sub {
+    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+    $ENV{GEARMAN_SERVERS}
+        || plan skip_all => 'without $ENV{GEARMAN_SERVERS}';
+
+    pass "work subtest";
+    $c->work(stop_if => sub { return 1; });
+};
 
 done_testing();
