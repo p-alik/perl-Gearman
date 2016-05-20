@@ -10,6 +10,8 @@ use Test::More;
 use lib 't';
 use TestGearman;
 
+$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+
 if (start_server(PORT)) {
     plan tests => 12;
 } else {

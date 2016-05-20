@@ -11,6 +11,8 @@ use Time::HiRes qw(time);
 use lib 't';
 use TestGearman;
 
+$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+
 # This is testing the MAXQUEUE feature of gearmand. There's no direct
 # support for it in Gearman::Worker yet, so we connect directly to
 # gearmand to configure it for the test.
