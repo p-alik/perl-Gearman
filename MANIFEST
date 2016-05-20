@@ -1,5 +1,4 @@
 CHANGES
-HACKING
 lib/Gearman/Base.pm
 lib/Gearman/Client.pm
 lib/Gearman/JobStatus.pm
@@ -29,4 +28,5 @@ t/65-responseparser.t
 t/TestGearman.pm
 t/worker.pl
 t/lib/GearTestLib.pm
+README
 TODO
