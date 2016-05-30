@@ -1,5 +1,6 @@
 1.12.007 (2016-05-20)
      -- more tests only with AUTHOR_TESTING
+     -- rename Base.pm to Object.pm (no permissions for Base.pm)
 
 1.12.006 (2016-05-19)
      -- tests refactoring
