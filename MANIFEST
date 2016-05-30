@@ -1,7 +1,7 @@
 CHANGES
-lib/Gearman/Base.pm
 lib/Gearman/Client.pm
 lib/Gearman/JobStatus.pm
+lib/Gearman/Object.pm
 lib/Gearman/ResponseParser.pm
 lib/Gearman/ResponseParser/Taskset.pm
 lib/Gearman/Task.pm
