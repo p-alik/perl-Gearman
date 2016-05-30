@@ -1,4 +1,4 @@
-package Gearman::Base;
+package Gearman::Object;
 use strict;
 use warnings;
 
@@ -12,7 +12,7 @@ use fields qw/
     /;
 
 sub new {
-    my Gearman::Base $self = shift;
+    my Gearman::Object $self = shift;
     my (%opts) = @_;
     unless (ref($self)) {
         $self = fields::new($self);
@@ -52,7 +52,7 @@ sub canonicalize_job_servers {
     my ($self) = shift;
     my $list = ref $_[0] ? $_[0] : [@_];    # take arrayref or array
     foreach (@$list) {
-        $_ .= ':' . Gearman::Base::DEFAULT_PORT unless /:/;
+        $_ .= ':' . Gearman::Object::DEFAULT_PORT unless /:/;
     }
     return $list;
 } ## end sub canonicalize_job_servers
