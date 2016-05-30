@@ -3,7 +3,7 @@ use warnings;
 
 use Test::More tests => 8;
 
-use_ok('Gearman::Base');
+use_ok('Gearman::Object');
 use_ok('Gearman::Client');
 use_ok('Gearman::JobStatus');
 use_ok('Gearman::ResponseParser');
