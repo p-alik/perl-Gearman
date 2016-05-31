@@ -1,6 +1,6 @@
 # this is the object that's handed to the worker subrefs
 package Gearman::Job;
-$Gearman::Job::VERSION = '1.3.001';
+$Gearman::Job::VERSION = '1.13.001';
 
 use strict;
 use warnings;
