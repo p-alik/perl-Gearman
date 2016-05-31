@@ -17,6 +17,7 @@ t/01-base.t
 t/02-client.t
 t/03-worker.t
 t/04-task.t
+t/05-taskset.t
 t/09-connect.t
 t/10-all.t
 t/20-leaktest.t
