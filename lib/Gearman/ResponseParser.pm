@@ -1,4 +1,6 @@
 package Gearman::ResponseParser;
+$Gearman::ResponseParser::VERSION = '1.13.001';
+
 use strict;
 use warnings;
 
