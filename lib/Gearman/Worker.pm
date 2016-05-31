@@ -1,5 +1,5 @@
 package Gearman::Worker;
-$Gearman::Worker::VERSION = '1.3.001';
+$Gearman::Worker::VERSION = '1.13.001';
 
 use strict;
 use warnings;
