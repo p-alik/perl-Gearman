@@ -1,7 +1,6 @@
 package Gearman::Taskset;
 $Gearman::Taskset::VERSION = '1.13.001';
 
-
 use strict;
 use warnings;
 no warnings "redefine";
@@ -206,7 +205,7 @@ sub wait {
 
 sub add_task {
     my Gearman::Taskset $ts = shift;
-    my $task = Gearman::Client::_get_task_from_args(@_);
+    my $task = $ts->client()->_get_task_from_args(@_);
 
     $task->taskset($ts);
 
@@ -258,7 +257,7 @@ sub _get_hashed_sock {
     my Gearman::Taskset $ts = shift;
     my $hv = shift;
 
-    my Gearman::Client $cl = $ts->{client};
+    my $cl = $ts->client;
 
     for (my $off = 0; $off < $cl->{js_count}; $off++) {
         my $idx = ($hv + $off) % ($cl->{js_count});
