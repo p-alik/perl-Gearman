@@ -158,6 +158,7 @@ sub get_job_server_clients {
 } ## end sub get_job_server_clients
 
 sub _get_task_from_args {
+    my $self = shift;
     my Gearman::Task $task;
     if (ref $_[0]) {
         $task = shift;
@@ -171,6 +172,7 @@ sub _get_task_from_args {
         my $argref = ref $arg_p ? $arg_p : \$arg_p;
         Carp::croak("Function argument must be scalar or scalarref")
             unless ref $argref eq "SCALAR";
+
         $task = Gearman::Task->new($func, $argref, $opts);
     } ## end else [ if (ref $_[0]) ]
     return $task;
@@ -180,7 +182,7 @@ sub _get_task_from_args {
 # given a (func, arg_p, opts?), returns either undef (on fail) or scalarref of result
 sub do_task {
     my Gearman::Client $self = shift;
-    my Gearman::Task $task   = &_get_task_from_args;
+    my Gearman::Task $task   = $self->_get_task_from_args(@_);
 
     my $ret     = undef;
     my $did_err = 0;
@@ -198,14 +200,13 @@ sub do_task {
     $ts->wait(timeout => $task->timeout);
 
     return $did_err ? undef : $ret;
-
 } ## end sub do_task
 
 # given a (func, arg_p, opts?) or
 # Gearman::Task, dispatches job in background.  returns the handle from the jobserver, or false if any failure
 sub dispatch_background {
     my Gearman::Client $self = shift;
-    my Gearman::Task $task   = &_get_task_from_args;
+    my Gearman::Task $task   = $self->_get_task_from_args(@_);
 
     $task->{background} = 1;
 
