@@ -5,10 +5,8 @@ use strict;
 use warnings;
 
 use Carp          ();
-use String::CRC32 ();
-
-use Gearman::Taskset;
 use Gearman::Util;
+use String::CRC32 ();
 use Storable;
 
 use fields (
@@ -44,7 +42,7 @@ use fields (
     'hooks', # hookname -> coderef
 );
 
-no warnings "redefine";
+#no warnings "redefine";
 
 # constructor, given: ($func, $argref, $opts);
 sub new {
@@ -121,7 +119,9 @@ sub taskset {
     return $task->{taskset} unless @_;
 
     # setter
-    my Gearman::Taskset $ts = shift;
+    my $ts = shift;
+    ref($ts) eq "Gearman::Taskset"
+        || Carp::croak("argument is not an instance of Gearman::Taskset");
     $task->{taskset} = $ts;
 
     my $merge_on = $task->{uniq}
@@ -157,8 +157,8 @@ sub _hashfunc {
 }
 
 sub pack_submit_packet {
-    my Gearman::Task $task     = shift;
-    my Gearman::Client $client = shift;
+    my Gearman::Task $task = shift;
+    my $client = shift;
 
     my $func = $task->{func};
 
