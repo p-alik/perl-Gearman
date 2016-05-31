@@ -1,5 +1,6 @@
 CHANGES
 lib/Gearman/Client.pm
+lib/Gearman/Job.pm
 lib/Gearman/JobStatus.pm
 lib/Gearman/Object.pm
 lib/Gearman/ResponseParser.pm
