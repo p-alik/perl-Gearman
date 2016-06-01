@@ -13,7 +13,7 @@ sub new {
     my $class = shift;
     my %opts  = @_;
     my $src   = delete $opts{'source'};
-    die if %opts;
+    die "unsupported arguments '@{[keys %opts]}'" if %opts;
 
     my $self = bless {
         source =>
