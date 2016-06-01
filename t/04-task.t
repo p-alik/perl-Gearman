@@ -43,7 +43,7 @@ is($t->{$_}, 0, $_) for qw/
 
 is($t->taskset, undef, "taskset");
 throws_ok { $t->taskset($f) } qr/not an instance of Gearman::Taskset/,
-    "cought taskset($f) exception";
+    "caught taskset($f) exception";
 is($t->{background}, undef,        "!background");
 is($t->mode,         "submit_job", "submit_job");
 is($t->{high_priority} = 1, 1, "high_priority");
