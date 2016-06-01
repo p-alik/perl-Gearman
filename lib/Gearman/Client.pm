@@ -513,12 +513,12 @@ This is free software.  This comes with no warranty whatsoever.
 
 =head1 AUTHORS
 
- Brad Fitzpatrick (brad@danga.com)
- Jonathan Steinert (hachi@cpan.org)
- Alexei Pastuchov (<palik at cpan.org>)
+ Brad Fitzpatrick (<brad at danga dot com>)
+ Jonathan Steinert (<hachi at cpan dot org>)
+ Alexei Pastuchov (<palik at cpan dot org>)
 
 =head1 REPOSITORY
 
 L<https://github.com/p-alik/perl-Gearman.git>
 
-=cut
+
