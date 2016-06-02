@@ -3,7 +3,6 @@ $Gearman::Taskset::VERSION = '1.13.001';
 
 use strict;
 use warnings;
-no warnings "redefine";
 
 use fields (
     'waiting',        # { handle => [Task, ...] }
@@ -19,7 +18,6 @@ use fields (
 );
 
 use Carp ();
-use Gearman::Client;
 use Gearman::Util;
 use Gearman::ResponseParser::Taskset;
 use Scalar::Util ()
@@ -27,8 +25,10 @@ use Scalar::Util ()
 use Time::HiRes ();
 
 sub new {
-    my $class = shift;
-    my Gearman::Client $client = shift;
+    my $class  = shift;
+    my $client = shift;
+    ref($client) eq "Gearman::Client"
+        || die "provided client argument is not a Gearman::Client reference";
 
     my $self = $class;
     $self = fields::new($class) unless ref $self;
@@ -172,12 +172,11 @@ sub wait {
 
             # TODO: deal with error vector
 
-            my $sock   = $watching{$fd};
-            my $parser = $parser{$fd}
-                ||= Gearman::ResponseParser::Taskset->new(
+            my $sock = $watching{$fd};
+            my $parser = $parser{$fd} ||= Gearman::ResponseParser::Taskset->new(
                 source  => $sock,
                 taskset => $ts
-                );
+            );
             eval { $parser->parse_sock($sock); };
 
             if ($@) {
@@ -297,7 +296,8 @@ sub _fail_jshandle {
     my $task_list = $ts->{waiting}{$shandle}
         or die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
 
-    my Gearman::Task $task = shift @$task_list
+    my $task = shift @$task_list;
+    ($task && ref($task) eq "Gearman::Task")
         or die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
 
     $task->fail;
@@ -309,7 +309,8 @@ sub _process_packet {
     my ($res, $sock) = @_;
 
     if ($res->{type} eq "job_created") {
-        my Gearman::Task $task = shift @{ $ts->{need_handle} }
+        my $task = shift @{ $ts->{need_handle} };
+        ($task && ref($task) eq "Gearman::Task")
             or die "Um, got an unexpected job_created notification";
 
         my $shandle = ${ $res->{'blobref'} };
@@ -341,7 +342,8 @@ sub _process_packet {
         my $task_list = $ts->{waiting}{$shandle}
             or die "Uhhhh:  got work_complete for unknown handle: $shandle\n";
 
-        my Gearman::Task $task = shift @$task_list
+        my $task = shift @$task_list;
+        ($task && ref($task) eq "Gearman::Task")
             or die
             "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
 
@@ -358,7 +360,8 @@ sub _process_packet {
         my $task_list = $ts->{waiting}{$shandle}
             or die "Uhhhh:  got work_exception for unknown handle: $shandle\n";
 
-        my Gearman::Task $task = $task_list->[0]
+        my $task = $task_list->[0];
+        ($task && ref($task) eq "Gearman::Task")
             or die
             "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
 
@@ -377,7 +380,7 @@ sub _process_packet {
         # interested client, even if the clients are the same, so probably need
         # to fix the server not to do that.  just put this FIXME here for now,
         # though really it's a server issue.
-        foreach my Gearman::Task $task (@$task_list) {
+        foreach my $task (@$task_list) {
             $task->status($nu, $de);
         }
 
