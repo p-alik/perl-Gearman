@@ -58,7 +58,7 @@ sub handle {
 }
 
 package Gearman::Worker;
-use base 'Gearman::Base';
+use base 'Gearman::Object';
 
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
 
