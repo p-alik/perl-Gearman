@@ -1,3 +1,6 @@
+1.12.008 (2016-06-03)
+     -- rename Gearman::Base back to Geamrman::Object because Gearman-Client-Async depends on it
+
 1.12.007 (2016-05-20)
      -- more tests only with AUTHOR_TESTING
      -- rename Base.pm to Object.pm (no permissions for Base.pm)
@@ -175,3 +178,4 @@
      -- finally package it up and call it 1.00 now that we've been using
         it in (LiveJournal) production for quite a while, finding/fixing
         the bugs that happen when you put something into production.
+ 
