@@ -225,8 +225,7 @@ sub send_req {
     my $len = length($$reqref);
     local $SIG{PIPE} = 'IGNORE';
     my $rv = $sock->syswrite($$reqref, $len);
-    return 0 unless $rv == $len;
-    return 1;
+    return ($rv && $rv == $len) ? 1 : 0;
 } ## end sub send_req
 
 # given a file descriptor number and a timeout, wait for that descriptor to
