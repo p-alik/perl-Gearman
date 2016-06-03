@@ -42,8 +42,6 @@ use fields (
     'hooks', # hookname -> coderef
 );
 
-#no warnings "redefine";
-
 # constructor, given: ($func, $argref, $opts);
 sub new {
     my $class = shift;
