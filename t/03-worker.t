@@ -7,7 +7,7 @@ my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
 use_ok('Gearman::Worker');
 
 my $c = new_ok('Gearman::Worker', [job_servers => [@js]]);
-isa_ok($c, 'Gearman::Object');
+isa_ok($c, 'Gearman::Objects');
 
 my ($tn) = qw/foo/;
 ok(
