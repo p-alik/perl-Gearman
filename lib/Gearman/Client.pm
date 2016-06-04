@@ -1,5 +1,5 @@
 package Gearman::Client;
-$Gearman::Client::VERSION = '1.12.008';
+$Gearman::Client::VERSION = '1.12.009';
 
 use strict;
 use warnings;
