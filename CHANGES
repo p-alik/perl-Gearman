@@ -1,3 +1,7 @@
+1.12.009 (2016-06-04)
+     -- run t/30-maxqueue.t and t/40-prefix.t only with AUTHOR_TESTING
+     -- s/::Object/::Objects/
+
 1.12.008 (2016-06-03)
      -- rename Gearman::Base back to Geamrman::Object because Gearman-Client-Async depends on it
 
