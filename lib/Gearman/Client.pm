@@ -5,7 +5,7 @@ use strict;
 use warnings;
 no warnings "redefine";
 
-use base 'Gearman::Object';
+use base 'Gearman::Objects';
 
 use fields (
     'sock_cache',    # hostport -> socket

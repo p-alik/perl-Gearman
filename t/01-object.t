@@ -2,15 +2,15 @@ use strict;
 use warnings;
 use Test::More;
 
-use_ok('Gearman::Object');
+use_ok('Gearman::Objects');
 
 my @servers = $ENV{GEARMAN_SERVERS}
     ? split /,/, $ENV{GEARMAN_SERVERS}
     : qw/foo bar/;
 my $c = new_ok(
-    'Gearman::Object',
+    'Gearman::Objects',
     [job_servers => $servers[0]],
-    "Gearman::Object->new(job_servers => $servers[0])"
+    "Gearman::Objects->new(job_servers => $servers[0])"
 );
 is(
     @{ $c->job_servers() }[0],
@@ -20,9 +20,9 @@ is(
 is(1, $c->{js_count}, 'js_count=1');
 
 $c = new_ok(
-    'Gearman::Object',
+    'Gearman::Objects',
     [job_servers => [@servers]],
-    sprintf("Gearman::Object->new(job_servers => [%s])", join(', ', @servers))
+    sprintf("Gearman::Objects->new(job_servers => [%s])", join(', ', @servers))
 );
 is(scalar(@servers), $c->{js_count}, 'js_count=' . scalar(@servers));
 ok(my @js = $c->job_servers);
