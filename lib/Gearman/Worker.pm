@@ -4,7 +4,7 @@ $Gearman::Worker::VERSION = '1.13.001';
 use strict;
 use warnings;
 
-use base 'Gearman::Object';
+use base 'Gearman::Objects';
 
 #TODO: retries?
 #

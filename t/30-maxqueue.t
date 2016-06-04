@@ -7,6 +7,9 @@ use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
 
+#TODO refactoring
+$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+
 use lib 't';
 use TestGearman;
 

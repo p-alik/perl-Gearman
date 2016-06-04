@@ -6,7 +6,7 @@ my @mn = qw/
     Gearman::Client
     Gearman::Job
     Gearman::JobStatus
-    Gearman::Object
+    Gearman::Objects
     Gearman::ResponseParser
     Gearman::Task
     Gearman::Taskset

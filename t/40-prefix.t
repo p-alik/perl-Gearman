@@ -8,10 +8,11 @@ use Storable qw( freeze );
 use Test::More;
 use Time::HiRes 'sleep';
 
+#TODO refactoring
+$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+
 use lib 't';
 use TestGearman;
-
-$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
 
 if (start_server(PORT)) {
     plan tests => 9;
