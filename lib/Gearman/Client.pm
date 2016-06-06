@@ -3,7 +3,6 @@ $Gearman::Client::VERSION = '1.13.001';
 
 use strict;
 use warnings;
-no warnings "redefine";
 
 use base 'Gearman::Objects';
 
@@ -16,13 +15,18 @@ use fields (
     'command_timeout'
     , # maximum time a gearman command should take to get a result (not a job timeout)
 );
-use IO::Socket::INET;
-use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET);
-use Time::HiRes;
 
 use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
+
+use IO::Socket::INET;
+use Socket qw/
+    IPPROTO_TCP
+    TCP_NODELAY
+    SOL_SOCKET
+    /;
+use Time::HiRes;
 
 sub new {
     my ($class, %opts) = @_;
