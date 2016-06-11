@@ -3,55 +3,100 @@ use warnings;
 use Test::More;
 use Test::Exception;
 
-use_ok("Gearman::Task");
+my $mn = "Gearman::Task";
+use_ok($mn);
 can_ok(
-    "Gearman::Task", qw/
-        run_hook
-        add_hook
-        is_finished
-        taskset
-        hash
+    $mn, qw/
         _hashfunc
-        pack_submit_packet
+        add_hook
+        complete
+        exception
         fail
         final_fail
-        exception
-        complete
-        status
-        handle
-        set_on_post_hooks
-        wipe
         func
-        timeout
+        handle
+        hash
+        is_finished
         mode
+        pack_submit_packet
+        run_hook
+        set_on_post_hooks
+        status
+        taskset
+        timeout
+        wipe
         /
 );
 
-my ($f, $arg, $to) = (qw/foo bar/, int(rand(10)));
+my ($f, $arg) = qw/
+    foo
+    bar
+    /;
 
-#my $to = int(rand(10));
+my %opt = (
+    uniq          => rand(10),
+    on_complete   => 1,
+    on_fail       => 2,
+    on_exception  => 3,
+    on_retry      => undef,
+    on_status     => 4,
+    retry_count   => 6,
+    try_timeout   => 7,
+    high_priority => 1,
+    background    => 1,
+    timeout       => int(rand(10)),
+);
 
-my $t = new_ok("Gearman::Task", [$f, \$arg, { timeout => $to }]);
-is($t->func,          $f,   "func");
+throws_ok { $mn->new($f, \$arg, { $f => 1 }) } qr/Unknown option/,
+    "caught unknown option exception";
+
+my $t = new_ok($mn, [$f, \$arg, {%opt}]);
+
+is($t->func, $f, "func");
+
 is(${ $t->{argref} }, $arg, "argref");
-is($t->timeout,       $to,  "timeout");
+
+foreach (keys %opt) {
+    is($t->can($_) ? $t->$_ : $t->{$_}, $opt{$_}, $_);
+}
 
 is($t->{$_}, 0, $_) for qw/
     is_finished
-    retry_count
+    retries_done
     /;
 
 is($t->taskset, undef, "taskset");
 throws_ok { $t->taskset($f) } qr/not an instance of Gearman::Taskset/,
     "caught taskset($f) exception";
-is($t->{background}, undef,        "!background");
-is($t->mode,         "submit_job", "submit_job");
-is($t->{high_priority} = 1, 1, "high_priority");
-is($t->mode, "submit_job_high", "submit_job_high");
 
-is($t->{background} = 1, 1, "background");
-is($t->mode, "submit_job_high_bg", "submit_job_high_bg");
-is($t->{high_priority} = 0, 0, "!high_priority");
-is($t->mode, "submit_job_bg", "submit_job_bg");
+subtest "mode", sub {
+    $t->{background}    = undef;
+    $t->{high_priority} = 0;
+    is($t->mode, "submit_job", "submit_job");
+    $t->{high_priority} = 1;
+    is($t->mode, "submit_job_high", "submit_job_high");
+
+    is($t->{background} = 1, 1, "background");
+    is($t->mode, "submit_job_high_bg", "submit_job_high_bg");
+    $t->{high_priority} = 0;
+    is($t->mode, "submit_job_bg", "submit_job_bg");
+};
+
+subtest "wipe", sub {
+    my @h = qw/
+        on_post_hooks
+        on_complete
+        on_fail
+        on_retry
+        on_status
+        hooks
+        /;
+
+    $t->{$_} = 1 for @h;
+
+    $t->wipe();
+
+    is($t->{$_}, undef, $_) for @h;
+};
 
 done_testing();
