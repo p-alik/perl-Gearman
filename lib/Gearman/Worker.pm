@@ -6,6 +6,86 @@ use warnings;
 
 use base 'Gearman::Object';
 
+=head1 NAME
+
+Gearman::Worker - Worker for gearman distributed job system
+
+=head1 SYNOPSIS
+
+    use Gearman::Worker;
+    my $worker = Gearman::Worker->new;
+    $worker->job_servers('127.0.0.1');
+    $worker->register_function($funcname => $subref);
+    $worker->work while 1;
+
+=head1 DESCRIPTION
+
+I<Gearman::Worker> is a worker class for the Gearman distributed job system,
+providing a framework for receiving and serving jobs from a Gearman server.
+
+Callers instantiate a I<Gearman::Worker> object, register a list of functions
+and capabilities that they can handle, then enter an event loop, waiting
+for the server to send jobs.
+
+The worker can send a return value back to the server, which then gets
+sent back to the client that requested the job; or it can simply execute
+silently.
+
+=head1 USAGE
+
+=head2 Gearman::Worker->new(%options)
+
+Creates a new I<Gearman::Worker> object, and returns the object.
+
+If I<%options> is provided, initializes the new worker object with the
+settings in I<%options>, which can contain:
+
+=over 4
+
+=item * job_servers
+
+Calls I<job_servers> (see below) to initialize the list of job
+servers. It will be ignored if this worker is running as a child
+process of a gearman server.
+
+=item * prefix
+
+Calls I<prefix> (see below) to set the prefix / namespace.
+
+=back
+
+=head2 $client-E<gt>prefix($prefix)
+
+Sets the namespace / prefix for the function names.  This is useful
+for sharing job servers between different applications or different
+instances of the same application (different development sandboxes for
+example).
+
+The namespace is currently implemented as a simple tab separated
+concatenation of the prefix and the function name.
+
+=head1 EXAMPLES
+
+=head2 Summation
+
+This is an example worker that receives a request to sum up a list of
+integers.
+
+    use Gearman::Worker;
+    use Storable qw( thaw );
+    use List::Util qw( sum );
+    my $worker = Gearman::Worker->new;
+    $worker->job_servers('127.0.0.1');
+    $worker->register_function(sum => sub { sum @{ thaw($_[0]->arg) } });
+    $worker->work while 1;
+
+See the I<Gearman::Client> documentation for a sample client sending the
+I<sum> job.
+
+=head1 METHODS
+
+=cut
+
 #TODO: retries?
 #
 use Gearman::Util;
@@ -224,7 +304,12 @@ sub _set_ability {
     return Gearman::Util::send_req($sock, \$req);
 } ## end sub _set_ability
 
-# tell all the jobservers that this worker can't do anything
+=head2 reset_abilities
+
+tell all the jobservers that this worker can't do anything
+
+=cut
+
 sub reset_abilities {
     my Gearman::Worker $self = shift;
     my $req = Gearman::Util::pack_req_command("reset_abilities");
@@ -241,6 +326,12 @@ sub reset_abilities {
     $self->{timeouts} = {};
 } ## end sub reset_abilities
 
+=head2 uncache_sock()
+
+close TCP connection
+
+=cut
+
 sub uncache_sock {
     my ($self, $ipport, $reason) = @_;
 
@@ -253,7 +344,13 @@ sub uncache_sock {
     delete $self->{sock_cache}{$ipport};
 } ## end sub uncache_sock
 
-# does one job and returns.  no return value.
+=head2 work(%opts)
+
+Do one job and returns (no value returned).
+You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
+
+=cut
+
 sub work {
     my Gearman::Worker $self = shift;
     my %opts = @_;
@@ -448,6 +545,28 @@ sub work {
 
 } ## end sub work
 
+=head2 $worker->register_function($funcname, $subref)
+
+=head2 $worker->register_function($funcname, $timeout, $subref)
+
+Registers the function I<$funcname> as being provided by the worker
+I<$worker>, and advertises these capabilities to all of the job servers
+defined in this worker.
+
+I<$subref> must be a subroutine reference that will be invoked when the
+worker receives a request for this function. It will be passed a
+I<Gearman::Job> object representing the job that has been received by the
+worker.
+
+I<$timeout> is an optional parameter specifying how long the jobserver will
+wait for your subroutine to give an answer. Exceeding this time will result
+in the jobserver reassigning the task and ignoring your result. This prevents
+a gimpy worker from ruining the 'user experience' in many situations.
+
+The subroutine reference can return a return value, which will be sent back
+to the job server.
+=cut
+
 sub register_function {
     my Gearman::Worker $self = shift;
     my $func = shift;
@@ -471,6 +590,10 @@ sub register_function {
     $self->{can}{$ability} = $subref;
 } ## end sub register_function
 
+=head2 unregister_function($funcname)
+
+=cut
+
 sub unregister_function {
     my Gearman::Worker $self = shift;
     my $func = shift;
@@ -484,6 +607,9 @@ sub unregister_function {
     delete $self->{can}{$ability};
 } ## end sub unregister_function
 
+#
+# _register_all($req)
+#
 sub _register_all {
     my Gearman::Worker $self = shift;
     my $req = shift;
@@ -498,66 +624,7 @@ sub _register_all {
     } ## end foreach my $js (@{ $self->{...}})
 } ## end sub _register_all
 
-# getters/setters
-sub job_servers {
-    my Gearman::Worker $self = shift;
-    return if ($ENV{GEARMAN_WORKER_USE_STDIO});
-
-    return $self->SUPER::job_servers(@_);
-} ## end sub job_servers
-
-1;
-__END__
-
-=head1 NAME
-
-Gearman::Worker - Worker for gearman distributed job system
-
-=head1 SYNOPSIS
-
-    use Gearman::Worker;
-    my $worker = Gearman::Worker->new;
-    $worker->job_servers('127.0.0.1');
-    $worker->register_function($funcname => $subref);
-    $worker->work while 1;
-
-=head1 DESCRIPTION
-
-I<Gearman::Worker> is a worker class for the Gearman distributed job system,
-providing a framework for receiving and serving jobs from a Gearman server.
-
-Callers instantiate a I<Gearman::Worker> object, register a list of functions
-and capabilities that they can handle, then enter an event loop, waiting
-for the server to send jobs.
-
-The worker can send a return value back to the server, which then gets
-sent back to the client that requested the job; or it can simply execute
-silently.
-
-=head1 USAGE
-
-=head2 Gearman::Worker->new(%options)
-
-Creates a new I<Gearman::Worker> object, and returns the object.
-
-If I<%options> is provided, initializes the new worker object with the
-settings in I<%options>, which can contain:
-
-=over 4
-
-=item * job_servers
-
-Calls I<job_servers> (see below) to initialize the list of job
-servers. It will be ignored if this worker is running as a child
-process of a gearman server.
-
-=item * prefix
-
-Calls I<prefix> (see below) to set the prefix / namespace.
-
-=back
-
-=head2 $worker->job_servers(@servers)
+=head2 job_servers(@servers)
 
 Initializes the worker I<$worker> with the list of job servers in I<@servers>.
 I<@servers> should contain a list of IP addresses, with optional port numbers.
@@ -570,51 +637,17 @@ If the port number is not provided, 4730 is used as the default.
 Calling this method will do nothing in a worker that is running as a child
 process of a gearman server.
 
-=head2 $worker->register_function($funcname, $subref)
+=cut
 
-=head2 $worker->register_function($funcname, $timeout, $subref)
+sub job_servers {
+    my Gearman::Worker $self = shift;
+    return if ($ENV{GEARMAN_WORKER_USE_STDIO});
 
-Registers the function I<$funcname> as being provided by the worker
-I<$worker>, and advertises these capabilities to all of the job servers
-defined in this worker.
+    return $self->SUPER::job_servers(@_);
+} ## end sub job_servers
 
-I<$subref> must be a subroutine reference that will be invoked when the
-worker receives a request for this function. It will be passed a
-I<Gearman::Job> object representing the job that has been received by the
-worker.
-
-I<$timeout> is an optional parameter specifying how long the jobserver will
-wait for your subroutine to give an answer. Exceeding this time will result
-in the jobserver reassigning the task and ignoring your result. This prevents
-a gimpy worker from ruining the 'user experience' in many situations.
-
-The subroutine reference can return a return value, which will be sent back
-to the job server.
-
-=head2 $client-E<gt>prefix($prefix)
-
-Sets the namespace / prefix for the function names.  This is useful
-for sharing job servers between different applications or different
-instances of the same application (different development sandboxes for
-example).
-
-The namespace is currently implemented as a simple tab separated
-concatenation of the prefix and the function name.
-
-=head2 Gearman::Job->arg
-
-Returns the scalar argument that the client sent to the job server.
-
-=head2 Gearman::Job->set_status($numerator, $denominator)
-
-Updates the status of the job (most likely, a long-running job) and sends
-it back to the job server. I<$numerator> and I<$denominator> should
-represent the percentage completion of the job.
-
-=head2 Gearman::Job->work(%opts)
-
-Do one job and returns (no value returned).
-You can pass "on_start" "on_complete" and "on_fail" callbacks in I<%opts>.
+1;
+__END__
 
 =head1 WORKERS AS CHILD PROCESSES
 
@@ -626,22 +659,3 @@ variable is set to true, then the jobservers function and option for
 new() are ignored and the unix socket bound to STDIN/OUT are used
 instead as the IO path to the gearman server.
 
-=head1 EXAMPLES
-
-=head2 Summation
-
-This is an example worker that receives a request to sum up a list of
-integers.
-
-    use Gearman::Worker;
-    use Storable qw( thaw );
-    use List::Util qw( sum );
-    my $worker = Gearman::Worker->new;
-    $worker->job_servers('127.0.0.1');
-    $worker->register_function(sum => sub { sum @{ thaw($_[0]->arg) } });
-    $worker->work while 1;
-
-See the I<Gearman::Client> documentation for a sample client sending the
-I<sum> job.
-
-=cut
