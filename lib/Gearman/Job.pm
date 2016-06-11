@@ -11,6 +11,14 @@ use Gearman::Util;
 use Carp             ();
 use IO::Socket::INET ();
 
+=head1 NAME
+
+Gearman::Job - Job in gearman distributed job system
+
+
+=head1 METHODS
+
+=cut
 
 use fields (
     'func',
@@ -31,7 +39,14 @@ sub new {
     return $self;
 } ## end sub new
 
-# ->set_status($numerator, $denominator) : $bool_sent_to_jobserver
+=head2 set_status($numerator, $denominator)
+
+Updates the status of the job (most likely, a long-running job) and sends
+it back to the job server. I<$numerator> and I<$denominator> should
+represent the percentage completion of the job.
+
+=cut
+
 sub set_status {
     my Gearman::Job $self = shift;
     my ($nu, $de) = @_;
@@ -43,19 +58,33 @@ sub set_status {
     return 1;
 } ## end sub set_status
 
+=head2 argref()
+
+=cut
+
 sub argref {
     my Gearman::Job $self = shift;
     return $self->{argref};
 }
+
+=head2 arg()
+
+B<return> the scalar argument that the client sent to the job server.
+
+=cut
 
 sub arg {
     my Gearman::Job $self = shift;
     return ${ $self->{argref} };
 }
 
+=head2 handle()
+
+B<return> handle
+=cut
+
 sub handle {
     my Gearman::Job $self = shift;
     return $self->{handle};
 }
-
 
