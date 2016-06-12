@@ -3,11 +3,14 @@ use warnings;
 use Test::More;
 use Test::Exception;
 
+use_ok("Gearman::Client");
+use_ok("Gearman::Taskset");
+
 my $mn = "Gearman::Task";
 use_ok($mn);
+
 can_ok(
     $mn, qw/
-        _hashfunc
         add_hook
         complete
         exception
@@ -65,10 +68,6 @@ is($t->{$_}, 0, $_) for qw/
     retries_done
     /;
 
-is($t->taskset, undef, "taskset");
-throws_ok { $t->taskset($f) } qr/not an instance of Gearman::Taskset/,
-    "caught taskset($f) exception";
-
 subtest "mode", sub {
     $t->{background}    = undef;
     $t->{high_priority} = 0;
@@ -97,6 +96,28 @@ subtest "wipe", sub {
     $t->wipe();
 
     is($t->{$_}, undef, $_) for @h;
+};
+
+subtest "hook", sub {
+    my $cb = sub { 2 * shift };
+    ok($t->add_hook($f, $cb));
+    is($t->{hooks}->{$f}, $cb);
+    $t->run_hook($f, 2);
+    ok($t->add_hook($f));
+    is($t->{hooks}->{$f}, undef);
+};
+
+subtest "taskset", sub {
+    is($t->taskset, undef, "taskset");
+    throws_ok { $t->taskset($f) } qr/not an instance of Gearman::Taskset/,
+        "caught taskset($f) exception";
+
+    my $c = new_ok("Gearman::Client");
+    my $ts = new_ok("Gearman::Taskset", [$c]);
+    ok($t->taskset($ts));
+    is($t->taskset(), $ts);
+    $t->{uniq} = '-';
+    is($t->taskset(), $ts);
 };
 
 done_testing();
