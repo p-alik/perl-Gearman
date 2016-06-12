@@ -102,6 +102,7 @@ never.
 
 =back
 
+=head1 METHODS
 
 =cut
 
@@ -187,35 +188,36 @@ sub new {
     return $self;
 } ## end sub new
 
-=head2 run_hook($hookname)
+=head2 run_hook($name)
+
+run a hook callback if defined
 
 =cut
 
 sub run_hook {
     my Gearman::Task $self = shift;
-    my $hookname = shift || return;
+    my $name = shift;
+    ($name && $self->{hooks}->{$name}) || return;
 
-    my $hook = $self->{hooks}->{$hookname};
-    return unless $hook;
-
-    eval { $hook->(@_) };
-
-    warn "Gearman::Task hook '$hookname' threw error: $@\n" if $@;
+    eval { $self->{hooks}->{$name}->(@_) };
+    warn "Gearman::Task hook '$name' threw error: $@\n" if $@;
 } ## end sub run_hook
 
-=head2 add_hook($hookname)
+=head2 add_hook($name, $cb)
+
+add a hook
 
 =cut
 
 sub add_hook {
     my Gearman::Task $self = shift;
-    my $hookname = shift || return;
+    my $name = shift || return;
 
     if (@_) {
-        $self->{hooks}->{$hookname} = shift;
+        $self->{hooks}->{$name} = shift;
     }
     else {
-        delete $self->{hooks}->{$hookname};
+        delete $self->{hooks}->{$name};
     }
 } ## end sub add_hook
 
@@ -256,10 +258,7 @@ sub taskset {
         || Carp::croak("argument is not an instance of Gearman::Taskset");
     $task->{taskset} = $ts;
 
-    my $merge_on = $task->{uniq}
-        && $task->{uniq} eq "-" ? $task->{argref} : \$task->{uniq};
-    if ($$merge_on) {
-        my $hash_num = _hashfunc($merge_on);
+    if (my $hash_num = $task->hash()) {
         $task->{jssock} = $ts->_get_hashed_sock($hash_num);
     }
     else {
@@ -277,11 +276,10 @@ B<return> undef on non-uniq packet, or the hash value (0-32767) if uniq
 
 sub hash {
     my Gearman::Task $task = shift;
-
     my $merge_on = $task->{uniq}
         && $task->{uniq} eq "-" ? $task->{argref} : \$task->{uniq};
     if ($$merge_on) {
-        return _hashfunc($merge_on);
+        return (String::CRC32::crc32(${$merge_on}) >> 16) & 0x7fff;
     }
     else {
         return undef;
@@ -334,6 +332,20 @@ sub fail {
 
 =head2 final_fail($reason)
 
+run if !is_finished
+
+=over
+
+=item
+
+on_fail
+
+=item
+
+on_post_hooks
+
+=back
+
 =cut
 
 sub final_fail {
@@ -353,6 +365,10 @@ sub final_fail {
 } ## end sub final_fail
 
 =head2 exception($exc_ref)
+
+$exc_ref may be a Storable serialized value
+
+run on_exception if defined
 
 =cut
 
@@ -518,14 +534,6 @@ sub mode {
         : "submit_job"
         );
 } ## end sub mode
-
-#
-# _hashfunc()
-# returns number in range [0,32767] given a scalarref
-#
-sub _hashfunc {
-    return (String::CRC32::crc32(${ shift() }) >> 16) & 0x7fff;
-}
 
 1;
 __END__
