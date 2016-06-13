@@ -372,6 +372,8 @@ sub final_fail {
     return undef;
 } ## end sub final_fail
 
+#FIXME obsolete?
+
 =head2 exception($exc_ref)
 
 $exc_ref may be a Storable serialized value
@@ -432,9 +434,13 @@ shandle is an opaque handle specific to the job server running on IP:port
 
 sub handle {
     my Gearman::Task $task = shift;
-    return $task->{handle} unless @_;
-    return $task->{handle} = shift;
-}
+    if (@_) {
+        $task->{handle} = shift;
+    }
+    return $task->{handle};
+} ## end sub handle
+
+#FIXME obsolete?
 
 =head2 set_on_post_hooks($code)
 
@@ -518,9 +524,11 @@ B<return> timeout
 
 sub timeout {
     my Gearman::Task $task = shift;
-    return $task->{timeout} unless @_;
-    return $task->{timeout} = shift;
-}
+    if (@_) {
+        $task->{timeout} = shift;
+    }
+    return $task->{timeout};
+} ## end sub timeout
 
 =head2 mode()
 
