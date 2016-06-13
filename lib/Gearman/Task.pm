@@ -278,7 +278,7 @@ sub hash {
     my Gearman::Task $task = shift;
     my $merge_on = $task->{uniq}
         && $task->{uniq} eq "-" ? $task->{argref} : \$task->{uniq};
-    if ($$merge_on) {
+    if (${$merge_on}) {
         return (String::CRC32::crc32(${$merge_on}) >> 16) & 0x7fff;
     }
     else {
