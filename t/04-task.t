@@ -1,5 +1,7 @@
 use strict;
 use warnings;
+
+use Storable;
 use Test::More;
 use Test::Exception;
 
@@ -79,17 +81,20 @@ subtest "mode", sub {
     is($t->mode, "submit_job_high_bg", "submit_job_high_bg");
     $t->{high_priority} = 0;
     is($t->mode, "submit_job_bg", "submit_job_bg");
+
+    ok($t->pack_submit_packet(new_ok("Gearman::Client", [prefix => $f])),
+        "pack_submit_packet");
 };
+my @h = qw/
+    on_post_hooks
+    on_complete
+    on_fail
+    on_retry
+    on_status
+    hooks
+    /;
 
 subtest "wipe", sub {
-    my @h = qw/
-        on_post_hooks
-        on_complete
-        on_fail
-        on_retry
-        on_status
-        hooks
-        /;
 
     $t->{$_} = 1 for @h;
 
@@ -116,8 +121,37 @@ subtest "taskset", sub {
     my $ts = new_ok("Gearman::Taskset", [$c]);
     ok($t->taskset($ts));
     is($t->taskset(), $ts);
+    is($t->hash(),    $t->hash());
+
     $t->{uniq} = '-';
     is($t->taskset(), $ts);
+    is($t->hash(),    $t->hash());
 };
+
+subtest "fail", sub {
+    $t->{is_finished} = 1;
+    is($t->fail(), undef);
+
+    $t->{is_finished}  = undef;
+    $t->{on_retry}     = sub { is(shift, $t->{retry_count}, "on_retry") };
+    $t->{retries_done} = 0;
+    $t->{retry_count}  = 1;
+    $t->fail($f);
+    is($t->{retries_done}, $t->{retry_count}, "retries_done = retry_count");
+
+    $t->{is_finished} = undef;
+    $t->{on_fail} = sub { is(shift, $f, "on_fail") };
+    $t->final_fail($f);
+    is($t->{is_finished}, $f);
+
+    is($t->{$_}, undef, $_) for @h;
+};
+
+
+#subtest "exception", sub {
+#        my $exc          = Storable::freeze($f=>$f);
+#        $t->{on_exception} = sub {my(%h)=@_; is($h{$f}, $f)};
+#        is($t->exception($exc), undef);
+#};
 
 done_testing();
