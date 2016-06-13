@@ -15,6 +15,7 @@ WriteMakefile(
     BUILD_REQUIRES => {
         "Test::More"      => 0,
         "Test::Exception" => 0,
+        "Storable"        => 0,
     },
     PREREQ_PM => {
         "fields"           => 0,
