@@ -147,11 +147,29 @@ subtest "fail", sub {
     is($t->{$_}, undef, $_) for @h;
 };
 
+subtest "exception", sub {
+    my $exc = Storable::freeze(\$f);
+    $t->{on_exception} = sub { is(shift, $f) };
+    is($t->exception(\$exc), undef);
+    pass("x");
+};
 
-#subtest "exception", sub {
-#        my $exc          = Storable::freeze($f=>$f);
-#        $t->{on_exception} = sub {my(%h)=@_; is($h{$f}, $f)};
-#        is($t->exception($exc), undef);
-#};
+subtest "complete", sub {
+    $t->{is_finished} = undef;
+    $t->{on_complete} = sub { is(shift, $f) };
+    $t->complete($f);
+    is($t->{is_finished}, "complete");
+};
+
+subtest "status", sub {
+    $t->{is_finished} = undef;
+    $t->{on_status} = sub { is(shift, $f), is(shift, $arg) };
+    $t->status($f, $arg);
+};
+
+subtest "handle", sub {
+    ok($t->handle($f));
+    is($t->{handle}, $f);
+};
 
 done_testing();
