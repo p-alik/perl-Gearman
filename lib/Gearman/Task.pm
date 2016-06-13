@@ -11,9 +11,8 @@ Gearman::Task - a task in Gearman, from the point of view of a client
 =head1 SYNOPSIS
 
     my $task = Gearman::Task->new("add", "1+2", {
-            .....
-
-    };
+            ...
+    });
 
     $taskset->add_task($task);
     $client->do_task($task);
@@ -124,8 +123,11 @@ use fields (
     'on_exception',
     'on_retry',
     'on_status',
-    'on_post_hooks'
-    ,    # used internally, when other hooks are done running, prior to cleanup
+    'on_post_hooks',
+
+    # used internally,
+    # when other hooks are done running,
+    # prior to cleanup
     'retry_count',
     'timeout',
     'try_timeout',
@@ -139,9 +141,15 @@ use fields (
     'retries_done',
     'is_finished',
     'taskset',
-    'jssock',    # jobserver socket.  shared by other tasks in the same taskset,
-             # but not w/ tasks in other tasksets using the same Gearman::Client
-    'hooks', # hookname -> coderef
+
+    # jobserver socket.
+    # shared by other tasks in the same taskset,
+    # but not w/ tasks in other tasksets using
+    # the same Gearman::Client
+    'jssock',
+
+    # hookname -> coderef
+    'hooks',
 );
 
 # constructor, given: ($func, $argref, $opts);
