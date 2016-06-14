@@ -4,34 +4,61 @@ $Gearman::Taskset::VERSION = '1.13.001';
 use strict;
 use warnings;
 
+=head1 NAME
+
+Gearman::Taskset - a taskset in Gearman, from the point of view of a client
+
+=head1 SYNOPSIS
+
+
+=head1 DESCRIPTION
+
+=cut
+
 use fields (
-    'waiting',        # { handle => [Task, ...] }
-    'client',         # Gearman::Client
-    'need_handle',    # arrayref
 
-    'default_sock',        # default socket (non-merged requests)
-    'default_sockaddr',    # default socket's ip/port
+    # { handle => [Task, ...] }
+    'waiting',
 
-    'loaned_sock',         # { hostport => socket }
-    'cancelled',           # bool, if taskset has been cancelled mid-processing
-    'hooks',               # hookname -> coderef
+    # Gearman::Client
+    'client',
+
+    # arrayref
+    'need_handle',
+
+    # default socket (non-merged requests)
+    'default_sock',
+
+    # default socket's ip/port
+    'default_sockaddr',
+
+    # { hostport => socket }
+    'loaned_sock',
+
+    # bool, if taskset has been cancelled mid-processing
+    'cancelled',
+
+    # hookname -> coderef
+    'hooks',
 );
 
 use Carp ();
 use Gearman::Util;
 use Gearman::ResponseParser::Taskset;
-use Scalar::Util ()
-    ;    # i thought about weakening taskset's client, but might be too weak.
-use Time::HiRes ();
+
+# i thought about weakening taskset's client, but might be too weak.
+use Scalar::Util ();
+use Time::HiRes  ();
 
 sub new {
-    my $class  = shift;
+    my $self   = shift;
     my $client = shift;
     ref($client) eq "Gearman::Client"
-        || die "provided client argument is not a Gearman::Client reference";
+        || Carp::croak "provided client argument is not a Gearman::Client reference";
 
-    my $self = $class;
-    $self = fields::new($class) unless ref $self;
+    unless (ref $self) {
+        $self = fields::new($self);
+    }
 
     $self->{waiting}     = {};
     $self->{need_handle} = [];
@@ -183,7 +210,7 @@ sub wait {
 
                 # TODO this should remove the fd from the list, and reassign any tasks to other jobserver, or bail.
                 # We're not in an accessible place here, so if all job servers fail we must die to prevent hanging.
-                die("Job server failure: $@");
+                Carp::croak("Job server failure: $@");
             } ## end if ($@)
         } ## end foreach my $fd (keys %watching)
 
@@ -217,7 +244,7 @@ sub add_task {
     my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
     my $rv  = $jssock->syswrite($req, $len);
-    die "Wrote $rv but expected to write $len" unless $rv == $len;
+    Carp::croak "Wrote $rv but expected to write $len" unless $rv == $len;
 
     push @{ $ts->{need_handle} }, $task;
     while (@{ $ts->{need_handle} }) {
@@ -294,11 +321,11 @@ sub _fail_jshandle {
     my $shandle = shift;
 
     my $task_list = $ts->{waiting}{$shandle}
-        or die "Uhhhh:  got work_fail for unknown handle: $shandle\n";
+        or Carp::croak "Uhhhh:  got work_fail for unknown handle: $shandle\n";
 
     my $task = shift @$task_list;
     ($task && ref($task) eq "Gearman::Task")
-        or die "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
+        or Carp::croak "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
 
     $task->fail;
     delete $ts->{waiting}{$shandle} unless @$task_list;
@@ -311,7 +338,7 @@ sub _process_packet {
     if ($res->{type} eq "job_created") {
         my $task = shift @{ $ts->{need_handle} };
         ($task && ref($task) eq "Gearman::Task")
-            or die "Um, got an unexpected job_created notification";
+            or Carp::croak "Um, got an unexpected job_created notification";
 
         my $shandle = ${ $res->{'blobref'} };
         my $ipport  = _ip_port($sock);
@@ -336,15 +363,15 @@ sub _process_packet {
 
     if ($res->{type} eq "work_complete") {
         ${ $res->{'blobref'} } =~ s/^(.+?)\0//
-            or die "Bogus work_complete from server";
+            or Carp::croak "Bogus work_complete from server";
         my $shandle = $1;
 
         my $task_list = $ts->{waiting}{$shandle}
-            or die "Uhhhh:  got work_complete for unknown handle: $shandle\n";
+            or Carp::croak "Uhhhh:  got work_complete for unknown handle: $shandle\n";
 
         my $task = shift @$task_list;
         ($task && ref($task) eq "Gearman::Task")
-            or die
+            or Carp::croak
             "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
 
         $task->complete($res->{'blobref'});
@@ -355,14 +382,14 @@ sub _process_packet {
 
     if ($res->{type} eq "work_exception") {
         ${ $res->{'blobref'} } =~ s/^(.+?)\0//
-            or die "Bogus work_exception from server";
+            or Carp::croak "Bogus work_exception from server";
         my $shandle   = $1;
         my $task_list = $ts->{waiting}{$shandle}
-            or die "Uhhhh:  got work_exception for unknown handle: $shandle\n";
+            or Carp::croak "Uhhhh:  got work_exception for unknown handle: $shandle\n";
 
         my $task = $task_list->[0];
         ($task && ref($task) eq "Gearman::Task")
-            or die
+            or Carp::croak
             "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
 
         $task->exception($res->{'blobref'});
@@ -374,7 +401,7 @@ sub _process_packet {
         my ($shandle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
 
         my $task_list = $ts->{waiting}{$shandle}
-            or die "Uhhhh:  got work_status for unknown handle: $shandle\n";
+            or Carp::croak "Uhhhh:  got work_status for unknown handle: $shandle\n";
 
         # FIXME: the server is (probably) sending a work_status packet for each
         # interested client, even if the clients are the same, so probably need
@@ -387,7 +414,7 @@ sub _process_packet {
         return 1;
     } ## end if ($res->{type} eq "work_status")
 
-    die "Unknown/unimplemented packet type: $res->{type} [${$res->{blobref}}]";
+    Carp::croak "Unknown/unimplemented packet type: $res->{type} [${$res->{blobref}}]";
 
 } ## end sub _process_packet
 
