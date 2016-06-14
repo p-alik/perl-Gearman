@@ -27,9 +27,6 @@ Gearman::Taskset is a Gearman::Client's representation of tasks queue t in Gearm
 
 =cut
 
-## Please see file perltidy.ERR
-=cut
-
 use fields (
 
     # { handle => [Task, ...] }
