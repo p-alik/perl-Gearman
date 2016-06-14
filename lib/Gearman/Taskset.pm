@@ -116,7 +116,7 @@ sub run_hook {
 
     eval { $hook->(@_) };
 
-    warn "Gearman::Taskset hook '$hookname' threw error: $@\n" if $@;
+    warn "Gearman::Taskset hook '$name' threw error: $@\n" if $@;
 } ## end sub run_hook
 
 =head2 add_hook($name)
