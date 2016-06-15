@@ -109,12 +109,10 @@ sub DESTROY {
 
 sub run_hook {
     my Gearman::Taskset $self = shift;
-    my $name = shift || return;
+    my $name = shift;
+    ($name && $self->{hooks}->{$name}) || return;
 
-    my $hook = $self->{hooks}->{$name};
-    return unless $hook;
-
-    eval { $hook->(@_) };
+    eval { $self->{hooks}->{$name}->(@_) };
 
     warn "Gearman::Taskset hook '$name' threw error: $@\n" if $@;
 } ## end sub run_hook
@@ -190,7 +188,7 @@ sub _get_loaned_sock {
     return $ts->{loaned_sock}{$hostport} = $sock;
 } ## end sub _get_loaned_sock
 
-=head2 waint()
+=head2 wait()
 
 event loop for reading in replies
 
@@ -198,7 +196,6 @@ event loop for reading in replies
 
 sub wait {
     my Gearman::Taskset $ts = shift;
-
     my %opts = @_;
 
     my $timeout;
