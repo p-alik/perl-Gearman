@@ -84,8 +84,11 @@ subtest "socket", sub {
             $ls, "_get_hashed_sock($i) = _get_loaned_sock($js[$i])");
     } ## end for (my $i = 0; $i < scalar...)
 
+    scalar(@js)
     # random
-    ok($ts->_get_default_sock(), "_get_default_sock");
+        ? ok($ts->_get_default_sock(), "_get_default_sock")
+        # undef
+        : is($ts->_get_default_sock(), undef, "_get_default_sock");
 };
 
 # _wait_for_packet
