@@ -330,6 +330,7 @@ sub add_task {
 
 #
 # _get_default_soc()
+# used in Gearman::Task->taskset only
 #
 sub _get_default_sock {
     my Gearman::Taskset $ts = shift;
@@ -353,19 +354,22 @@ sub _get_default_sock {
 #
 #  _get_hashed_sock($hv)
 #
+# only used in Gearman::Task->taskset only
+#
+# return a socket
 sub _get_hashed_sock {
     my Gearman::Taskset $ts = shift;
     my $hv = shift;
 
     my $cl = $ts->client;
-
+    my $sock;
     for (my $off = 0; $off < $cl->{js_count}; $off++) {
         my $idx = ($hv + $off) % ($cl->{js_count});
-        my $sock = $ts->_get_loaned_sock($cl->{job_servers}[$idx]);
-        return $sock if $sock;
+        $sock = $ts->_get_loaned_sock($cl->{job_servers}[$idx]);
+        last;
     }
 
-    return undef;
+    return $sock;
 } ## end sub _get_hashed_sock
 
 #
