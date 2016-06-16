@@ -35,7 +35,7 @@ can_ok(
 
 my $c = new_ok($mn, [job_servers => [@js]]);
 isa_ok($c, "Gearman::Objects");
-
+is($c->{js_count}, scalar(@js), "js_count");
 isa_ok($c->new_task_set(), "Gearman::Taskset");
 is($c->{hooks}->{new_task_set}, undef, "no hook new_task_set");
 
