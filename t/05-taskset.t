@@ -85,19 +85,25 @@ subtest "socket", sub {
     } ## end for (my $i = 0; $i < scalar...)
 
     scalar(@js)
-    # random
+
+        # random
         ? ok($ts->_get_default_sock(), "_get_default_sock")
+
         # undef
         : is($ts->_get_default_sock(), undef, "_get_default_sock");
 };
 
 # _wait_for_packet
 # _is_port
-# _fail_jshandle
 # _process_packet
 
 subtest "task", sub {
 
+    throws_ok { $ts->_fail_jshandle() } qr/called without shandle/,
+        "caught _fail_jshandle() without shandle";
+
+    throws_ok { $ts->_fail_jshandle('x') } qr/unknown handle/,
+        "caught _fail_jshandle() unknown shandle";
     pass("TODO");
 
     # is($ts->add_task(qw/a b/), undef, "add_task returns undef");
