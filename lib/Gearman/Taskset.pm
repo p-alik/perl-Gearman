@@ -407,9 +407,12 @@ sub _ip_port {
 sub _fail_jshandle {
     my Gearman::Taskset $ts = shift;
     my $shandle = shift;
+    $shandle
+        or Carp::croak sprintf
+        "_fail_jshandle() called without shandle parameter";
 
     my $task_list = $ts->{waiting}{$shandle}
-        or Carp::croak "Uhhhh:  got work_fail for unknown handle: $shandle\n";
+        or Carp::croak "Uhhhh:  got work_fail for unknown handle: $shandle";
 
     my $task = shift @$task_list;
     ($task && ref($task) eq "Gearman::Task")
