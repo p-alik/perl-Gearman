@@ -4,6 +4,8 @@ $Gearman::Taskset::VERSION = '1.13.001';
 use strict;
 use warnings;
 
+use Socket;
+
 =head1 NAME
 
 Gearman::Taskset - a taskset in Gearman, from the point of view of a client
@@ -392,11 +394,12 @@ sub _wait_for_packet {
 # _is_port($sock)
 #
 sub _ip_port {
-    my $sock = shift;
+    my ($self, $sock) = @_;
     return undef unless $sock;
     my $pn = getpeername($sock) or return undef;
     my ($port, $iaddr) = Socket::sockaddr_in($pn);
-    return Socket::inet_ntoa($iaddr) . ":$port";
+
+    return join ':', Socket::inet_ntoa($iaddr), $port;
 } ## end sub _ip_port
 
 #
@@ -436,7 +439,7 @@ sub _process_packet {
             or Carp::croak "Um, got an unexpected job_created notification";
 
         my $shandle = ${ $res->{'blobref'} };
-        my $ipport  = _ip_port($sock);
+        my $ipport  = $ts->_ip_port($sock);
 
         # did sock become disconnected in the meantime?
         if (!$ipport) {
