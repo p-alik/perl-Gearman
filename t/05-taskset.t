@@ -84,21 +84,22 @@ subtest "socket", sub {
             $ls, "_get_hashed_sock($i) = _get_loaned_sock($js[$i])");
     } ## end for (my $i = 0; $i < scalar...)
 
-    scalar(@js)
-
-        # random
-        ? ok($ts->_get_default_sock(), "_get_default_sock")
-
+    if (scalar(@js)) {
+        ok($ts->_get_default_sock(), "_get_default_sock");
+        ok($ts->_ip_port($ts->_get_default_sock()));
+    } ## end if (scalar(@js))
+    else {
         # undef
-        : is($ts->_get_default_sock(), undef, "_get_default_sock");
+        is($ts->_get_default_sock(), undef, "_get_default_sock");
+        is($ts->_ip_port($ts->_get_default_sock()), undef);
+    }
+
 };
 
 # _wait_for_packet
-# _is_port
 # _process_packet
 
 subtest "task", sub {
-
     throws_ok { $ts->_fail_jshandle() } qr/called without shandle/,
         "caught _fail_jshandle() without shandle";
 
