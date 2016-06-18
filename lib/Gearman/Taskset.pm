@@ -263,39 +263,7 @@ sub wait {
 
 =head2 add_task($func, <$scalar | $scalarref>, <$uniq | $opts_hr>
 
-C<$opts_hr>:
-
-=over
-
-=item 
-
-uniq
-
-=item
-
-on_complete
-
-=item
-
-on_fail
-
-=item
-
-on_status
-
-=item
-
-retry_count
-
-=item
-
-fail_after_idle
-
-=item
-
-high_priority
-
-=back
+C<$opts_hr> see L<Gearman::Task>
 
 =cut
 
