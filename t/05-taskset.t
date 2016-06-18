@@ -5,12 +5,13 @@ use IO::Socket::INET;
 use Test::More;
 use Test::Exception;
 
+my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
 my $mn = "Gearman::Taskset";
 use_ok($mn);
 use_ok("Gearman::Client");
 
 can_ok(
-    "Gearman::Taskset", qw/
+    $mn, qw/
         add_task
         add_hook
         run_hook
@@ -27,8 +28,7 @@ can_ok(
         /
 );
 
-my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
-my $c  = new_ok("Gearman::Client");
+my $c = new_ok("Gearman::Client", [job_servers => [@js]]);
 my $ts = new_ok($mn, [$c]);
 
 is($ts->{cancelled},        0);
@@ -87,7 +87,7 @@ subtest "socket", sub {
     if (scalar(@js)) {
         ok($ts->_get_default_sock(), "_get_default_sock");
         ok($ts->_ip_port($ts->_get_default_sock()));
-    } ## end if (scalar(@js))
+    }
     else {
         # undef
         is($ts->_get_default_sock(), undef, "_get_default_sock");
@@ -105,7 +105,19 @@ subtest "task", sub {
 
     throws_ok { $ts->_fail_jshandle('x') } qr/unknown handle/,
         "caught _fail_jshandle() unknown shandle";
-    pass("TODO");
+
+    dies_ok { $ts->add_task() } "add_task() dies";
+
+    my $f = "foo";
+    $ts->{need_handle} = [];
+    $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
+    if (!@js) {
+        is($ts->add_task($f), undef, "add_task($f) returns undef");
+    }
+    else {
+        ok($ts->add_task($f), "add_task($f) returns handle");
+        is(scalar(@{ $ts->{need_handle} }), 0);
+    }
 
     # is($ts->add_task(qw/a b/), undef, "add_task returns undef");
 
