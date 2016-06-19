@@ -96,7 +96,6 @@ subtest "socket", sub {
 
 };
 
-# _wait_for_packet
 # _process_packet
 
 subtest "task", sub {
@@ -106,8 +105,8 @@ subtest "task", sub {
     throws_ok { $ts->_fail_jshandle('x') } qr/unknown handle/,
         "caught _fail_jshandle() unknown shandle";
 
+    dies_ok { $ts->_wait_for_packet() } "_wait_for_packet() dies";
     dies_ok { $ts->add_task() } "add_task() dies";
-
     my $f = "foo";
     $ts->{need_handle} = [];
     $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
@@ -117,7 +116,9 @@ subtest "task", sub {
     else {
         ok($ts->add_task($f), "add_task($f) returns handle");
         is(scalar(@{ $ts->{need_handle} }), 0);
-    }
+        is($ts->_wait_for_packet($ts->_get_default_sock(), 1),
+            0, "_wait_for_packet");
+    } ## end else [ if (!@js) ]
 
     # is($ts->add_task(qw/a b/), undef, "add_task returns undef");
 
