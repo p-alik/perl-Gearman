@@ -354,8 +354,8 @@ sub _wait_for_packet {
 
     my ($res, $err);
     $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
-    return 0 unless $res;
-    return $ts->_process_packet($res, $sock);
+
+    return $res ? $ts->_process_packet($res, $sock) : 0;
 } ## end sub _wait_for_packet
 
 #
