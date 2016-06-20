@@ -282,6 +282,7 @@ sub add_task {
     my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
     my $rv  = $jssock->syswrite($req, $len);
+    $rv ||= 0;
     Carp::croak "Wrote $rv but expected to write $len" unless $rv == $len;
 
     push @{ $ts->{need_handle} }, $task;
@@ -427,9 +428,12 @@ sub _process_packet {
         return 1;
     }
 
+    my $qr = qr/(.+?)\0/;
+
     if ($res->{type} eq "work_complete") {
-        ${ $res->{'blobref'} } =~ s/^(.+?)\0//
+        (${ $res->{'blobref'} } =~ /^$qr/)
             or Carp::croak "Bogus work_complete from server";
+        ${ $res->{'blobref'} } =~ s/^$qr//;
         my $shandle = $1;
 
         my $task_list = $ts->{waiting}{$shandle}
@@ -448,9 +452,15 @@ sub _process_packet {
     } ## end if ($res->{type} eq "work_complete")
 
     if ($res->{type} eq "work_exception") {
-        ${ $res->{'blobref'} } =~ s/^(.+?)\0//
+
+        # ${ $res->{'blobref'} } =~ s/^(.+?)\0//
+        #     or Carp::croak "Bogus work_exception from server";
+
+        (${ $res->{'blobref'} } =~ /^$qr/)
             or Carp::croak "Bogus work_exception from server";
-        my $shandle   = $1;
+        ${ $res->{'blobref'} } =~ s/^$qr//;
+        my $shandle = $1;
+
         my $task_list = $ts->{waiting}{$shandle}
             or Carp::croak
             "Uhhhh:  got work_exception for unknown handle: $shandle\n";
