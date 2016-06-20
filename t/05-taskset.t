@@ -96,8 +96,6 @@ subtest "socket", sub {
 
 };
 
-# _process_packet
-
 subtest "task", sub {
     throws_ok { $ts->_fail_jshandle() } qr/called without shandle/,
         "caught _fail_jshandle() without shandle";
@@ -116,6 +114,8 @@ subtest "task", sub {
     else {
         ok($ts->add_task($f), "add_task($f) returns handle");
         is(scalar(@{ $ts->{need_handle} }), 0);
+
+        #TODO timeout test
         is($ts->_wait_for_packet($ts->_get_default_sock(), 1),
             0, "_wait_for_packet");
     } ## end else [ if (!@js) ]
@@ -124,4 +124,54 @@ subtest "task", sub {
 
 };
 
+subtest "_process_packet", sub {
+    my $f = "foo";
+    my $h = "H:localhost:12345";
+
+    $ts->{need_handle} = [];
+    $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
+    my $r = { type => "job_created", blobref => \$h };
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/unexpected job_created/, "job_created exception";
+
+    $ts->{need_handle} = [$ts->client()->_get_task_from_args($f)];
+    dies_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    "_process_packet dies";
+
+    $r->{type} = "work_fail";
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/work_fail for unknown handle/,
+        "caught _process_packet({type => work_fail})";
+
+    $r->{type} = "work_complete";
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/Bogus work_complete from server/,
+        "caught _process_packet({type => work_complete})";
+
+    $r->{blobref} = \join "\0", $h, "abc";
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/got work_complete for unknown handle/,
+        "caught _process_packet({type => work_complete}) unknown handle";
+
+    $r = { type => "work_exception", blobref => \$h };
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/Bogus work_exception from server/,
+        "caught _process_packet({type => work_exception})";
+    $r->{blobref} = \join "\0", ${ $r->{blobref} }, "abc";
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/got work_exception for unknown handle/,
+        "caught _process_packet({type => work_exception}) unknown handle";
+
+    $r = { type => "work_status", blobref => \$h };
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/got work_status for unknown handle/,
+        "caught _process_packet({type => work_status}) unknown handle";
+
+    $r->{type} = $f;
+    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    qr/unimplemented packet type/,
+        "caught _process_packet({type => $f }) unknown handle";
+};
+
 done_testing();
+
