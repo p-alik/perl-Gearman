@@ -151,6 +151,7 @@ use fields (
     , # maximum time a gearman command should take to get a result (not a job timeout)
 );
 
+use Carp;
 use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
@@ -449,7 +450,7 @@ sub get_status {
     my $res = Gearman::Util::read_res_packet($sock, \$err);
 
     if ($res && $res->{type} eq "error") {
-        die "Error packet from server after get_status: ${$res->{blobref}}\n";
+        Carp::croak "Error packet from server after get_status: ${$res->{blobref}}\n";
     }
 
     return undef unless $res && $res->{type} eq "status_res";
