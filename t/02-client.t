@@ -35,12 +35,16 @@ can_ok(
 
 my $c = new_ok($mn, [job_servers => [@js]]);
 isa_ok($c, "Gearman::Objects");
+is($c->{backoff_max},     90, join "->", $mn, "{backoff_max}");
+is($c->{command_timeout}, 30, join "->", $mn, "{command_timeout}");
+is($c->{exceptions},      0,  join "->", $mn, "{exceptions}");
 is($c->{js_count}, scalar(@js), "js_count");
-isa_ok($c->new_task_set(), "Gearman::Taskset");
-is($c->{hooks}->{new_task_set}, undef, "no hook new_task_set");
+is(keys(%{ $c->{hooks} }),      0, join "->", $mn, "{hooks}");
+is(keys(%{ $c->{sock_cache} }), 0, join "->", $mn, "{sock_cache}");
 
 ok(my $r = $c->get_job_server_status, "get_job_server_status");
 is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
+
 # note "get_job_server_status result: ", explain $r;
 
 ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
@@ -54,6 +58,16 @@ my ($tn, $args, $timeout) = qw/
     bar
     2
     /;
+
+subtest "new_task_set", sub {
+    my $h = "new_task_set";
+    my $cb = sub { pass("$h cb") };
+    ok($c->add_hook($h, $cb), "add_hook($h, cb)");
+    is($c->{hooks}->{$h}, $cb, "$h eq cb");
+    isa_ok($c->new_task_set(), "Gearman::Taskset");
+    ok($c->add_hook($h), "add_hook($h)");
+    is($c->{hooks}->{$h}, undef, "no hook $h");
+};
 
 subtest "do tast", sub {
     $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
