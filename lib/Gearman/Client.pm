@@ -430,6 +430,7 @@ sub add_hook {
 sub get_status {
     my Gearman::Client $self = shift;
     my $handle = shift;
+    $handle || return;
     my ($hostport, $shandle) = split(m!//!, $handle);
 
     #TODO simple check for $hostport in job_server doesn't work if
