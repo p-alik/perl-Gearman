@@ -92,7 +92,7 @@ is an opaque scalar that can be used to refer to the task.
 
 =head2 $taskset = $client-E<gt>new_task_set
 
-Creates and returns a new I<Gearman::Taskset> object.
+Creates and returns a new L<Gearman::Taskset> object.
 
 =head2 $taskset-E<gt>add_task($task)
 
@@ -134,7 +134,7 @@ integers.
     });
     $tasks->wait;
 
-See the I<Gearman::Worker> documentation for the worker for the I<sum>
+See the L<Gearman::Worker> documentation for the worker for the I<sum>
 function.
 
 =cut
@@ -407,7 +407,6 @@ sub dispatch_background {
 run a hook callback if defined
 
 =cut
-
 sub run_hook {
     my Gearman::Client $self = shift;
     my $hookname = shift || return;
@@ -420,12 +419,13 @@ sub run_hook {
     warn "Gearman::Client hook '$hookname' threw error: $@\n" if $@;
 } ## end sub run_hook
 
+
 =head2 add_hook($name)
+
 
 add a hook
 
 =cut
-
 sub add_hook {
     my Gearman::Client $self = shift;
     my $hookname = shift || return;
@@ -437,6 +437,10 @@ sub add_hook {
         delete $self->{hooks}->{$hookname};
     }
 } ## end sub add_hook
+
+=head2 get_status($handle)
+
+=cut
 
 sub get_status {
     my Gearman::Client $self = shift;
@@ -473,6 +477,9 @@ sub get_status {
     return Gearman::JobStatus->new(@args);
 } ## end sub get_status
 
+#
+# _option_request($sock, $option)
+#
 sub _option_request {
     my Gearman::Client $self = shift;
     my $sock                 = shift;
@@ -495,6 +502,9 @@ sub _option_request {
     return;
 } ## end sub _option_request
 
+# 
+# _get_js_sock($hostport)
+#
 # returns a socket from the cache.  it should be returned to the
 # cache with _put_js_sock.  the hostport isn't verified. the caller
 # should verify that $hostport is in the set of jobservers.
@@ -540,6 +550,9 @@ sub _get_js_sock {
     return $sock;
 } ## end sub _get_js_sock
 
+#
+# _put_js_sock($hostport, $sock)
+#
 # way for a caller to give back a socket it previously requested.
 # the $hostport isn't verified, so the caller should verify the
 # $hostport is still in the set of jobservers.
