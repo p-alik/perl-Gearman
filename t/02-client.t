@@ -45,13 +45,20 @@ is(keys(%{ $c->{sock_cache} }), 0, join "->", $mn, "{sock_cache}");
 ok(my $r = $c->get_job_server_status, "get_job_server_status");
 is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
 
-# note "get_job_server_status result: ", explain $r;
-
 ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
 note "get_job_server_jobs result: ", explain $r;
 
 ok($r = $c->get_job_server_clients, "get_job_server_clients");
-note "get_job_server_clients result: ", explain $r;
+
+subtest "get_status", sub {
+  is($c->get_status(), undef, "get_status()");
+  my $h = "localhost:4730";
+  is($c->get_status($h), undef, "get_status($h)");
+  if($c->job_servers()) {
+      $h = join "//", @{$c->job_servers()}[0], "H:foo:5252";
+      isa_ok($c->get_status($h), "Gearman::JobStatus", "get_status($h)");
+    }
+};
 
 my ($tn, $args, $timeout) = qw/
     foo
