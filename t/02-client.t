@@ -34,6 +34,7 @@ can_ok(
 );
 
 my $c = new_ok($mn, [job_servers => [@js]]);
+
 isa_ok($c, "Gearman::Objects");
 is($c->{backoff_max},     90, join "->", $mn, "{backoff_max}");
 is($c->{command_timeout}, 30, join "->", $mn, "{command_timeout}");
@@ -50,13 +51,18 @@ note "get_job_server_jobs result: ", explain $r;
 
 ok($r = $c->get_job_server_clients, "get_job_server_clients");
 
+foreach ($c->job_servers()) {
+    ok(my $s = $c->_get_js_sock($_), "_get_js_sock($_)");
+    isa_ok($s, "IO::Socket::INET");
+}
+
 subtest "get_status", sub {
-  is($c->get_status(), undef, "get_status()");
-  my $h = "localhost:4730";
-  is($c->get_status($h), undef, "get_status($h)");
-  if($c->job_servers()) {
-      $h = join "//", @{$c->job_servers()}[0], "H:foo:5252";
-      isa_ok($c->get_status($h), "Gearman::JobStatus", "get_status($h)");
+    is($c->get_status(), undef, "get_status()");
+    my $h = "localhost:4730";
+    is($c->get_status($h), undef, "get_status($h)");
+    if (@{ $c->job_servers() }) {
+        $h = join "//", @{ $c->job_servers() }[0], "H:foo:5252";
+        isa_ok($c->get_status($h), "Gearman::JobStatus", "get_status($h)");
     }
 };
 
@@ -96,8 +102,9 @@ subtest "dispatch background", sub {
 
     ok(my $h = $c->dispatch_background($tn, $args),
         "dispatch_background($tn, $args)");
-    $h && ok($r = $c->get_status($h), "get_status($h)");
-    note "get_status result: ", explain $r;
+    $h
+        && ok($r = $c->get_status($h), "get_status($h)")
+        && isa_ok($r, "Gearman::JobStatus");
 };
 
 done_testing();
