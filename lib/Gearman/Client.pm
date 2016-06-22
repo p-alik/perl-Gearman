@@ -356,6 +356,7 @@ given a (func, arg_p, opts?),
 B<return> either undef (on fail) or scalarref of result
 
 =cut
+
 sub do_task {
     my Gearman::Client $self = shift;
     my Gearman::Task $task   = $self->_get_task_from_args(@_);
@@ -395,6 +396,7 @@ sub dispatch_background {
 run a hook callback if defined
 
 =cut
+
 sub run_hook {
     my Gearman::Client $self = shift;
     my $hookname = shift || return;
@@ -412,6 +414,7 @@ sub run_hook {
 add a hook
 
 =cut
+
 sub add_hook {
     my Gearman::Client $self = shift;
     my $hookname = shift || return;
@@ -450,7 +453,8 @@ sub get_status {
     my $res = Gearman::Util::read_res_packet($sock, \$err);
 
     if ($res && $res->{type} eq "error") {
-        Carp::croak "Error packet from server after get_status: ${$res->{blobref}}\n";
+        Carp::croak
+            "Error packet from server after get_status: ${$res->{blobref}}\n";
     }
 
     return undef unless $res && $res->{type} eq "status_res";
@@ -486,7 +490,7 @@ sub _option_request {
     return;
 } ## end sub _option_request
 
-# 
+#
 # _get_js_sock($hostport)
 #
 # returns a socket from the cache.  it should be returned to the
@@ -518,7 +522,8 @@ sub _get_js_sock {
         return;
     } ## end unless ($sock)
 
-    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
+    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1))
+        or Carp::croak "setsockopt: $!";
     $sock->autoflush(1);
 
     # If exceptions support is to be requested, and the request fails, disable
