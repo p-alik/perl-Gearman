@@ -178,7 +178,7 @@ sub cancel {
     $ts->{client}      = undef;
 } ## end sub cancel
 
-#=head2 _get_loaned_sock()
+#=head2 _get_loaned_sock($hostport)
 #
 #=cut
 
@@ -366,12 +366,27 @@ sub _wait_for_packet {
 #
 # _is_port($sock)
 #
+# return hostport || ipport
+#
 sub _ip_port {
     my ($self, $sock) = @_;
     return undef unless $sock;
+
+    # look for a hostport in loaned_sock
+    my $hostport;
+    while ( my ($hp, $s) = each %{ $self->{loaned_sock} }) {
+      $s || next;
+      if($sock == $s) {
+        $hostport = $hp;
+      last;
+      }
+    }
+
+    # hopefully it solves client->get_status mismatch
+    $hostport && return $hostport;
+
     my $pn = getpeername($sock) or return undef;
     my ($port, $iaddr) = Socket::sockaddr_in($pn);
-
     return join ':', Socket::inet_ntoa($iaddr), $port;
 } ## end sub _ip_port
 
