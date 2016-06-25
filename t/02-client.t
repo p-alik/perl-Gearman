@@ -40,13 +40,17 @@ is($c->{js_count}, scalar(@js), "js_count");
 isa_ok($c->new_task_set(), "Gearman::Taskset");
 is($c->{hooks}->{new_task_set}, undef, "no hook new_task_set");
 
-ok(my $r = $c->get_job_server_status, "get_job_server_status");
-is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
+subtest "get_job_server_status", sub {
+    ok(my $r = $c->get_job_server_status, "get_job_server_status");
+    is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
 
-# note "get_job_server_status result: ", explain $r;
+    # note "get_job_server_status result: ", explain $r;
+};
 
-ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
-note "get_job_server_jobs result: ", explain $r;
+subtest "get_job_server_jobs", sub {
+    ok(my $r = $c->get_job_server_jobs, "get_job_server_jobs");
+    note "get_job_server_jobs result: ", explain $r;
+};
 
 throws_ok { $c->get_job_server_clients }
 qr/deprecated because Gearman Administrative Protocol/,
@@ -71,6 +75,16 @@ subtest "do tast", sub {
     is(int(Time::HiRes::tv_interval($starttime)), $timeout, "do_task timeout");
 };
 
+subtest "_get_random_js_sock", sub {
+    if (@{ $c->job_servers() }) {
+        ok(my @r = $c->_get_random_js_sock());
+        note explain @r;
+    }
+    else {
+        is($c->_get_random_js_sock(), undef);
+    }
+};
+
 subtest "dispatch background", sub {
     $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
     $ENV{GEARMAN_SERVERS}
@@ -78,7 +92,7 @@ subtest "dispatch background", sub {
 
     ok(my $h = $c->dispatch_background($tn, $args),
         "dispatch_background($tn, $args)");
-    $h && ok($r = $c->get_status($h), "get_status($h)");
+    $h && ok(my $r = $c->get_status($h), "get_status($h)");
     note "get_status result: ", explain $r;
 };
 
