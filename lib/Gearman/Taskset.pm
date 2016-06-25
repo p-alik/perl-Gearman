@@ -107,6 +107,8 @@ sub DESTROY {
 
 =head2 run_hook($name)
 
+run a hook callback if defined
+
 =cut
 
 sub run_hook {
@@ -120,6 +122,8 @@ sub run_hook {
 } ## end sub run_hook
 
 =head2 add_hook($name)
+
+add a hook
 
 =cut
 
