@@ -443,6 +443,8 @@ sub add_hook {
 
 =head2 get_status($handle)
 
+return L<Gearman::JobStatus> on success
+
 =cut
 
 sub get_status {
@@ -509,8 +511,8 @@ sub _option_request {
 #
 # _get_js_sock($hostport)
 #
-# returns a socket from the cache.  it should be returned to the
-# cache with _put_js_sock.  the hostport isn't verified. the caller
+# returns a socket from the cache. it should be returned to the
+# cache with _put_js_sock. the hostport isn't verified. the caller
 # should verify that $hostport is in the set of jobservers.
 sub _get_js_sock {
     my Gearman::Client $self = shift;
