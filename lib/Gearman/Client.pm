@@ -294,6 +294,8 @@ sub get_job_server_jobs {
 
 =head2 get_job_server_clients()
 
+B<deprecated> because L<Gearman Administrative Protocol|http://gearman.org/protocol/> does not support clients command
+
 =cut
 
 sub get_job_server_clients {
@@ -377,8 +379,14 @@ sub do_task {
     return $did_err ? undef : $ret;
 } ## end sub do_task
 
-# given a (func, arg_p, opts?) or
-# Gearman::Task, dispatches job in background.  returns the handle from the jobserver, or false if any failure
+=head2 dispatch_background($func, $arg_p, $opts)
+=head2 dispatch_background($task)
+
+dispatches job in background
+
+return the handle from the jobserver, or false if any failure
+
+=cut
 sub dispatch_background {
     my Gearman::Client $self = shift;
     my Gearman::Task $task   = $self->_get_task_from_args(@_);
@@ -389,6 +397,11 @@ sub dispatch_background {
     return $ts->add_task($task);
 } ## end sub dispatch_background
 
+=head2 run_hook($name)
+
+run a hook callback if defined
+
+=cut
 sub run_hook {
     my Gearman::Client $self = shift;
     my $hookname = shift || return;
@@ -400,6 +413,12 @@ sub run_hook {
 
     warn "Gearman::Client hook '$hookname' threw error: $@\n" if $@;
 } ## end sub run_hook
+
+=head2 add_hook($name)
+
+add a hook
+
+=cut
 
 sub add_hook {
     my Gearman::Client $self = shift;
@@ -552,13 +571,13 @@ License granted to use/distribute under the same terms as Perl itself.
 
 =head1 WARRANTY
 
-This is free software.  This comes with no warranty whatsoever.
+This is free software. This comes with no warranty whatsoever.
 
 =head1 AUTHORS
 
  Brad Fitzpatrick (<brad at danga dot com>)
  Jonathan Steinert (<hachi at cpan dot org>)
- Alexei Pastuchov (<palik at cpan dot org>)
+ Alexei Pastuchov (<palik at cpan dot org>) co-maintainer
 
 =head1 REPOSITORY
 
