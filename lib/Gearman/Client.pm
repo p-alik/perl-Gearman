@@ -301,6 +301,9 @@ B<deprecated> because L<Gearman Administrative Protocol|http://gearman.org/proto
 sub get_job_server_clients {
     my Gearman::Client $self = shift;
 
+    Carp::croak "Gearman::Client->get_job_server_clients() 
+deprecated because Gearman Administrative Protocol does not support clients command";
+
     my $js_clients = {};
     my $client;
     $self->_job_server_status_command(
@@ -357,6 +360,7 @@ given a (func, arg_p, opts?),
 B<return> either undef (on fail) or scalarref of result
 
 =cut
+
 sub do_task {
     my Gearman::Client $self = shift;
     my Gearman::Task $task   = $self->_get_task_from_args(@_);
@@ -387,6 +391,7 @@ dispatches job in background
 return the handle from the jobserver, or false if any failure
 
 =cut
+
 sub dispatch_background {
     my Gearman::Client $self = shift;
     my Gearman::Task $task   = $self->_get_task_from_args(@_);
@@ -402,6 +407,7 @@ sub dispatch_background {
 run a hook callback if defined
 
 =cut
+
 sub run_hook {
     my Gearman::Client $self = shift;
     my $hookname = shift || return;
