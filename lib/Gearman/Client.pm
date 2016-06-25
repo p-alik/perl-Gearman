@@ -92,7 +92,7 @@ is an opaque scalar that can be used to refer to the task.
 
 =head2 $taskset = $client-E<gt>new_task_set
 
-Creates and returns a new I<Gearman::Taskset> object.
+Creates and returns a new L<Gearman::Taskset> object.
 
 =head2 $taskset-E<gt>add_task($task)
 
@@ -134,7 +134,7 @@ integers.
     });
     $tasks->wait;
 
-See the I<Gearman::Worker> documentation for the worker for the I<sum>
+See the L<Gearman::Worker> documentation for the worker for the I<sum>
 function.
 
 =cut
@@ -151,6 +151,7 @@ use fields (
     , # maximum time a gearman command should take to get a result (not a job timeout)
 );
 
+use Carp;
 use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
@@ -420,7 +421,7 @@ sub run_hook {
     warn "Gearman::Client hook '$hookname' threw error: $@\n" if $@;
 } ## end sub run_hook
 
-=head2 add_hook($name)
+=head2 add_hook($name, $cb)
 
 add a hook
 
@@ -438,9 +439,16 @@ sub add_hook {
     }
 } ## end sub add_hook
 
+=head2 get_status($handle)
+
+return L<Gearman::JobStatus> on success
+
+=cut
+
 sub get_status {
     my Gearman::Client $self = shift;
     my $handle = shift;
+    $handle || return;
     my ($hostport, $shandle) = split(m!//!, $handle);
 
     #TODO simple check for $hostport in job_server doesn't work if
@@ -473,6 +481,9 @@ sub get_status {
     return Gearman::JobStatus->new(@args);
 } ## end sub get_status
 
+#
+# _option_request($sock, $option)
+#
 sub _option_request {
     my Gearman::Client $self = shift;
     my $sock                 = shift;
@@ -495,8 +506,11 @@ sub _option_request {
     return;
 } ## end sub _option_request
 
-# returns a socket from the cache.  it should be returned to the
-# cache with _put_js_sock.  the hostport isn't verified. the caller
+#
+# _get_js_sock($hostport)
+#
+# returns a socket from the cache. it should be returned to the
+# cache with _put_js_sock. the hostport isn't verified. the caller
 # should verify that $hostport is in the set of jobservers.
 sub _get_js_sock {
     my Gearman::Client $self = shift;
@@ -524,7 +538,8 @@ sub _get_js_sock {
         return;
     } ## end unless ($sock)
 
-    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
+    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1))
+        or Carp::croak "setsockopt: $!";
     $sock->autoflush(1);
 
     # If exceptions support is to be requested, and the request fails, disable
@@ -540,6 +555,9 @@ sub _get_js_sock {
     return $sock;
 } ## end sub _get_js_sock
 
+#
+# _put_js_sock($hostport, $sock)
+#
 # way for a caller to give back a socket it previously requested.
 # the $hostport isn't verified, so the caller should verify the
 # $hostport is still in the set of jobservers.
