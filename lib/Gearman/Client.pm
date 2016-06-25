@@ -447,6 +447,8 @@ sub get_status {
     # $hostport is not contained in job_servers
     # job_servers = ["localhost:4730"]
     # handle = 127.0.0.1:4730//H:...
+    #
+    # hopefully commit 58e2aa5 solves this TODO
     return undef unless grep { $hostport eq $_ } @{ $self->{job_servers} };
 
     my $sock = $self->_get_js_sock($hostport)
@@ -459,7 +461,8 @@ sub get_status {
     my $res = Gearman::Util::read_res_packet($sock, \$err);
 
     if ($res && $res->{type} eq "error") {
-        die "Error packet from server after get_status: ${$res->{blobref}}\n";
+        Carp::croak
+            "Error packet from server after get_status: ${$res->{blobref}}\n";
     }
 
     return undef unless $res && $res->{type} eq "status_res";
