@@ -7,6 +7,7 @@ use Time::HiRes qw/
     /;
 
 use Test::More;
+use Test::Exception;
 
 my $mn = "Gearman::Client";
 my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
@@ -41,13 +42,15 @@ is($c->{hooks}->{new_task_set}, undef, "no hook new_task_set");
 
 ok(my $r = $c->get_job_server_status, "get_job_server_status");
 is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
+
 # note "get_job_server_status result: ", explain $r;
 
 ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
 note "get_job_server_jobs result: ", explain $r;
 
-ok($r = $c->get_job_server_clients, "get_job_server_clients");
-note "get_job_server_clients result: ", explain $r;
+throws_ok { $c->get_job_server_clients }
+qr/deprecated because Gearman Administrative Protocol/,
+    "caught deprecated get_job_server_clients exception";
 
 my ($tn, $args, $timeout) = qw/
     foo
