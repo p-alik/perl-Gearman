@@ -47,10 +47,12 @@ is(keys(%{ $c->{sock_cache} }), 0, join "->", $mn, "{sock_cache}");
 ok(my $r = $c->get_job_server_status, "get_job_server_status");
 is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
 
-ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
-note "get_job_server_jobs result: ", explain $r;
+ok(my $r = $c->get_job_server_clients, "get_job_server_clients");
+ok(my $r = $c->get_job_server_jobs, "get_job_server_jobs");
 
-ok($r = $c->get_job_server_clients, "get_job_server_clients");
+# throws_ok { $c->get_job_server_clients }
+# qr/deprecated because Gearman Administrative Protocol/,
+#     "caught deprecated get_job_server_clients exception";
 
 foreach ($c->job_servers()) {
     ok(my $s = $c->_get_js_sock($_), "_get_js_sock($_)");
