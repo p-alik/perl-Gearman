@@ -370,22 +370,24 @@ sub _wait_for_packet {
 #
 sub _ip_port {
     my ($self, $sock) = @_;
-    return undef unless $sock;
+    $sock || return;
+
+    my $pn = getpeername($sock);
+    $pn || return;
 
     # look for a hostport in loaned_sock
     my $hostport;
-    while ( my ($hp, $s) = each %{ $self->{loaned_sock} }) {
-      $s || next;
-      if($sock == $s) {
-        $hostport = $hp;
-      last;
-      }
-    }
+    while (my ($hp, $s) = each %{ $self->{loaned_sock} }) {
+        $s || next;
+        if ($sock == $s) {
+            $hostport = $hp;
+            last;
+        }
+    } ## end while (my ($hp, $s) = each...)
 
     # hopefully it solves client->get_status mismatch
     $hostport && return $hostport;
 
-    my $pn = getpeername($sock) or return undef;
     my ($port, $iaddr) = Socket::sockaddr_in($pn);
     return join ':', Socket::inet_ntoa($iaddr), $port;
 } ## end sub _ip_port
@@ -425,7 +427,6 @@ sub _process_packet {
         my $task = shift @{ $ts->{need_handle} };
         ($task && ref($task) eq "Gearman::Task")
             or Carp::croak "Um, got an unexpected job_created notification";
-
         my $shandle = ${ $res->{'blobref'} };
         my $ipport  = $ts->_ip_port($sock);
 
