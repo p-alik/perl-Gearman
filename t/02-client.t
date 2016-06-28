@@ -51,7 +51,7 @@ subtest "get_job_server_status", sub {
 };
 
 ok(my $r = $c->get_job_server_clients, "get_job_server_clients");
-ok(my $r = $c->get_job_server_jobs, "get_job_server_jobs");
+ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
 
 # throws_ok { $c->get_job_server_clients }
 # qr/deprecated because Gearman Administrative Protocol/,
