@@ -23,6 +23,7 @@ t/07-response-parser-taskset.t
 t/08-jobstatus.t
 t/09-connect.t
 t/10-all.t
+t/11-job.t
 t/20-leaktest.t
 t/30-maxqueue.t
 t/40-prefix.t
