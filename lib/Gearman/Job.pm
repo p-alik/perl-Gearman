@@ -1,4 +1,3 @@
-# this is the object that's handed to the worker subrefs
 package Gearman::Job;
 $Gearman::Job::VERSION = '1.13.001';
 
@@ -15,6 +14,10 @@ use IO::Socket::INET ();
 
 Gearman::Job - Job in gearman distributed job system
 
+=head1 DESCRIPTION
+
+
+I<Gearman::Job> is the object that's handed to the worker subrefs
 
 =head1 METHODS
 
@@ -53,8 +56,10 @@ sub set_status {
 
     my $req = Gearman::Util::pack_req_command("work_status",
         join("\0", $self->{handle}, $nu, $de));
-    die "work_status write failed"
+
+      Carp::croak "work_status write failed"
         unless Gearman::Util::send_req($self->{jss}, \$req);
+
     return 1;
 } ## end sub set_status
 
@@ -81,6 +86,7 @@ sub arg {
 =head2 handle()
 
 B<return> handle
+
 =cut
 
 sub handle {
