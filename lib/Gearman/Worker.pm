@@ -217,6 +217,7 @@ sub _get_js_sock {
     my Gearman::Worker $self = shift;
     my $ipport               = shift;
     my %opts                 = @_;
+    $ipport || return;
 
     my $on_connect = delete $opts{on_connect};
 
@@ -252,12 +253,17 @@ sub _get_js_sock {
         Timeout  => 1
     );
     unless ($sock) {
+        $self->debug && warn "$@";
+
         $self->{down_since}{$ipport} ||= $now;
         $self->{last_connect_fail}{$ipport} = $now;
-        return undef;
+
+        return;
     }
+
     delete $self->{last_connect_fail}{$ipport};
     delete $self->{down_since}{$ipport};
+
     $sock->autoflush(1);
     setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
 
@@ -265,7 +271,7 @@ sub _get_js_sock {
 
     unless ($self->_on_connect($sock) && $on_connect && $on_connect->($sock)) {
         delete $self->{sock_cache}{$ipport};
-        return undef;
+        return;
     }
 
     return $sock;
