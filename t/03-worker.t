@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Timer;
+use IO::Socket::INET;
 
 my $debug = $ENV{DEBUG};
 my @js    = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
@@ -26,7 +27,7 @@ can_ok(
 );
 
 subtest "new", sub {
-    my $w = new_ok($mn, [job_servers => [@js]]);
+    my $w = _w();
     isa_ok($w, 'Gearman::Objects');
 
     is(ref($w->{sock_cache}),        "HASH");
@@ -38,7 +39,7 @@ subtest "new", sub {
 };
 
 subtest "register_function", sub {
-    my $w = new_ok($mn, [job_servers => [@js], debug => $debug]);
+    my $w = _w();
     my ($tn, $to) = qw/foo 2/;
     my $cb = sub {
         my ($j) = @_;
@@ -56,6 +57,16 @@ subtest "register_function", sub {
         "register_function($to, cb)"
     );
 };
+subtest "reset_abilities", sub {
+    my $w = _w();
+    $w->{can}->{x}      = 1;
+    $w->{timeouts}->{x} = 1;
+
+    ok($w->reset_abilities());
+
+    is(keys %{ $w->{can} },      0);
+    is(keys %{ $w->{timeouts} }, 0);
+};
 
 subtest "work", sub {
 
@@ -63,7 +74,7 @@ subtest "work", sub {
     # $ENV{GEARMAN_SERVERS}
     #     || plan skip_all => 'without $ENV{GEARMAN_SERVERS}';
 
-    my $w = new_ok($mn, [job_servers => [@js]]);
+    my $w = _w();
 
     time_ok(
         sub {
@@ -75,7 +86,7 @@ subtest "work", sub {
 };
 
 subtest "_get_js_sock", sub {
-    my $w = new_ok($mn, [job_servers => [@js], debug => $debug]);
+    my $w = _w();
     is($w->_get_js_sock(), undef);
 
     $w->{parent_pipe} = rand(10);
@@ -102,4 +113,31 @@ SKIP: {
 
 };
 
+subtest "_on_connect-_set_ability", sub {
+    my $w = _w();
+    my $m = "foo";
+
+    is($w->_on_connect(), undef);
+
+    is($w->_set_ability(), 0);
+    is($w->_set_ability(undef, $m), 0);
+    is($w->_set_ability(undef, $m, 2), 0);
+
+    my @js = @{ $w->job_servers() };
+    if (@js) {
+        my $s = IO::Socket::INET->new(
+            PeerAddr => $js[0],
+            Timeout  => 1
+        );
+        is($w->_on_connect($s), 1);
+
+        is($w->_set_ability($s, $m), 1);
+        is($w->_set_ability($s, $m, 2), 1);
+    } ## end if (@js)
+};
+
 done_testing();
+
+sub _w {
+    return new_ok($mn, [job_servers => [@js], debug => $debug]);
+}

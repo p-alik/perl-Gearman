@@ -302,6 +302,9 @@ sub _on_connect {
     return 1;
 } ## end sub _on_connect
 
+#
+# _set_ability($sock, $ability, $timeout)
+#
 sub _set_ability {
     my Gearman::Worker $self = shift;
     my ($sock, $ability, $timeout) = @_;
