@@ -4,7 +4,7 @@ $Gearman::Worker::VERSION = '1.13.001';
 use strict;
 use warnings;
 
-use base 'Gearman::Objects';
+use base "Gearman::Objects";
 
 =head1 NAME
 
@@ -163,6 +163,9 @@ sub new {
     return $self;
 } ## end sub new
 
+#
+# _get_js_sock($ipport, %opts)
+#
 sub _get_js_sock {
     my Gearman::Worker $self = shift;
     my $ipport               = shift;
@@ -221,9 +224,13 @@ sub _get_js_sock {
     return $sock;
 } ## end sub _get_js_sock
 
+#
+# _on_connect($sock)
+#
 # Housekeeping things to do on connection to a server. Method call
 # with one argument being the 'socket' we're going to take care of.
 # returns true on success, false on failure.
+#
 sub _on_connect {
     my ($self, $sock) = @_;
 
@@ -279,7 +286,7 @@ sub reset_abilities {
     $self->{timeouts} = {};
 } ## end sub reset_abilities
 
-=head2 uncache_sock()
+=head2 uncache_sock($ipport, $reason)
 
 close TCP connection
 
@@ -579,13 +586,8 @@ sub _register_all {
 
 =head2 job_servers(@servers)
 
-Initializes the worker I<$worker> with the list of job servers in I<@servers>.
-I<@servers> should contain a list of IP addresses, with optional port numbers.
-For example:
-
-    $worker->job_servers('127.0.0.1', '192.168.1.100:4730');
-
-If the port number is not provided, 4730 is used as the default.
+override L<Gearman::Objects> method to skip job server initialization
+if defined C<$ENV{GEARMAN_WORKER_USE_STDIO}>
 
 Calling this method will do nothing in a worker that is running as a child
 process of a gearman server.
