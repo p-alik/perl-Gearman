@@ -3,7 +3,7 @@ use warnings;
 use Test::More;
 use Test::Timer;
 
-my $debug = $ENV{AUTHOR_TESTING};
+my $debug = $ENV{DEBUG};
 my @js    = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
 my $mn    = "Gearman::Worker";
 use_ok($mn);
