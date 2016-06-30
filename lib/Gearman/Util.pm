@@ -4,9 +4,20 @@ $Gearman::Util::VERSION = '1.13.001';
 use strict;
 use warnings;
 
+# man errno
+# Resource temporarily unavailable
+# (may be the same value as EWOULDBLOCK) (POSIX.1)
 use Errno qw(EAGAIN);
 use Time::HiRes qw();
 use IO::Handle;
+
+=head1 NAME
+
+Gearman::Util
+
+=head1 METHODS
+
+=cut
 
 sub DEBUG () {0}
 
@@ -62,12 +73,19 @@ while (my ($num, $ary) = each %cmd) {
     $num{ $ary->[1] } = $num;
 }
 
+=head2 cmd_name($num)
+
+=cut
+
 sub cmd_name {
     my $num = shift;
     my $c   = $cmd{$num};
     return $c ? $c->[1] : undef;
 }
 
+=head2 pack_req_command($cmd, $arg)
+
+=cut
 sub pack_req_command {
     my $type_arg = shift;
     my $type = $num{$type_arg} || $type_arg;
@@ -77,6 +95,9 @@ sub pack_req_command {
     return "\0REQ" . pack("NN", $type, $len) . $arg;
 } ## end sub pack_req_command
 
+=head2 pack_res_command($cmd, $arg)
+
+=cut
 sub pack_res_command {
     my $type_arg = shift;
     my $type = $num{$type_arg} || int($type_arg);
