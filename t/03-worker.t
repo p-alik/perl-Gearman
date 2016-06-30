@@ -18,7 +18,6 @@ can_ok(
         job_servers
         register_function
         reset_abilities
-        reset_abilities
         uncache_sock
         unregister_function
         work
@@ -41,11 +40,7 @@ subtest "new", sub {
 subtest "register_function", sub {
     my $w = _w();
     my ($tn, $to) = qw/foo 2/;
-    my $cb = sub {
-        my ($j) = @_;
-        note join(' ', 'work on', $j->handle, explain $j->arg);
-        return $j->arg ? $j->arg : 'done';
-    };
+    my $cb = sub { 1 };
 
     ok($w->register_function($tn => $cb), "register_function($tn)");
 
@@ -57,6 +52,7 @@ subtest "register_function", sub {
         "register_function($to, cb)"
     );
 };
+
 subtest "reset_abilities", sub {
     my $w = _w();
     $w->{can}->{x}      = 1;
