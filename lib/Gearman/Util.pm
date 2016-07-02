@@ -64,16 +64,18 @@ our %cmd = (
     # for worker to declare to the jobserver that this worker is only connected
     # to one jobserver, so no polls/grabs will take place, and server is free
     # to push "job_assign" packets back down.
-    24 => ['I', "all_yours"],    # W->J ---
+    24 => ['I', "all_yours"],     # W->J ---
 );
 
-our %num;                        # name -> num
+our %num;                         # name -> num
 while (my ($num, $ary) = each %cmd) {
     die if $num{ $ary->[1] };
     $num{ $ary->[1] } = $num;
 }
 
 =head2 cmd_name($num)
+
+B<return> cmd
 
 =cut
 
@@ -85,7 +87,10 @@ sub cmd_name {
 
 =head2 pack_req_command($cmd, $arg)
 
+B<return> request string
+
 =cut
+
 sub pack_req_command {
     my $type_arg = shift;
     my $type = $num{$type_arg} || $type_arg;
@@ -97,7 +102,10 @@ sub pack_req_command {
 
 =head2 pack_res_command($cmd, $arg)
 
+B<return> response string
+
 =cut
+
 sub pack_res_command {
     my $type_arg = shift;
     my $type = $num{$type_arg} || int($type_arg);
@@ -109,7 +117,12 @@ sub pack_res_command {
     return "\0RES" . pack("NN", $type, $len) . $_[0];
 } ## end sub pack_res_command
 
-# returns undef on closed socket or malformed packet
+=heade2 read_res_packet($sock, $err_ref, $timeout)
+
+B<return> undef on closed socket or malformed packet
+
+=cut
+
 sub read_res_packet {
     warn " Entering read_res_packet" if DEBUG;
     my $sock       = shift;
@@ -210,6 +223,10 @@ LOOP: while (1) {
     } ## end LOOP: while (1)
 } ## end sub read_res_packet
 
+=head2 read_text_status($sock, $err_ref)
+
+=cut
+
 sub read_text_status {
     my $sock    = shift;
     my $err_ref = shift;
@@ -239,6 +256,10 @@ sub read_text_status {
     return @lines;
 } ## end sub read_text_status
 
+=head2 send_req($sock, $reqref)
+
+=cut
+
 sub send_req {
     my ($sock, $reqref) = @_;
     return 0 unless $sock;
@@ -249,8 +270,16 @@ sub send_req {
     return ($rv && $rv == $len) ? 1 : 0;
 } ## end sub send_req
 
-# given a file descriptor number and a timeout, wait for that descriptor to
-# become readable; returns 0 or 1 on if it did or not
+=head2 wait_for_readability($fileno, $timeout)
+
+given a file descriptor number and a timeout,
+
+wait for that descriptor to become readable
+
+B<return> 0 or 1 on if it did or not
+
+=cut
+
 sub wait_for_readability {
     my ($fileno, $timeout) = @_;
     return 0 unless $fileno && $timeout;
