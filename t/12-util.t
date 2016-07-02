@@ -45,8 +45,9 @@ foreach my $n (keys %cmd) {
     );
 } ## end foreach my $n (keys %cmd)
 
-
-# throws_ok(sub { &{"$mn\:\:pack_req_command"}() },qr/Bogus type arg of/);
-# throws_ok(sub { &{"$mn\:\:pack_res_command"}() },qr/Bogus type arg of/);
+throws_ok(sub { &{"$mn\:\:pack_req_command"}() },    qr/Bogus type arg of/);
+throws_ok(sub { &{"$mn\:\:pack_req_command"}('x') }, qr/Bogus type arg of/);
+throws_ok(sub { &{"$mn\:\:pack_res_command"}() },    qr/Bogus type arg of/);
+throws_ok(sub { &{"$mn\:\:pack_res_command"}('x') }, qr/Bogus type arg of/);
 
 done_testing();
