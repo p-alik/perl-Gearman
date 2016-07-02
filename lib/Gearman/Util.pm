@@ -85,20 +85,15 @@ sub cmd_name {
     return $c ? $c->[1] : undef;
 }
 
-=head2 pack_req_command($cmd, $arg)
+=head2 pack_req_command($key, $arg)
 
 B<return> request string
 
 =cut
 
 sub pack_req_command {
-    my $type_arg = shift;
-    my $type = $num{$type_arg} || $type_arg;
-    die "Bogus type arg of '$type_arg'" unless $type;
-    my $arg = $_[0] || '';
-    my $len = length($arg);
-    return "\0REQ" . pack("NN", $type, $len) . $arg;
-} ## end sub pack_req_command
+    return _pack_command("REQ", @_);
+}
 
 =head2 pack_res_command($cmd, $arg)
 
@@ -107,15 +102,8 @@ B<return> response string
 =cut
 
 sub pack_res_command {
-    my $type_arg = shift;
-    my $type = $num{$type_arg} || int($type_arg);
-    die "Bogus type arg of '$type_arg'" unless $type;
-
-    # If they didn't pass in anything to send, make it be an empty string.
-    $_[0] = '' unless defined $_[0];
-    my $len = length($_[0]);
-    return "\0RES" . pack("NN", $type, $len) . $_[0];
-} ## end sub pack_res_command
+    return _pack_command("RES", @_);
+}
 
 =heade2 read_res_packet($sock, $err_ref, $timeout)
 
@@ -292,4 +280,15 @@ sub wait_for_readability {
     return $nfound ? 1 : 0;
 } ## end sub wait_for_readability
 
+#
+# _pack_command($prefix, $key, $arg)
+#
+sub _pack_command {
+    my ($prefix, $key, $arg) = @_;
+    ($key && $num{$key}) || die sprintf("Bogus type arg of '%s'", $key || '');
+
+    $arg ||= '';
+    my $len = length($arg);
+    return "\0$prefix" . pack("NN", $num{$key}, $len) . $arg;
+} ## end sub _pack_command
 1;
