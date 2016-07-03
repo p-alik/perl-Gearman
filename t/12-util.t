@@ -3,6 +3,8 @@ use warnings;
 use Test::More;
 use Test::Exception;
 
+use IO::Socket::INET;
+
 my $mn = "Gearman::Util";
 
 use_ok($mn);
@@ -50,4 +52,39 @@ throws_ok(sub { &{"$mn\:\:pack_req_command"}('x') }, qr/Bogus type arg of/);
 throws_ok(sub { &{"$mn\:\:pack_res_command"}() },    qr/Bogus type arg of/);
 throws_ok(sub { &{"$mn\:\:pack_res_command"}('x') }, qr/Bogus type arg of/);
 
+#TODO read_res_packet
+# use Socket qw/
+#     IPPROTO_TCP
+#     TCP_NODELAY
+#     SOL_SOCKET
+#     PF_INET
+#     SOCK_STREAM
+#     /;
+# subtest "read_res_packet", sub {
+#     my $s = IO::Socket::INET->new(
+#         # PeerAddr => "localhost:4730",
+#         # Timeout  => 1
+#     );
+
+#     # $s->autoflush(1);
+#     # setsockopt($s, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
+
+#     is(&{"$mn\:\:read_res_packet"}($s, \my $e), undef);
+#     is($e, "eof");
+# };
+
+subtest "read_text_status", sub {
+    is(&{"$mn\:\:read_text_status"}(IO::Socket::INET->new(), \my $e), undef);
+    is($e, "eof");
+};
+
+subtest "send_req", sub {
+    is(&{"$mn\:\:send_req"}(IO::Socket::INET->new(), \"foo"), 0);
+};
+
+subtest "wait_for_readability", sub {
+    is(&{"$mn\:\:wait_for_readability"}(2, 3), 0);
+};
+
 done_testing();
+
