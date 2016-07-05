@@ -306,8 +306,8 @@ sub pack_submit_packet {
 
     my $func = $task->{func};
 
-    if (my $prefix = $client && $client->prefix) {
-        $func = join "\t", $prefix, $task->{func};
+    if ($client && $client->prefix()) {
+        $func = join "\t", $client->prefix(), $task->{func};
     }
 
     return Gearman::Util::pack_req_command(
