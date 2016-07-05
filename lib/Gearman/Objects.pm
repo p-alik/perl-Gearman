@@ -27,7 +27,8 @@ sub new {
         && $self->set_job_servers(
         ref($opts{job_servers})
         ? @{ $opts{job_servers} }
-        : [$opts{job_servers}]);
+        : [$opts{job_servers}]
+        );
     $opts{debug}  && $self->debug($opts{debug});
     $opts{prefix} && $self->prefix($opts{prefix});
 
@@ -67,8 +68,10 @@ sub debug {
 
 sub prefix {
     my $self = shift;
-    return $self->{prefix} unless @_;
-    $self->{prefix} = shift;
-}
+    if (@_) {
+        $self->{prefix} = shift;
+    }
+    return $self->{prefix};
+} ## end sub prefix
 
 1;
