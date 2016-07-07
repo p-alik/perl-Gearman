@@ -11,28 +11,30 @@ use Test::Timer;
 use lib 't';
 use TestGearman;
 
-my @ports = free_ports(3);
-start_server($ports[0]) || plan skip_all => "Can't find server to test with";
+my @job_servers;
+{
+    my $la = "127.0.0.1";
+    my @ports = free_ports($la, 3);
+    start_server($ENV{GEARMAND_PATH}, $ports[0])
+        || plan skip_all => "Can't find server to test with";
 
-for (1 .. $#ports) {
-    start_server($ports[$_]);
+    @job_servers = map { join ':', $la, $_ } @ports;
+
+    for (1 .. $#ports) {
+        start_server($ENV{GEARMAND_PATH}, $ports[$_]);
+    }
+
+    foreach (@job_servers) {
+        check_server_connection($_);
+    }
 }
-
-# kinda useless, now that start_server does this for us, but...
-for (1 .. $#ports) {
-    ## Sleep, wait for servers to start up before connecting workers.
-    wait_for_port($ports[$_]);
-}
-
-## Start two workers, look for $NUM_SERVERS job servers, starting at
-## port number $port.
-start_worker([@ports]);
-start_worker([@ports]);
-
-my @job_servers = map { '127.0.0.1:' . $_ } @ports;
 
 my $client = new_ok("Gearman::Client",
     [exceptions => 1, job_servers => [@job_servers]]);
+
+## Start two workers, look for job servers
+start_worker([@job_servers]);
+start_worker([@job_servers]);
 
 subtest "taskset 1", sub {
     throws_ok { $client->do_task(sum => []) }
@@ -101,7 +103,7 @@ subtest "failures", sub {
 subtest "Worker process exits", sub {
     is($client->do_task('fail_exit'),
         undef, 'Job that failed via exit returned undef');
-    pid_is_dead(wait(), [@ports]);
+    pid_is_dead(wait(), [@job_servers]);
 };
 
 ## Worker process times out (takes longer than timeout seconds).
@@ -307,7 +309,7 @@ subtest "hight priority", sub {
     like($out, qr/p.+6/, 'High priority tasks executed in priority order.');
 
     # We just killed off all but one worker--make sure they get respawned.
-    respawn_children([@ports]);
+    respawn_children([@job_servers]);
 };
 
 subtest "job server status", sub {
