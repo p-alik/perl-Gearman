@@ -24,6 +24,7 @@ END { kill_children() }
 
 sub free_ports {
     my ($la, $count) = @_;
+    $count||=1;
     my @p;
     for (1 .. $count) {
         my $fp = _free_port($la);
@@ -74,13 +75,12 @@ sub start_server {
     return $pid;
 } ## end sub start_server
 
-#TODO rm num_servers
 sub start_worker {
     my ($job_servers, $args) = @_;
     unless (ref $args) {
         $args = {};
     }
-    my $num_servers ||= $args->{num_servers} || 1;
+
     my $worker = "$Bin/worker.pl";
     my $servers = join ',', @{$job_servers};
     my $ready = 0;
