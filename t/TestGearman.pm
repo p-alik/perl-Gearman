@@ -132,7 +132,6 @@ sub check_server_connection {
 
 sub pid_is_dead {
     my ($pid) = shift;
-    warn "pid $pid";
     return if $pid == -1;
     my $type = delete $Children{$pid};
     if ($type eq 'W') {
