@@ -1,44 +1,65 @@
 package TestGearman;
 use base qw(Exporter);
 @EXPORT = qw(
+    free_ports
     start_server
-    wait_for_port
+    check_server_connection
     start_worker
     respawn_children
     pid_is_dead
-    PORT
     %Children
-    $NUM_SERVERS
 );
+
 use strict;
-use File::Basename 'dirname';
-use List::Util qw(first);
+use warnings;
+
 use IO::Socket::INET;
 use POSIX qw( :sys_wait_h );
 
-our $Bin;
 use FindBin qw( $Bin );
-
-# TODO: use a variation of t/lib/GearTestLib::free_port to find 3 free ports
-use constant PORT => 9050;
-
-our $NUM_SERVERS = 1;
 
 our %Children;
 
 END { kill_children() }
 
+sub free_ports {
+    my ($la, $count) = @_;
+    my @p;
+    for (1 .. $count) {
+        my $fp = _free_port($la);
+        $fp && push @p, $fp;
+    }
+    return @p;
+} ## end sub free_ports
+
+sub _free_port {
+    my ($la, $port) = shift;
+    my ($type, $retry, $sock) = ("tcp", 5);
+    do {
+        unless ($port) {
+            $port = int(rand(20000)) + 30000;
+        }
+
+        IO::Socket::INET->new(
+            LocalAddr => $la,
+            LocalPort => $port,
+            Proto     => $type,
+            ReuseAddr => 1
+        ) or undef($port);
+
+    } until ($port || --$retry == 0);
+
+    return $port;
+} ## end sub _free_port
+
 sub start_server {
-    my ($port) = @_;
-    my @loc = (
-        "$Bin/../../../../server/gearmand",    # using svn
-        "$Bin/../../../../../server/gearmand", # using svn and 'disttest'
-        dirname($^X) . '/gearmand',            # local installs (e.g. perlbrew)
-        '/usr/bin/gearmand',                   # where some distros might put it
-        '/usr/sbin/gearmand',    # where other distros might put it
-    );
-    my $server = first { -e $_ } @loc
-        or return 0;
+    my ($server, $port) = @_;
+    $server ||= qx/which gearmand/;
+    ($server && $port) || return;
+
+    chomp $server;
+
+    (-e $server) || return;
 
     my $ready = 0;
     local $SIG{USR1} = sub {
@@ -53,18 +74,15 @@ sub start_server {
     return $pid;
 } ## end sub start_server
 
+#TODO rm num_servers
 sub start_worker {
-    my ($port, $args) = @_;
-    my $num_servers;
+    my ($job_servers, $args) = @_;
     unless (ref $args) {
-        $num_servers = $args;
-        $args        = {};
+        $args = {};
     }
-    $num_servers ||= $args->{num_servers} || 1;
-    my $worker  = "$Bin/worker.pl";
-    my $servers = join ',',
-        map '127.0.0.1:' . (PORT + $_),
-        0 .. $num_servers - 1;
+    my $num_servers ||= $args->{num_servers} || 1;
+    my $worker = "$Bin/worker.pl";
+    my $servers = join ',', @{$job_servers};
     my $ready = 0;
     my $pid;
     local $SIG{USR1} = sub {
@@ -99,31 +117,34 @@ sub kill_children {
     kill INT => keys %Children;
 }
 
-sub wait_for_port {
-    my ($port) = @_;
+sub check_server_connection {
+    my ($pa) = @_;
     my $start = time;
-    while (1) {
-        my $sock = IO::Socket::INET->new(PeerAddr => "127.0.0.1:$port");
-        return 1 if $sock;
+    my $sock;
+    do {
+        $sock = IO::Socket::INET->new(PeerAddr => $pa);
         select undef, undef, undef, 0.25;
-        die "Timeout waiting for port $port to startup" if time > $start + 5;
-    } ## end while (1)
-} ## end sub wait_for_port
+        die "Timeout waiting for peer address $pa" if time > $start + 5;
+    } until ($sock);
+
+    return defined($sock);
+} ## end sub check_server_connection
 
 sub pid_is_dead {
-    my ($pid) = @_;
+    my ($pid) = shift;
+    warn "pid $pid";
     return if $pid == -1;
     my $type = delete $Children{$pid};
     if ($type eq 'W') {
         ## Right now we can only restart workers.
-        start_worker(PORT, $NUM_SERVERS);
+        start_worker(@_);
     }
 } ## end sub pid_is_dead
 
 sub respawn_children {
     for my $pid (keys %Children) {
         if (waitpid($pid, WNOHANG) > 0) {
-            pid_is_dead($pid);
+            pid_is_dead($pid, @_);
         }
     }
 } ## end sub respawn_children
