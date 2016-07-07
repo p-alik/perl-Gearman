@@ -13,20 +13,23 @@ use TestGearman;
 # support for it in Gearman::Worker yet, so we connect directly to
 # gearmand to configure it for the test.
 
-my $port = (free_ports(1))[0];
-if (start_server($port)) {
-    plan tests => 6;
-}
-else {
-    plan skip_all => "Can't find server to test with";
-    exit 0;
-}
-
-wait_for_port($port);
-
+my $job_server;
 {
+    my $port = (free_ports(1))[0];
+    if (!start_server($ENV{GEARMAND_PATH}, $port)) {
+        plan skip_all => "Can't find server to test with";
+        exit 0;
+    }
+
+    plan tests => 6;
+
+    my $la = "127.0.0.1";
+    $job_server = join ':', $la, $port;
+
+    check_server_connection($job_server);
+
     my $sock = IO::Socket::INET->new(
-        PeerAddr => '127.0.0.1',
+        PeerAddr => $la,
         PeerPort => $port,
     );
     ok($sock, "connect to jobserver");
@@ -36,12 +39,9 @@ wait_for_port($port);
     ok($input =~ m/^OK\b/i);
 }
 
-start_worker([$port]);
+start_worker([$job_server]);
 
-my $client = Gearman::Client->new;
-isa_ok($client, 'Gearman::Client');
-
-$client->job_servers('127.0.0.1:' . $port);
+my $client = new_ok("Gearman::Client", [job_servers => [$job_server]]);
 
 my $tasks = $client->new_task_set;
 isa_ok($tasks, 'Gearman::Taskset');
@@ -58,9 +58,12 @@ foreach my $iter (1 .. 5) {
         }
     );
 } ## end foreach my $iter (1 .. 5)
+
 $tasks->wait;
 
-ok($completed == 2 || $completed == 1, 'number of success')
-    ;    # One in the queue, plus one that may start immediately
-ok($failed == 3 || $failed == 4, 'number of failure');    # All the rest
+# One in the queue, plus one that may start immediately
+ok($completed == 2 || $completed == 1, 'number of success');
+
+# All the rest
+ok($failed == 3 || $failed == 4, 'number of failure');
 
