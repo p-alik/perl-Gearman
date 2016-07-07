@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Gearman::Client;
-use Storable qw( freeze );
 use Test::More;
 use Test::Timer;
 
@@ -25,7 +24,7 @@ my $job_server;
     check_server_connection($job_server);
 }
 
-plan tests => 2;
+plan tests => 3;
 
 start_worker([$job_server]);
 
@@ -64,4 +63,39 @@ subtest "wait with timeout", sub {
 
     ok($completed > 0, "at least one job is completed");
     is($failed, 0, "no failed jobs");
+};
+
+subtest "long args", sub {
+    my $tasks = $client->new_task_set;
+    isa_ok($tasks, 'Gearman::Taskset');
+
+    my $arg = "x" x (5 * 1024 * 1024);
+
+    $tasks->add_task(
+        'long',
+        \$arg,
+        {
+            on_complete => sub {
+                my $rr = shift;
+                if (length($$rr) != length($arg)) {
+                    fail(     "Large job failed size check: got "
+                            . length($$rr)
+                            . ", want "
+                            . length($arg));
+                } ## end if (length($$rr) != length...)
+                elsif ($$rr ne $arg) {
+                    fail("Large job failed content check");
+                }
+                else {
+                    pass("Large job succeeded");
+                }
+            },
+            on_fail => sub {
+                fail("Large job failed");
+            },
+        }
+    );
+
+    my $to = 10;
+    time_ok(sub { $tasks->wait(timeout => $to) }, $to, "timeout");
 };
