@@ -22,11 +22,11 @@ my $job_server;
     $job_server = join ':', $la, $port;
 
     check_server_connection($job_server);
+    start_worker([$job_server]);
 }
 
 plan tests => 3;
 
-start_worker([$job_server]);
 
 my $client = new_ok("Gearman::Client", [job_servers => [$job_server]]);
 
