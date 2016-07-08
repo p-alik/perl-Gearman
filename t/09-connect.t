@@ -1,20 +1,20 @@
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
 use Gearman::Client;
-use Test::More;
-use lib 't';
-use Time::HiRes;
 use IO::Socket::INET;
+use Test::More;
+use Time::HiRes;
 
-$ENV{AUTHOR_TESTING} || plan skip_all => "without \$ENV{AUTHOR_TESTING}";
+my @paddr = qw/
+    192.0.2.1:1
+    192.0.2.2:1
+    /;
 
-{
+foreach my $pa (@paddr) {
     my $start_time = [Time::HiRes::gettimeofday];
-    my $sock  = IO::Socket::INET->new(PeerAddr => "192.0.2.1:1", Timeout => 2);
-    my $delta = Time::HiRes::tv_interval($start_time);
+    my $sock       = IO::Socket::INET->new(PeerAddr => $pa, Timeout => 2);
+    my $delta      = Time::HiRes::tv_interval($start_time);
 
     if ($sock) {
         plan skip_all =>
@@ -26,13 +26,14 @@ $ENV{AUTHOR_TESTING} || plan skip_all => "without \$ENV{AUTHOR_TESTING}";
             "Socket timeouts aren't behaving, we can't trust this test in that scenario.";
         exit 0;
     }
-    plan tests => 10;
-}
+} ## end foreach my $pa (@paddr)
+
+plan tests => 11;
 
 # Testing exponential backoff
 {
-    my $client = Gearman::Client->new(exceptions => 1);
-    $client->job_servers('192.0.2.1:1');    # doesn't connect
+    # doesn't connect
+    my $client = new_ok("Gearman::Client", [exceptions => 1, job_servers => $paddr[0]]);
 
     # 1 second backoff (1 ** 2)
     time_between(
@@ -45,6 +46,7 @@ $ENV{AUTHOR_TESTING} || plan skip_all => "without \$ENV{AUTHOR_TESTING}";
         sub { $client->do_task(anything => '') },
         "Backoff for 1s, fast failure"
     );
+
     sleep 2;
 
     # 4 second backoff (2 ** 2)
@@ -72,7 +74,7 @@ $ENV{AUTHOR_TESTING} || plan skip_all => "without \$ENV{AUTHOR_TESTING}";
     );
 
     # Now we reset the server list again and see if we have a slow backoff again.
-    $client->job_servers('192.0.2.2:1');    # doesn't connect
+    $client->job_servers($paddr[1]);    # doesn't connect
 
     # Fresh server list, backoff will be 1 second (1 ** 2) after the first failure.
     time_between(
