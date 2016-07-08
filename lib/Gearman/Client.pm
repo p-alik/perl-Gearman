@@ -265,19 +265,14 @@ sub get_job_server_status {
 
 =head2 get_job_server_jobs()
 
+supported only by L<Gearman::Server>
+
 B<return> {job => {address, listeners, key}}
 
 =cut
 
-#B<deprecated> because L<Gearman Administrative Protocol|http://gearman.org/protocol/> does not support jobs command
 sub get_job_server_jobs {
     my Gearman::Client $self = shift;
-
-    # Carp::croak <<'HERE';
-# Gearman::Client->get_job_server_jobs() deprecated
-# because Gearman Administrative Protocol does not support jobs command
-# HERE
-
     my $js_jobs = {};
     $self->_job_server_status_command(
         "jobs\n",
@@ -301,17 +296,12 @@ sub get_job_server_jobs {
 
 =head2 get_job_server_clients()
 
+supported only by L<Gearman::Server>
 
 =cut
 
-#B<deprecated> because L<Gearman Administrative Protocol|http://gearman.org/protocol/> does not support clients command
 sub get_job_server_clients {
     my Gearman::Client $self = shift;
-
-    # Carp::croak <<'HERE';
-# Gearman::Client->get_job_server_clients() deprecated
-# because Gearman Administrative Protocol does not support clients command
-# HERE
 
     my $js_clients = {};
     my $client;
@@ -334,6 +324,7 @@ sub get_job_server_clients {
         },
         @_
     );
+
     return $js_clients;
 } ## end sub get_job_server_clients
 
