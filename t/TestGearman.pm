@@ -24,7 +24,7 @@ END { kill_children() }
 
 sub free_ports {
     my ($la, $count) = @_;
-    $count||=1;
+    $count ||= 1;
     my @p;
     for (1 .. $count) {
         my $fp = _free_port($la);
@@ -62,16 +62,23 @@ sub start_server {
 
     (-e $server) || return;
 
-    my $ready = 0;
-    local $SIG{USR1} = sub {
-        $ready = 1;
-    };
-
-    my $pid = start_child([$server, '-p' => $port, '-n' => $$]);
-    $Children{$pid} = 'S';
-    while (!$ready) {
-        select undef, undef, undef, 0.10;
+    my $version = qx/$server -V/;
+    my $pid;
+    if ($version !~ /Gearman::Server/) {
+        $pid = start_child("$server -p $port -d  -l /dev/null", 1);
+        warn "got $pid";
     }
+    else {
+        my $ready = 0;
+        local $SIG{USR1} = sub {
+            $ready = 1;
+        };
+        $pid = start_child([$server, '-p' => $port, '-n' => $$]);
+        while (!$ready) {
+            select undef, undef, undef, 0.10;
+        }
+    } ## end else [ if ($version !~ /Gearman::Server/)]
+    $Children{$pid} = 'S';
     return $pid;
 } ## end sub start_server
 
@@ -81,9 +88,9 @@ sub start_worker {
         $args = {};
     }
 
-    my $worker = "$Bin/worker.pl";
+    my $worker  = "$Bin/worker.pl";
     my $servers = join ',', @{$job_servers};
-    my $ready = 0;
+    my $ready   = 0;
     my $pid;
     local $SIG{USR1} = sub {
         $ready = 1;
@@ -104,12 +111,20 @@ sub start_worker {
 } ## end sub start_worker
 
 sub start_child {
-    my ($cmd) = @_;
+    my ($cmd, $binary) = @_;
     my $pid = fork();
     die $! unless defined $pid;
     unless ($pid) {
-        exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
-    }
+        if (!$binary) {
+            exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
+        }
+        else {
+            warn "$cmd";
+            exec($cmd) or die $!;
+
+            # qx/$cmd/ or die $!;
+        } ## end else [ if (!$binary) ]
+    } ## end unless ($pid)
     $pid;
 } ## end sub start_child
 
