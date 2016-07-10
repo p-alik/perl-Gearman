@@ -1,9 +1,6 @@
-package TestGearman;
+package Test::Gearman;
 use base qw(Exporter);
 @EXPORT = qw(
-    free_ports
-    start_server
-    check_server_connection
     start_worker
     respawn_children
     pid_is_dead
@@ -12,6 +9,15 @@ use base qw(Exporter);
 
 use strict;
 use warnings;
+
+use fields qw/
+    daemon
+    ports
+    ip
+    count
+    _is_perl_daemon
+    _job_servers
+    /;
 
 use IO::Socket::INET;
 use POSIX qw( :sys_wait_h );
@@ -22,16 +28,46 @@ our %Children;
 
 END { kill_children() }
 
-sub free_ports {
-    my ($la, $count) = @_;
+sub new {
+    my ($class, %args) = @_;
+
+    my $self = fields::new($class);
+
+    $self->{daemon} = $args{daemon} || qx/which gearmand/;
+    chomp $self->{daemon};
+
+    $self->{ports} = $self->_free_ports($args{count});
+    $self->{ip}    = $args{ip};
+
+    return $self;
+} ## end sub new
+
+sub is_perl_daemon {
+    my ($self) = @_;
+    $self->{daemon} || return;
+
+    unless (defined $self->{_is_perl_daemon}) {
+        my $v = qx/$self->{daemon} -V/;
+        $self->{_is_perl_daemon} = ($v && $v =~ /Gearman::Server/);
+    }
+    return $self->{_is_perl_daemon};
+} ## end sub is_perl_daemon
+
+sub _free_ports {
+    my ($self, $count) = @_;
     $count ||= 1;
     my @p;
     for (1 .. $count) {
-        my $fp = _free_port($la);
+        my $fp = _free_port($self->{ip});
         $fp && push @p, $fp;
     }
-    return @p;
-} ## end sub free_ports
+
+    unless (scalar(@p) == $count) {
+        warn "couldn't find $count free ports";
+        return;
+    }
+    return [@p];
+} ## end sub _free_ports
 
 sub _free_port {
     my ($la, $port) = shift;
@@ -53,32 +89,47 @@ sub _free_port {
     return $port;
 } ## end sub _free_port
 
+sub job_servers {
+    return shift->{_job_servers};
+
+}
+
+sub start_servers {
+    my ($self) = @_;
+    ($self->{daemon} && $self->{ports}) || return;
+    (-e $self->{daemon}) || return;
+
+    my $ok = 1;
+    foreach (@{ $self->{ports} }) {
+        my $pid = start_server($self->{daemon}, $_, $self->is_perl_daemon());
+        unless ($pid) {
+            $ok = 0;
+            last;
+        }
+
+        push @{ $self->{_job_servers} }, join ':', $self->{ip}, $_;
+        $Children{$pid} = 'S';
+    } ## end foreach (@{ $self->{ports} ...})
+    return $ok;
+} ## end sub start_servers
+
 sub start_server {
-    my ($server, $port) = @_;
-    $server ||= qx/which gearmand/;
-    ($server && $port) || return;
-
-    chomp $server;
-
-    (-e $server) || return;
-
-    my $version = qx/$server -V/;
+    my ($daemon, $port, $is_perl_daemon) = @_;
     my $pid;
-    if ($version !~ /Gearman::Server/) {
-        $pid = start_child("$server -p $port -d  -l /dev/null", 1);
-        warn "got $pid";
+    unless ($is_perl_daemon) {
+        $pid = start_child("$daemon -p $port -d  -l /dev/null", 1);
     }
     else {
         my $ready = 0;
         local $SIG{USR1} = sub {
             $ready = 1;
         };
-        $pid = start_child([$server, '-p' => $port, '-n' => $$]);
+        $pid = start_child([$daemon, '-p' => $port, '-n' => $$]);
         while (!$ready) {
             select undef, undef, undef, 0.10;
         }
-    } ## end else [ if ($version !~ /Gearman::Server/)]
-    $Children{$pid} = 'S';
+    } ## end else
+
     return $pid;
 } ## end sub start_server
 
@@ -88,9 +139,10 @@ sub start_worker {
         $args = {};
     }
 
-    my $worker  = "$Bin/worker.pl";
+    my $worker = "$Bin/worker.pl";
+    warn $worker;
     my $servers = join ',', @{$job_servers};
-    my $ready   = 0;
+    my $ready = 0;
     my $pid;
     local $SIG{USR1} = sub {
         $ready = 1;
@@ -119,11 +171,8 @@ sub start_child {
             exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
         }
         else {
-            warn "$cmd";
             exec($cmd) or die $!;
-
-            # qx/$cmd/ or die $!;
-        } ## end else [ if (!$binary) ]
+        }
     } ## end unless ($pid)
     $pid;
 } ## end sub start_child
@@ -133,16 +182,17 @@ sub kill_children {
 }
 
 sub check_server_connection {
-    my ($pa) = @_;
-    my $start = time;
-    my $sock;
+    my ($self, $pa) = @_;
+    my ($start, $sock, $to) = (time);
     do {
         $sock = IO::Socket::INET->new(PeerAddr => $pa);
         select undef, undef, undef, 0.25;
-        die "Timeout waiting for peer address $pa" if time > $start + 5;
-    } until ($sock);
+        $to = time > $start + 5;
+    } until ($sock || $to);
 
-    return defined($sock);
+    $to && warn "Timeout waiting for peer address $pa";
+
+    return (defined($sock) && !$to);
 } ## end sub check_server_connection
 
 sub pid_is_dead {
