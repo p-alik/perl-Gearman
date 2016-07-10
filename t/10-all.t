@@ -1,38 +1,36 @@
 use strict;
 use warnings;
 
+use FindBin qw/ $Bin /;
 use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
 use Test::Exception;
 use Test::Timer;
-use lib 't';
-use TestGearman;
+use lib "$Bin/lib";
+use Test::Gearman;
 
-my @job_servers;
-{
-    my $la = "127.0.0.1";
-    my @ports = free_ports($la, 3);
-    start_server($ENV{GEARMAND_PATH}, $ports[0])
-        || plan skip_all => "Can't find server to test with";
+my $tg = Test::Gearman->new(
+    count  => 3,
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
 
-    @job_servers = map { join ':', $la, $_ } @ports;
+$tg->start_servers() || plan skip_all => "Can't find server to test with";
 
-    for (1 .. $#ports) {
-        start_server($ENV{GEARMAND_PATH}, $ports[$_]);
-    }
-
-    foreach (@job_servers) {
-        check_server_connection($_);
-    }
+foreach (@{$tg->job_servers}) {
+  unless($tg->check_server_connection($_)) {
+   plan skip_all => "connection check $_ failed";
+   last;
+  }
 }
 
 my $client = new_ok("Gearman::Client",
-    [exceptions => 1, job_servers => [@job_servers]]);
+    [exceptions => 1, job_servers => $tg->job_servers]);
 
 ## Start two workers, look for job servers
-start_worker([@job_servers]);
-start_worker([@job_servers]);
+start_worker($tg->job_servers);
+start_worker($tg->job_servers);
 
 subtest "taskset 1", sub {
     throws_ok { $client->do_task(sum => []) }
@@ -98,15 +96,25 @@ subtest "failures", sub {
 };
 
 ## Worker process exits.
-subtest "Worker process exits", sub {
-    is($client->do_task('fail_exit'),
-        undef, 'Job that failed via exit returned undef');
-    pid_is_dead(wait(), [@job_servers]);
+subtest "worker process exits", sub {
+    $tg->is_perl_daemon() || plan skip_all => "only Gearman::Server subtest";
+    is(
+        $client->do_task(
+            'fail_exit',
+            undef,
+            {
+                on_fail => sub { warn "on fail" }
+            }
+        ),
+        undef,
+        'Job that failed via exit returned undef'
+    );
+    pid_is_dead(wait(), $tg->job_servers);
 };
 
 ## Worker process times out (takes longer than timeout seconds).
 subtest "timeout", sub {
-    plan skip_all => "timout subtest is in TODO";
+    $tg->is_perl_daemon() || plan skip_all => "only Gearman::Server subtest";
     my $to = 3;
     time_ok(sub { $client->do_task('sleep', 5, { timeout => $to }) },
         $to, 'Job that timed out after 3 seconds returns failure');
@@ -307,7 +315,7 @@ subtest "hight priority", sub {
     like($out, qr/p.+6/, 'High priority tasks executed in priority order.');
 
     # We just killed off all but one worker--make sure they get respawned.
-    respawn_children([@job_servers]);
+    respawn_children($tg->job_servers);
 };
 
 subtest "job server status", sub {
@@ -323,6 +331,7 @@ subtest "job server status", sub {
 };
 
 subtest "job server jobs", sub {
+    $tg->is_perl_daemon() || plan skip_all => "supported only by Gearman::Server";
     my $tasks = $client->new_task_set;
     $tasks->add_task('sleep', 1);
     my $js_jobs = $client->get_job_server_jobs();
@@ -337,6 +346,7 @@ subtest "job server jobs", sub {
 };
 
 subtest "job server clients", sub {
+    $tg->is_perl_daemon() || plan skip_all => "supported only by Gearman::Server";
     my $tasks = $client->new_task_set;
     $tasks->add_task('sleep', 1);
     my $js_clients = $client->get_job_server_clients();
