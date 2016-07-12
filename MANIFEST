@@ -31,7 +31,6 @@ t/40-prefix.t
 t/50-wait_timeout.t
 t/60-stop-if.t
 t/65-responseparser.t
-t/TestGearman.pm
 t/worker.pl
 t/lib/GearTestLib.pm
 README
