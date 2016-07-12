@@ -1,11 +1,5 @@
 package Test::Gearman;
 use base qw(Exporter);
-@EXPORT = qw(
-    start_worker
-    respawn_children
-    pid_is_dead
-    %Children
-);
 
 use strict;
 use warnings;
@@ -24,7 +18,7 @@ use POSIX qw( :sys_wait_h );
 
 use FindBin qw( $Bin );
 
-our %Children;
+my %Children;
 
 END { kill_children() }
 
@@ -101,7 +95,7 @@ sub start_servers {
 
     my $ok = 1;
     foreach (@{ $self->{ports} }) {
-        my $pid = start_server($self->{daemon}, $_, $self->is_perl_daemon());
+        my $pid = _start_server($self->{daemon}, $_, $self->is_perl_daemon());
         unless ($pid) {
             $ok = 0;
             last;
@@ -113,41 +107,41 @@ sub start_servers {
     return $ok;
 } ## end sub start_servers
 
-sub start_server {
+sub _start_server {
     my ($daemon, $port, $is_perl_daemon) = @_;
     my $pid;
     unless ($is_perl_daemon) {
-        $pid = start_child("$daemon -p $port -d  -l /dev/null", 1);
+        $pid = _start_child("$daemon -p $port -d  -l /dev/null", 1);
     }
     else {
         my $ready = 0;
         local $SIG{USR1} = sub {
             $ready = 1;
         };
-        $pid = start_child([$daemon, '-p' => $port, '-n' => $$]);
+        $pid = _start_child([$daemon, '-p' => $port, '-n' => $$]);
         while (!$ready) {
             select undef, undef, undef, 0.10;
         }
     } ## end else
 
     return $pid;
-} ## end sub start_server
+} ## end sub _start_server
 
 sub start_worker {
-    my ($job_servers, $args) = @_;
+    my ($self, $args) = @_;
+    $self->job_servers || die "no running job servers";
     unless (ref $args) {
         $args = {};
     }
 
     my $worker = "$Bin/worker.pl";
-    warn $worker;
-    my $servers = join ',', @{$job_servers};
+    my $servers = join ',', @{ $self->job_servers };
     my $ready = 0;
     my $pid;
     local $SIG{USR1} = sub {
         $ready = 1;
     };
-    $pid = start_child(
+    $pid = _start_child(
         [
             $worker,
             '-s' => $servers,
@@ -162,7 +156,7 @@ sub start_worker {
     return $pid;
 } ## end sub start_worker
 
-sub start_child {
+sub _start_child {
     my ($cmd, $binary) = @_;
     my $pid = fork();
     die $! unless defined $pid;
@@ -175,7 +169,7 @@ sub start_child {
         }
     } ## end unless ($pid)
     $pid;
-} ## end sub start_child
+} ## end sub _start_child
 
 sub kill_children {
     kill INT => keys %Children;
@@ -196,21 +190,28 @@ sub check_server_connection {
 } ## end sub check_server_connection
 
 sub pid_is_dead {
-    my ($pid) = shift;
+    my ($self, $pid) = @_;
     return if $pid == -1;
     my $type = delete $Children{$pid};
     if ($type eq 'W') {
         ## Right now we can only restart workers.
-        start_worker(@_);
+        $self->start_worker();
     }
 } ## end sub pid_is_dead
 
 sub respawn_children {
+    my ($self) = @_;
     for my $pid (keys %Children) {
         if (waitpid($pid, WNOHANG) > 0) {
-            pid_is_dead($pid, @_);
+            $self->pid_is_dead($pid);
         }
     }
 } ## end sub respawn_children
+
+sub stop_worker {
+    my ($self, $pid) = @_;
+    ($Children{$pid} && $Children{$pid} eq 'W') || return;
+    kill INT => ($pid);
+} ## end sub stop_workers
 
 1;
