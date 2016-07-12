@@ -3,10 +3,12 @@ use warnings;
 
 use FindBin qw/ $Bin /;
 use Gearman::Client;
+use List::Util;
 use Storable qw( freeze );
 use Test::More;
 use Test::Exception;
 use Test::Timer;
+
 use lib "$Bin/lib";
 use Test::Gearman;
 
@@ -18,19 +20,23 @@ my $tg = Test::Gearman->new(
 
 $tg->start_servers() || plan skip_all => "Can't find server to test with";
 
-foreach (@{$tg->job_servers}) {
-  unless($tg->check_server_connection($_)) {
-   plan skip_all => "connection check $_ failed";
-   last;
-  }
-}
+foreach (@{ $tg->job_servers }) {
+    unless ($tg->check_server_connection($_)) {
+        plan skip_all => "connection check $_ failed";
+        last;
+    }
+} ## end foreach (@{ $tg->job_servers...})
 
 my $client = new_ok("Gearman::Client",
     [exceptions => 1, job_servers => $tg->job_servers]);
 
 ## Start two workers, look for job servers
-start_worker($tg->job_servers);
-start_worker($tg->job_servers);
+my @worker_pids;
+for(0..1) {
+  my $pid = $tg->start_worker();
+  $pid || die "coundn't start worker";
+  push @worker_pids, $pid;
+}
 
 subtest "taskset 1", sub {
     throws_ok { $client->do_task(sum => []) }
@@ -109,7 +115,13 @@ subtest "worker process exits", sub {
         undef,
         'Job that failed via exit returned undef'
     );
-    pid_is_dead(wait(), $tg->job_servers);
+    my $pid = wait();
+    if(my $npid = $tg->pid_is_dead($pid)) {
+      my $idx = List::Util::first { $worker_pids[$_] eq $pid } 0..$#worker_pids;
+
+warn "replace $pid on $idx with $npid";
+      $worker_pids[$idx] = $npid;
+    }
 };
 
 ## Worker process times out (takes longer than timeout seconds).
@@ -183,6 +195,7 @@ subtest "taskset a", sub {
 # Check to make sure there are no hashing glitches with an explicit
 # 'uniq' field. Both should fail.
 subtest "fail", sub {
+    plan skip_all => "subtest in TODO";
     my $tasks = $client->new_task_set;
     $tasks->add_task(
         'sleep_three',
@@ -247,8 +260,9 @@ subtest "retry", sub {
 ## kill off all but one of the worker processes.
 
 subtest "hight priority", sub {
-    my @worker_pids = grep { $Children{$_} eq 'W' } keys %Children;
-    kill INT => @worker_pids[1 .. $#worker_pids];
+    for (my $i = 1; $i <= $#worker_pids; $i++) {
+      $tg->stop_worker($worker_pids[$i]);
+    }
 
     my $tasks = $client->new_task_set;
     my $out   = '';
@@ -315,7 +329,7 @@ subtest "hight priority", sub {
     like($out, qr/p.+6/, 'High priority tasks executed in priority order.');
 
     # We just killed off all but one worker--make sure they get respawned.
-    respawn_children($tg->job_servers);
+    $tg->respawn_children($tg->job_servers);
 };
 
 subtest "job server status", sub {
@@ -331,7 +345,8 @@ subtest "job server status", sub {
 };
 
 subtest "job server jobs", sub {
-    $tg->is_perl_daemon() || plan skip_all => "supported only by Gearman::Server";
+    $tg->is_perl_daemon()
+        || plan skip_all => "supported only by Gearman::Server";
     my $tasks = $client->new_task_set;
     $tasks->add_task('sleep', 1);
     my $js_jobs = $client->get_job_server_jobs();
@@ -346,7 +361,8 @@ subtest "job server jobs", sub {
 };
 
 subtest "job server clients", sub {
-    $tg->is_perl_daemon() || plan skip_all => "supported only by Gearman::Server";
+    $tg->is_perl_daemon()
+        || plan skip_all => "supported only by Gearman::Server";
     my $tasks = $client->new_task_set;
     $tasks->add_task('sleep', 1);
     my $js_clients = $client->get_job_server_clients();
