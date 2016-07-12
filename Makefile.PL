@@ -31,6 +31,16 @@ WriteMakefile(
         "Time::HiRes"      => 0,    # Usually core now
         "fields"           => 0,
     },
+    META_MERGE => {
+        'meta-spec' => { version => 2 },
+        resources => {
+            repository => {
+                type => 'git',
+                url  => 'https://github.com/p-alik/perl-Gearman.git',
+                web  => 'https://github.com/p-alik/perl-Gearman',
+            },
+        },
+    },
 );
 
 1;
