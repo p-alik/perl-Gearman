@@ -1,13 +1,13 @@
 use strict;
 use warnings;
 
+use FindBin qw/ $Bin /;
 use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
 use Time::HiRes 'sleep';
 
-use lib 't';
-use TestGearman;
+plan skip_all => "TODO";
 
 my @job_servers;
 {

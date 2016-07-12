@@ -1,12 +1,15 @@
 use strict;
 use warnings;
 
+use FindBin qw/ $Bin /;
 use Gearman::Client;
 use Test::More;
 use Test::Timer;
 
-use lib 't';
-use TestGearman;
+use lib "$Bin/lib";
+use Test::Gearman;
+
+plan skip_all => "TODO";
 
 my $job_server;
 {

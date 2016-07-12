@@ -11,24 +11,33 @@ use POSIX qw( :sys_wait_h );
 use List::Util qw(first);
 
 use lib "$Bin/lib";
-use GearTestLib;
-use constant NUM_SERVERS => 3;
+use Test::Gearman;
+
+
+plan skip_all => "TODO";
 
 if (!eval "use Devel::Gladiator; 1;") {
     plan skip_all => "This test requires Devel::Gladiator";
     exit 0;
 }
 
-my $s1 = Test::GearServer->new;
-if (!$s1) {
-    plan skip_all => "Can't find server to test with";
-    exit 0;
-}
+my $tg = Test::Gearman->new(
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
 
-plan tests => 6;
+$tg->start_servers() || plan skip_all => "Can't find server to test with";
 
-my $client = Gearman::Client->new;
-$client->job_servers($s1->ipport);
+foreach (@{ $tg->job_servers }) {
+    unless ($tg->check_server_connection($_)) {
+        plan skip_all => "connection check $_ failed";
+        last;
+    }
+} ## end foreach (@{ $tg->job_servers...})
+
+plan tests => 7;
+
+my $client = new_ok("Gearman::Client", [job_servers => $tg->job_servers()]);
 
 my $tasks  = $client->new_task_set;
 my $handle = $tasks->add_task(
@@ -40,7 +49,7 @@ my $handle = $tasks->add_task(
 );
 
 ok($handle, "got handle");
-my $sock = IO::Socket::INET->new(PeerAddr => $s1->ipport);
+my $sock = IO::Socket::INET->new(PeerAddr => @{$tg->job_servers}[0]);
 ok($sock, "got raw connection");
 
 my $num = sub {
@@ -72,8 +81,3 @@ my $num_inets2 = $num->("IO::Socket::INET");
 is($num_inets2, $num_inets - 1, "2 sockets (client + listen)");
 is($num->("Gearman::Server::Client"), 1, "1 client connected (debug)");
 
-__END__
-
-
-
-eval { $client->do_task(sum => []) };

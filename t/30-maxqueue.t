@@ -1,11 +1,15 @@
 use strict;
 use warnings;
 
+use FindBin qw/ $Bin /;
 use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
-use lib 't';
-use TestGearman;
+
+plan skip_all => "TODO";
+
+use lib "$Bin/lib";
+use Test::Gearman;
 
 # This is testing the MAXQUEUE feature of gearmand. There's no direct
 # support for it in Gearman::Worker yet, so we connect directly to
