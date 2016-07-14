@@ -6,8 +6,6 @@ use Gearman::Client;
 use Storable qw( freeze );
 use Test::More;
 
-plan skip_all => "TODO";
-
 use lib "$Bin/lib";
 use Test::Gearman;
 
@@ -15,35 +13,36 @@ use Test::Gearman;
 # support for it in Gearman::Worker yet, so we connect directly to
 # gearmand to configure it for the test.
 
-my $job_server;
-{
-    my $port = (free_ports(1))[0];
-    if (!start_server($ENV{GEARMAND_PATH}, $port)) {
-        plan skip_all => "Can't find server to test with";
-        exit 0;
+my $tg = Test::Gearman->new(
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
+
+$tg->start_servers() || plan skip_all => "Can't find server to test with";
+
+foreach (@{ $tg->job_servers }) {
+    unless ($tg->check_server_connection($_)) {
+        plan skip_all => "connection check $_ failed";
+        last;
     }
+} ## end foreach (@{ $tg->job_servers...})
 
-    plan tests => 6;
+plan tests => 6;
 
-    my $la = "127.0.0.1";
-    $job_server = join ':', $la, $port;
-
-    check_server_connection($job_server);
-
+ok(
     my $sock = IO::Socket::INET->new(
-        PeerAddr => $la,
-        PeerPort => $port,
-    );
-    ok($sock, "connect to jobserver");
+        PeerAddr => @{ $tg->job_servers }[0],
+    ),
+    "connect to jobserver"
+);
 
-    $sock->write("MAXQUEUE long 1\n");
-    my $input = $sock->getline();
-    ok($input =~ m/^OK\b/i);
-}
+$sock->write("MAXQUEUE long 1\n");
+my $input = $sock->getline();
+ok($input =~ m/^OK\b/i);
 
-start_worker([$job_server]);
+my $pid = $tg->start_worker();
 
-my $client = new_ok("Gearman::Client", [job_servers => [$job_server]]);
+my $client = new_ok("Gearman::Client", [job_servers => $tg->job_servers]);
 
 my $tasks = $client->new_task_set;
 isa_ok($tasks, 'Gearman::Taskset');
