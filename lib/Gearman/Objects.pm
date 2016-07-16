@@ -6,6 +6,8 @@ use warnings;
 
 use constant DEFAULT_PORT => 4730;
 
+use IO::Socket::INET ();
+
 use fields qw/
     debug
     job_servers
@@ -73,5 +75,35 @@ sub prefix {
     }
     return $self->{prefix};
 } ## end sub prefix
+
+=head2 socket($host_port, [$timeout])
+
+prepare IO::Socket::INET
+
+=over
+
+=item
+
+C<$host_port> peer address
+
+=item
+
+C<$timeout> default: 1
+
+=back
+
+B<return> IO::Socket::INET on success
+
+=cut
+
+sub socket {
+    my ($self, $pa, $t) = @_;
+
+    my $sock = IO::Socket::INET->new(
+        PeerAddr => $pa,
+        Timeout  => $t || 1
+    );
+    return $sock;
+} ## end sub socket
 
 1;
