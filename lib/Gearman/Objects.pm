@@ -7,6 +7,7 @@ use warnings;
 use constant DEFAULT_PORT => 4730;
 
 use IO::Socket::INET ();
+use IO::Socket::SSL  ();
 
 use fields qw/
     debug
@@ -71,9 +72,13 @@ sub prefix {
     return shift->_property("prefix", @_);
 }
 
+sub use_ssl {
+    return shift->_property("use_ssl", @_ || 0);
+}
+
 =head2 socket($host_port, [$timeout])
 
-prepare IO::Socket::INET
+depends on C<use_ssl> prepare L<IO::Socket::INET> or L<IO::Socket::SSL>
 
 =over
 
@@ -87,21 +92,22 @@ C<$timeout> default: 1
 
 =back
 
-B<return> IO::Socket::INET on success
+B<return> IO::Socket::(INET|SSL) on success
 
 =cut
 
 sub socket {
     my ($self, $pa, $t) = @_;
 
-    my $sock = IO::Socket::INET->new(
+    my $sc = join "::", "IO::Socket", $self->use_ssl() ? "SSL" : "INET";
+    my $sock = $sc->new(
         PeerAddr => $pa,
         Timeout  => $t || 1
     );
     return $sock;
 } ## end sub socket
 
-# 
+#
 # _property($name, [$value])
 # set/get
 sub _property {
