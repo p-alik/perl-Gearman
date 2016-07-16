@@ -156,7 +156,6 @@ use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
 
-use IO::Socket::INET;
 use Socket qw/
     IPPROTO_TCP
     TCP_NODELAY
@@ -525,11 +524,7 @@ sub _get_js_sock {
     my $disabled_until = $sockinfo->{disabled_until};
     return if defined $disabled_until && $disabled_until > Time::HiRes::time();
 
-    my $sock = IO::Socket::INET->new(
-        PeerAddr => $hostport,
-        Timeout  => 1
-    );
-
+    my $sock = $self->socket($hostport, 1);
     unless ($sock) {
         my $count       = ++$sockinfo->{failed_connects};
         my $disable_for = $count**2;
