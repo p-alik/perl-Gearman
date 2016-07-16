@@ -13,6 +13,7 @@ use fields qw/
     job_servers
     js_count
     prefix
+    use_ssl
     /;
 
 sub new {
@@ -63,18 +64,12 @@ sub canonicalize_job_servers {
 } ## end sub canonicalize_job_servers
 
 sub debug {
-    my $self = shift;
-    $self->{debug} = shift if @_;
-    return $self->{debug} || 0;
+    return shift->_property("debug", @_ || 0);
 }
 
 sub prefix {
-    my $self = shift;
-    if (@_) {
-        $self->{prefix} = shift;
-    }
-    return $self->{prefix};
-} ## end sub prefix
+    return shift->_property("prefix", @_);
+}
 
 =head2 socket($host_port, [$timeout])
 
@@ -105,5 +100,19 @@ sub socket {
     );
     return $sock;
 } ## end sub socket
+
+# 
+# _property($name, [$value])
+# set/get
+sub _property {
+    my $self = shift;
+    my $name = shift;
+    $name || return;
+    if (@_) {
+        $self->{$name} = shift;
+    }
+
+    return $self->{$name};
+} ## end sub _property
 
 1;
