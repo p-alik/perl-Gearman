@@ -25,7 +25,6 @@ sub new {
     }
     $self->{job_servers} = [];
     $self->{js_count}    = 0;
-    $self->{prefix}      = undef;
 
     $opts{job_servers}
         && $self->set_job_servers(
@@ -33,8 +32,10 @@ sub new {
         ? @{ $opts{job_servers} }
         : [$opts{job_servers}]
         );
-    $opts{debug}  && $self->debug($opts{debug});
-    $opts{prefix} && $self->prefix($opts{prefix});
+
+    $self->debug($opts{debug});
+    $self->prefix($opts{prefix});
+    $self->use_ssl($opts{use_ssl});
 
     return $self;
 } ## end sub new
@@ -65,7 +66,7 @@ sub canonicalize_job_servers {
 } ## end sub canonicalize_job_servers
 
 sub debug {
-    return shift->_property("debug", @_ || 0);
+    return shift->_property("debug", @_);
 }
 
 sub prefix {
@@ -73,12 +74,14 @@ sub prefix {
 }
 
 sub use_ssl {
-    return shift->_property("use_ssl", @_ || 0);
+    return shift->_property("use_ssl", @_);
 }
 
 =head2 socket($host_port, [$timeout])
 
-depends on C<use_ssl> prepare L<IO::Socket::INET> or L<IO::Socket::SSL>
+depends on C<use_ssl> 
+prepare L<IO::Socket::INET>
+or L<IO::Socket::SSL>
 
 =over
 
@@ -92,7 +95,7 @@ C<$timeout> default: 1
 
 =back
 
-B<return> IO::Socket::(INET|SSL) on success
+B<return> depends on C<use_ssl> IO::Socket::(INET|SSL) on success
 
 =cut
 
@@ -100,11 +103,10 @@ sub socket {
     my ($self, $pa, $t) = @_;
 
     my $sc = join "::", "IO::Socket", $self->use_ssl() ? "SSL" : "INET";
-    my $sock = $sc->new(
+    return $sc->new(
         PeerAddr => $pa,
         Timeout  => $t || 1
     );
-    return $sock;
 } ## end sub socket
 
 #
