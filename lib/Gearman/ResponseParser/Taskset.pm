@@ -1,5 +1,6 @@
 package Gearman::ResponseParser::Taskset;
-$Gearman::ResponseParser::Taskset::VERSION = '1.13.001';
+use version;
+$Gearman::ResponseParser::Taskset::VERSION = qv("2.001.001_1");
 
 use strict;
 use warnings;
@@ -10,7 +11,7 @@ sub new {
     my ($class, %opts) = @_;
     my $ts = delete $opts{taskset};
     ref($ts) eq "Gearman::Taskset"
-        || die "provided taskset argument is not a Gearman::Taskset reference";
+        || die "provided argument is not a Gearman::Taskset reference";
 
     my $self = $class->SUPER::new(%opts);
     $self->{_taskset} = $ts;

@@ -1,12 +1,29 @@
 use strict;
 use warnings;
-use Test::More tests => 8;
+use version;
+use Test::More;
 
-use_ok('Gearman::Objects');
-use_ok('Gearman::Client');
-use_ok('Gearman::JobStatus');
-use_ok('Gearman::ResponseParser');
-use_ok('Gearman::Task');
-use_ok('Gearman::Taskset');
-use_ok('Gearman::Worker');
-use_ok('Gearman::Util');
+my @mn = qw/
+    Gearman::Client
+    Gearman::Job
+    Gearman::JobStatus
+    Gearman::Objects
+    Gearman::ResponseParser
+    Gearman::Task
+    Gearman::Taskset
+    Gearman::Util
+    Gearman::Worker
+    /;
+
+my $v = qv("2.001.001_1");
+
+foreach my $n (@mn) {
+    use_ok($n);
+    my $_v = eval '$' . $n . '::VERSION';
+
+    # diag("Testing $n $v, Perl $], $^X");
+    is($_v, $v, "$n version is $v");
+} ## end foreach my $n (@mn)
+
+done_testing;
+
