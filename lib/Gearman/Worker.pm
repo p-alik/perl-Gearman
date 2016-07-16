@@ -91,7 +91,6 @@ I<sum> job.
 use Gearman::Util;
 use Gearman::Job;
 use Carp             ();
-use IO::Socket::INET ();
 
 use Socket qw(
     IPPROTO_TCP
@@ -201,10 +200,7 @@ sub _get_js_sock {
 
     warn "connecting to '$ipport'" if $self->debug;
 
-    my $sock = IO::Socket::INET->new(
-        PeerAddr => $ipport,
-        Timeout  => 1
-    );
+    my $sock = $self->socket($ipport, 1);
     unless ($sock) {
         $self->debug && warn "$@";
 
