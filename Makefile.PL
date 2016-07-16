@@ -14,6 +14,7 @@ WriteMakefile(
     VERSION_FROM   => "lib/Gearman/Client.pm",
     BUILD_REQUIRES => {
         "IO::Socket::INET" => 0,
+        "IO::Socket::SSL"  => 0,
         "Storable"         => 0,
         "Test::Exception"  => 0,
         "Test::More"       => 0,
@@ -24,6 +25,7 @@ WriteMakefile(
         "Errno"            => 0,
         "IO::Handle"       => 0,
         "IO::Socket::INET" => 0,
+        "IO::Socket::SSL"  => 0,
         "Scalar::Util"     => 0,
         "Socket"           => 0,
         "Storable"         => 1,
@@ -33,7 +35,7 @@ WriteMakefile(
     },
     META_MERGE => {
         'meta-spec' => { version => 2 },
-        resources => {
+        resources   => {
             repository => {
                 type => 'git',
                 url  => 'https://github.com/p-alik/perl-Gearman.git',
