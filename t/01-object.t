@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
+use IO::Socket::SSL;
 
 my $mn = "Gearman::Objects";
 use_ok($mn);
@@ -93,16 +94,31 @@ subtest "use ssl", sub {
 subtest "socket", sub {
     my $dh  = "google.com";
     my $dst = join ':', $dh, 443;
-    my $c   = new_ok($mn, [job_servers => $dst, use_ssl => 1]);
+    my $to  = int(rand(5)) + 1;
+    my $c   = new_ok(
+        $mn,
+        [
+            job_servers   => $dst,
+            use_ssl       => 1,
+            ssl_socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; }
+        ]
+    );
 
-    ok(my $sock = $c->socket($dst), "socket($dst)");
-    isa_ok($sock, "IO::Socket::SSL");
+SKIP: {
+        my $sock = $c->socket($dst);
+        $sock || skip "failed connect to $dst or ssl handshake: $!,$SSL_ERROR", 2;
+        isa_ok($sock, "IO::Socket::SSL");
+        is($sock->timeout, $to, "ssl socket callback");
+    } ## end SKIP:
 
-    my $dst = join ':', $dh, 80;
-    my $c = new_ok($mn, [job_servers => $dst]);
+    $dst = join ':', $dh, 80;
+    $c = new_ok($mn, [job_servers => $dst]);
 
-    ok(my $sock = $c->socket($dst), "socket($dst)");
-    isa_ok($sock, "IO::Socket::INET");
+SKIP: {
+        my $sock = $c->socket($dst);
+        $sock || skip "failed connect or ssl handshake: $!,$SSL_ERROR", 1;
+        isa_ok($sock, "IO::Socket::INET");
+    }
 };
 
 done_testing();
