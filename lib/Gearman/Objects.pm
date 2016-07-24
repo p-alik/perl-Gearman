@@ -16,6 +16,7 @@ use fields qw/
     js_count
     prefix
     use_ssl
+    ssl_socket_cb
     /;
 
 sub new {
@@ -36,7 +37,9 @@ sub new {
 
     $self->debug($opts{debug});
     $self->prefix($opts{prefix});
-    $self->use_ssl($opts{use_ssl});
+    if ($self->use_ssl($opts{use_ssl})) {
+        $self->{ssl_socket_cb} = $opts{ssl_socket_cb};
+    }
 
     return $self;
 } ## end sub new
@@ -102,12 +105,20 @@ B<return> depends on C<use_ssl> IO::Socket::(INET|SSL) on success
 
 sub socket {
     my ($self, $pa, $t) = @_;
-
-    my $sc = join "::", "IO::Socket", $self->use_ssl() ? "SSL" : "INET";
-    return $sc->new(
+    my %opts = (
         PeerAddr => $pa,
         Timeout  => $t || 1
     );
+    my $sc;
+    if ($self->use_ssl()) {
+        $sc = "IO::Socket::SSL";
+        $self->{ssl_socket_cb} && $self->{ssl_socket_cb}->(\%opts);
+    }
+    else {
+        $sc = "IO::Socket::INET";
+    }
+
+    return $sc->new(%opts);
 } ## end sub socket
 
 #
