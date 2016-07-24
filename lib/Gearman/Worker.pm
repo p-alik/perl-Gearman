@@ -91,7 +91,7 @@ I<sum> job.
 #
 use Gearman::Util;
 use Gearman::Job;
-use Carp             ();
+use Carp ();
 
 use Socket qw(
     IPPROTO_TCP
@@ -133,18 +133,6 @@ sub new {
     my $self = $class;
     $self = fields::new($class) unless ref $self;
 
-    $self->SUPER::new(
-        debug  => delete $opts{debug},
-        prefix => delete $opts{prefix}
-    );
-
-    $self->{sock_cache}        = {};
-    $self->{last_connect_fail} = {};
-    $self->{down_since}        = {};
-    $self->{can}               = {};
-    $self->{timeouts}          = {};
-    $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1 .. 30));
-
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
         open my $sock, '+<&', \*STDIN
             or die "Unable to dup STDIN to socket for worker to use.";
@@ -153,12 +141,22 @@ sub new {
 
         die "Unable to initialize connection to gearmand"
             unless $self->_on_connect($sock);
-    } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
-    elsif ($opts{job_servers}) {
-        $self->job_servers(@{ $opts{job_servers} });
-    }
+        if ($opts{job_servers}) {
+            warn join ' ', __PACKAGE__,
+                'ignores job_servers if $ENV{GEARMAN_WORKER_USE_STDIO} is set';
 
-    $self->prefix($opts{prefix}) if $opts{prefix};
+            delete($opts{job_servers});
+        }
+    } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
+
+    $self->SUPER::new(%opts);
+
+    $self->{sock_cache}        = {};
+    $self->{last_connect_fail} = {};
+    $self->{down_since}        = {};
+    $self->{can}               = {};
+    $self->{timeouts}          = {};
+    $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1 .. 30));
 
     return $self;
 } ## end sub new
@@ -209,7 +207,7 @@ sub _get_js_sock {
         $self->{last_connect_fail}{$ipport} = $now;
 
         return;
-    }
+    } ## end unless ($sock)
 
     delete $self->{last_connect_fail}{$ipport};
     delete $self->{down_since}{$ipport};
