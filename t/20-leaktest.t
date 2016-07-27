@@ -13,9 +13,6 @@ use List::Util qw(first);
 use lib "$Bin/lib";
 use Test::Gearman;
 
-
-plan skip_all => "TODO";
-
 if (!eval "use Devel::Gladiator; 1;") {
     plan skip_all => "This test requires Devel::Gladiator";
     exit 0;
@@ -25,6 +22,9 @@ my $tg = Test::Gearman->new(
     ip     => "127.0.0.1",
     daemon => $ENV{GEARMAND_PATH} || undef
 );
+
+$tg->is_perl_daemon()
+    || plan skip_all => "test cases supported only by Gearman::Server";
 
 $tg->start_servers() || plan skip_all => "Can't find server to test with";
 
@@ -39,18 +39,20 @@ plan tests => 7;
 
 my $client = new_ok("Gearman::Client", [job_servers => $tg->job_servers()]);
 
-my $tasks  = $client->new_task_set;
-my $handle = $tasks->add_task(
-    dummy => 'xxxx',
-    {
-        on_complete => sub { die "shouldn't complete"; },
-        on_fail     => sub { warn "Failed...\n"; }
-    }
+my $tasks = $client->new_task_set;
+ok(
+    my $handle = $tasks->add_task(
+        dummy => 'xxxx',
+        {
+            on_complete => sub { die "shouldn't complete"; },
+            on_fail     => sub { warn "Failed...\n"; }
+        }
+    ),
+    "got handle"
 );
 
-ok($handle, "got handle");
-my $sock = IO::Socket::INET->new(PeerAddr => @{$tg->job_servers}[0]);
-ok($sock, "got raw connection");
+ok(my $sock = IO::Socket::INET->new(PeerAddr => @{ $tg->job_servers }[0]),
+    "got raw connection");
 
 my $num = sub {
     my $what = shift;
@@ -63,7 +65,6 @@ my $num = sub {
     }
     return $n;
 };
-
 is($num->("Gearman::Server::Client"),
     2, "2 clients connected (debug and caller)");
 
