@@ -10,6 +10,7 @@ use lib "$Bin/lib";
 use Test::Gearman;
 
 # NOK tested with gearman v1.0.6
+# OK Gearman::Server
 plan skip_all => "MAXQUEUE test is in TODO";
 
 # This is testing the MAXQUEUE feature of gearmand. There's no direct
