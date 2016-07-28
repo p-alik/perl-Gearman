@@ -1,41 +1,46 @@
 use strict;
 use warnings;
 
-use FindBin qw/ $Bin /;
+# OK gearmand v1.0.6
+# NOK Gearman::Server
+#
+use FindBin qw/$Bin/;
 use Gearman::Client;
-use Storable qw( freeze );
+use Storable qw/freeze/;
 use Test::More;
-use Time::HiRes 'sleep';
+use Time::HiRes qw/sleep/;
 
-plan skip_all => "TODO";
+use lib "$Bin/lib";
+use Test::Gearman;
 
-my @job_servers;
-{
-    my $la = "127.0.0.1";
-    my @ports = free_ports($la, 3);
-    start_server($ENV{GEARMAND_PATH}, $ports[0])
-        || plan skip_all => "Can't find server to test with";
+my $tg = Test::Gearman->new(
+    count  => 3,
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
 
-    @job_servers = map { join ':', $la, $_ } @ports;
+$tg->start_servers() || plan skip_all => "Can't find server to test with";
 
-    for (1 .. $#ports) {
-        start_server($ENV{GEARMAND_PATH}, $ports[$_]);
+foreach (@{ $tg->job_servers }) {
+    unless ($tg->check_server_connection($_)) {
+        plan skip_all => "connection check $_ failed";
+        last;
     }
-
-    foreach (@job_servers) {
-        check_server_connection($_);
-    }
-}
+} ## end foreach (@{ $tg->job_servers...})
 
 plan tests => 5;
 
-start_worker([@job_servers], { prefix => 'prefix_a' });
-start_worker([@job_servers], { prefix => 'prefix_b' });
+my @worker_pids;
+foreach (qw/a b/) {
+    my $pid = $tg->start_worker({ prefix => join('_', "prefix", $_) });
+    $pid || die "coundn't start worker";
+    push @worker_pids, $pid;
+}
 
 my $client_a = new_ok("Gearman::Client",
-    [prefix => 'prefix_a', job_servers => [@job_servers]]);
+    [prefix => "prefix_a", job_servers => $tg->job_servers]);
 my $client_b = new_ok("Gearman::Client",
-    [prefix => 'prefix_b', job_servers => [@job_servers]]);
+    [prefix => "prefix_b", job_servers => $tg->job_servers]);
 
 # basic do_task test
 subtest "basic do task", sub {
