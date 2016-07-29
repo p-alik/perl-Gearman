@@ -1,6 +1,9 @@
 use strict;
 use warnings;
 
+# OK gearmand v1.0.6
+# OK Gearman::Server
+
 use FindBin qw/ $Bin /;
 use Gearman::Client;
 use Storable qw(thaw);
@@ -9,27 +12,19 @@ use Test::More;
 use lib "$Bin/lib";
 use Test::Gearman;
 
-plan skip_all => "TODO";
+my $tg = Test::Gearman->new(
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
 
-my $job_server;
-{
-    my $port = (free_ports(1))[0];
-    if (!start_server($ENV{GEARMAND_PATH}, $port)) {
-        plan skip_all => "Can't find server to test with";
-        exit 0;
-    }
-
-    my $la = "127.0.0.1";
-    $job_server = join ':', $la, $port;
-
-    check_server_connection($job_server);
-    start_worker([$job_server]);
-}
+$tg->start_servers() || plan skip_all => "Can't find server to test with";
+($tg->check_server_connection(@{ $tg->job_servers }[0]))
+    || plan skip_all => "connection check $_ failed";
 
 plan tests => 5;
 
-my $client = new_ok("Gearman::Client", [job_servers => [$job_server]]);
-
+my $client = new_ok("Gearman::Client", [job_servers => $tg->job_servers()]);
+$tg->start_worker();
 subtest "stop if subtest 1", sub {
 
     # If we start up too fast, then the worker hasn't gone 'idle' yet.
