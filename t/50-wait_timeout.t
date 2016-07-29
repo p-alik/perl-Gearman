@@ -19,16 +19,12 @@ my $tg = Test::Gearman->new(
 
 $tg->start_servers() || plan skip_all => "Can't find server to test with";
 
-foreach (@{ $tg->job_servers }) {
-    unless ($tg->check_server_connection($_)) {
-        plan skip_all => "connection check $_ failed";
-        last;
-    }
-} ## end foreach (@{ $tg->job_servers...})
+($tg->check_server_connection(@{ $tg->job_servers }[0]))
+    || plan skip_all => "connection check $_ failed";
 
 plan tests => 3;
 
-my $pid = $tg->start_worker();
+$tg->start_worker();
 
 my $client = new_ok("Gearman::Client", [job_servers => $tg->job_servers()]);
 
@@ -36,16 +32,12 @@ subtest "wait with timeout", sub {
     ok(my $tasks = $client->new_task_set, "new_task_set");
     isa_ok($tasks, 'Gearman::Taskset');
 
-    my ($iter, $completed, $failed, $handle) = (0, 0, 0);
-
-    # handle => iter
-    my %handles;
+    my ($iter, $completed, $failed) = (0, 0, 0);
 
     my $opt = {
         uniq        => $iter,
         on_complete => sub {
             $completed++;
-            delete $handles{$handle};
             note "Got result for $iter";
         },
         on_fail => sub {
@@ -55,9 +47,7 @@ subtest "wait with timeout", sub {
 
     # For a total of 5 events, that will be 20 seconds; till they complete.
     foreach $iter (1 .. 5) {
-        ok($handle = $tasks->add_task("long", $iter, $opt),
-            "add_task('long', $iter)");
-        $handles{$handle} = $iter;
+        ok($tasks->add_task("long", $iter, $opt), "add_task('long', $iter)");
     }
 
     my $to = 11;
