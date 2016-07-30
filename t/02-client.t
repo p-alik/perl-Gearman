@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 
+use FindBin qw/ $Bin /;
 use Time::HiRes qw/
     gettimeofday
     tv_interval
@@ -9,8 +10,17 @@ use Time::HiRes qw/
 use Test::More;
 use Test::Exception;
 
+use lib "$Bin/lib";
+use Test::Gearman;
+
+my $tg = Test::Gearman->new(
+    count  => 3,
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
+
 my $mn = "Gearman::Client";
-my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
+my @js = $tg->start_servers() ? @{ $tg->job_servers } : ();
 
 use_ok($mn);
 
@@ -44,33 +54,10 @@ is($c->{js_count}, scalar(@js), "js_count");
 is(keys(%{ $c->{hooks} }),      0, join "->", $mn, "{hooks}");
 is(keys(%{ $c->{sock_cache} }), 0, join "->", $mn, "{sock_cache}");
 
-subtest "get_job_server_status", sub {
-    ok(my $r = $c->get_job_server_status, "get_job_server_status");
-    is(ref($r), "HASH", "get_job_server_status result is a HASH reference");
-    # note "get_job_server_status result: ", explain $r;
-};
-
-ok(my $r = $c->get_job_server_clients, "get_job_server_clients");
-ok($r = $c->get_job_server_jobs, "get_job_server_jobs");
-
-# throws_ok { $c->get_job_server_clients }
-# qr/deprecated because Gearman Administrative Protocol/,
-#     "caught deprecated get_job_server_clients exception";
-
 foreach ($c->job_servers()) {
     ok(my $s = $c->_get_js_sock($_), "_get_js_sock($_)");
     isa_ok($s, "IO::Socket::INET");
 }
-
-subtest "get_status", sub {
-    is($c->get_status(), undef, "get_status()");
-    my $h = "localhost:4730";
-    is($c->get_status($h), undef, "get_status($h)");
-    if (@{ $c->job_servers() }) {
-        $h = join "//", @{ $c->job_servers() }[0], "H:foo:5252";
-        isa_ok($c->get_status($h), "Gearman::JobStatus", "get_status($h)");
-    }
-};
 
 my ($tn, $args, $timeout) = qw/
     foo
@@ -88,19 +75,6 @@ subtest "new_task_set", sub {
     is($c->{hooks}->{$h}, undef, "no hook $h");
 };
 
-subtest "do tast", sub {
-    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
-    $ENV{GEARMAN_SERVERS}
-        || plan skip_all => 'without $ENV{GEARMAN_SERVERS}';
-
-    my $starttime = [Time::HiRes::gettimeofday];
-
-    pass("do_task($tn, $args, {timeout => $timeout})");
-    $c->do_task($tn, $args, { timeout => $timeout });
-
-    is(int(Time::HiRes::tv_interval($starttime)), $timeout, "do_task timeout");
-};
-
 subtest "_get_random_js_sock", sub {
     if (@{ $c->job_servers() }) {
         ok(my @r = $c->_get_random_js_sock());
@@ -109,17 +83,6 @@ subtest "_get_random_js_sock", sub {
     else {
         is($c->_get_random_js_sock(), undef);
     }
-};
-
-subtest "dispatch background", sub {
-    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
-    $ENV{GEARMAN_SERVERS}
-        || plan skip_all => 'without $ENV{GEARMAN_SERVERS}';
-
-    ok(my $h = $c->dispatch_background($tn, $args),
-        "dispatch_background($tn, $args)");
-    $h && ok(my $r = $c->get_status($h), "get_status($h)");
-    note "get_status result: ", explain $r;
 };
 
 done_testing();
