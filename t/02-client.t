@@ -2,11 +2,6 @@ use strict;
 use warnings;
 
 use FindBin qw/ $Bin /;
-use Time::HiRes qw/
-    gettimeofday
-    tv_interval
-    /;
-
 use Test::More;
 use Test::Exception;
 
