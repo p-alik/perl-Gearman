@@ -1,6 +1,9 @@
 use strict;
 use warnings;
 
+# OK gearmand v1.0.6
+# NOK Gearman::Server
+
 use FindBin qw/ $Bin /;
 use Gearman::Client;
 use List::Util;
