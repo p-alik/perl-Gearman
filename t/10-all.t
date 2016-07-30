@@ -329,7 +329,7 @@ subtest "hight priority", sub {
     like($out, qr/p.+6/, 'High priority tasks executed in priority order.');
 
     # We just killed off all but one worker--make sure they get respawned.
-    $tg->respawn_children($tg->job_servers);
+    $tg->respawn_children();
 };
 
 subtest "job server status", sub {
