@@ -1,12 +1,27 @@
 use strict;
 use warnings;
+
+# OK gearmand v1.0.6
+# OK Gearman::Server
+
 use Test::More;
 use Test::Timer;
 use IO::Socket::INET;
 
+use FindBin qw/ $Bin /;
+
+use lib "$Bin/lib";
+use Test::Gearman;
+
 my $debug = $ENV{DEBUG};
-my @js    = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
-my $mn    = "Gearman::Worker";
+
+my $tg = Test::Gearman->new(
+    count  => 3,
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
+my @js = $tg->start_servers() ? @{ $tg->job_servers } : ();
+my $mn = "Gearman::Worker";
 use_ok($mn);
 
 can_ok(
@@ -40,7 +55,7 @@ subtest "new", sub {
 subtest "register_function", sub {
     my $w = _w();
     my ($tn, $to) = qw/foo 2/;
-    my $cb = sub { 1 };
+    my $cb = sub {1};
 
     ok($w->register_function($tn => $cb), "register_function($tn)");
 
@@ -65,11 +80,6 @@ subtest "reset_abilities", sub {
 };
 
 subtest "work", sub {
-
-    # $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
-    # $ENV{GEARMAN_SERVERS}
-    #     || plan skip_all => 'without $ENV{GEARMAN_SERVERS}';
-
     my $w = _w();
 
     time_ok(
@@ -93,20 +103,14 @@ subtest "_get_js_sock", sub {
     delete $w->{parent_pipe};
     is($w->_get_js_sock($hp), undef);
 
-SKIP: {
-        @{ $w->job_servers() } || skip 'without $ENV{GEARMAN_SERVERS}', 3;
+    $hp = $w->job_servers()->[0];
 
-        my $hp = $w->job_servers()->[0];
+    $w->{last_connect_fail}{$hp} = 1;
+    $w->{down_since}{$hp}        = 1;
+    isa_ok($w->_get_js_sock($hp, on_connect => sub {1}), "IO::Socket::INET");
 
-        $w->{last_connect_fail}{$hp} = 1;
-        $w->{down_since}{$hp}        = 1;
-        isa_ok($w->_get_js_sock($hp, on_connect => sub {1}),
-            "IO::Socket::INET");
-
-        is($w->{last_connect_fail}{$hp}, undef);
-        is($w->{down_since}{$hp},        undef);
-    } ## end SKIP:
-
+    is($w->{last_connect_fail}{$hp}, undef);
+    is($w->{down_since}{$hp},        undef);
 };
 
 subtest "_on_connect-_set_ability", sub {
