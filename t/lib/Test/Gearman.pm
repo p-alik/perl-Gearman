@@ -14,17 +14,25 @@ use fields qw/
     /;
 
 use IO::Socket::INET;
-use POSIX qw( :sys_wait_h );
+use POSIX qw/ :sys_wait_h /;
 
-use FindBin qw( $Bin );
+use FindBin qw/ $Bin /;
 
 my %Children;
 
-END { kill_children() }
+END {
+    foreach (keys %Children) {
+        if ($Children{$_} ne 'W' && $Children{$_} ne 'S') {
+            qx/kill `cat $Children{$_}`/;
+        }
+        else {
+            kill INT => $_;
+        }
+    } ## end foreach (keys %Children)
+} ## end END
 
 sub new {
     my ($class, %args) = @_;
-
     my $self = fields::new($class);
 
     $self->{daemon} = $args{daemon} || qx/which gearmand/;
@@ -85,7 +93,6 @@ sub _free_port {
 
 sub job_servers {
     return shift->{_job_servers};
-
 }
 
 sub start_servers {
@@ -95,24 +102,45 @@ sub start_servers {
 
     my $ok = 1;
     foreach (@{ $self->{ports} }) {
-        my $pid = _start_server($self->{daemon}, $_, $self->is_perl_daemon());
+        my $pid = $self->_start_server($_);
         unless ($pid) {
             $ok = 0;
             last;
         }
 
         push @{ $self->{_job_servers} }, join ':', $self->{ip}, $_;
-        $Children{$pid} = 'S';
+        $Children{$pid}
+            = $self->is_perl_daemon() ? 'S' : $self->_pid_file("daemon", $_);
     } ## end foreach (@{ $self->{ports} ...})
+
     return $ok;
 } ## end sub start_servers
 
+sub _pid_file {
+    my ($self) = shift;
+    return join '/', "/tmp", join('-', @_);
+}
+
 sub _start_server {
-    my ($daemon, $port, $is_perl_daemon) = @_;
+    my ($self, $port) = @_;
     my $pid;
-    unless ($is_perl_daemon) {
-        $pid = _start_child("$daemon -p $port -d  -l /dev/null", 1);
-    }
+
+    my $daemon = $self->{daemon};
+
+    my $pf = $self->_pid_file("daemon", $port);
+    unless ($self->is_perl_daemon()) {
+        my ($verbose, $lf) = ('');
+        if ($ENV{DEBUG}) {
+            $lf = join('.', $pf, "log");
+            $verbose = "--verbose=INFO";
+        }
+        else {
+            $lf = "/dev/null";
+        }
+        $pid
+            = _start_child("$daemon -p $port -d -P $pf --log-file=$lf $verbose",
+            1);
+    } ## end unless ($self->is_perl_daemon...)
     else {
         my $ready = 0;
         local $SIG{USR1} = sub {
@@ -134,9 +162,9 @@ sub start_worker {
         $args = {};
     }
 
-    my $worker = "$Bin/worker.pl";
+    my $worker  = "$Bin/worker.pl";
     my $servers = join ',', @{ $self->job_servers };
-    my $ready = 0;
+    my $ready   = 0;
     my $pid;
     local $SIG{USR1} = sub {
         $ready = 1;
@@ -156,25 +184,6 @@ sub start_worker {
     return $pid;
 } ## end sub start_worker
 
-sub _start_child {
-    my ($cmd, $binary) = @_;
-    my $pid = fork();
-    die $! unless defined $pid;
-    unless ($pid) {
-        if (!$binary) {
-            exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
-        }
-        else {
-            exec($cmd) or die $!;
-        }
-    } ## end unless ($pid)
-    $pid;
-} ## end sub _start_child
-
-sub kill_children {
-    kill INT => keys %Children;
-}
-
 sub check_server_connection {
     my ($self, $pa) = @_;
     my ($start, $sock, $to) = (time);
@@ -192,8 +201,7 @@ sub check_server_connection {
 sub pid_is_dead {
     my ($self, $pid) = @_;
     return if $pid == -1;
-    my $type = delete $Children{$pid};
-    if ($type eq 'W') {
+    if (delete $Children{$pid} eq 'W') {
         ## Right now we can only restart workers.
         $self->start_worker();
     }
@@ -202,16 +210,32 @@ sub pid_is_dead {
 sub respawn_children {
     my ($self) = @_;
     for my $pid (keys %Children) {
+        $Children{$pid} eq 'W' || next;
         if (waitpid($pid, WNOHANG) > 0) {
             $self->pid_is_dead($pid);
         }
-    }
+    } ## end for my $pid (keys %Children)
 } ## end sub respawn_children
 
 sub stop_worker {
     my ($self, $pid) = @_;
     ($Children{$pid} && $Children{$pid} eq 'W') || return;
     kill INT => ($pid);
-} ## end sub stop_workers
+}
+
+sub _start_child {
+    my ($cmd, $binary) = @_;
+    my $pid = fork();
+    die $! unless defined $pid;
+    unless ($pid) {
+        if (!$binary) {
+            exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
+        }
+        else {
+            exec($cmd) or die $!;
+        }
+    } ## end unless ($pid)
+    $pid;
+} ## end sub _start_child
 
 1;
