@@ -13,6 +13,8 @@ use List::Util qw(first);
 use lib "$Bin/lib";
 use Test::Gearman;
 
+plan skip_all => "$0 in TODO";
+
 if (!eval "use Devel::Gladiator; 1;") {
     plan skip_all => "This test requires Devel::Gladiator";
     exit 0;
@@ -28,12 +30,7 @@ $tg->is_perl_daemon()
 
 $tg->start_servers() || plan skip_all => "Can't find server to test with";
 
-foreach (@{ $tg->job_servers }) {
-    unless ($tg->check_server_connection($_)) {
-        plan skip_all => "connection check $_ failed";
-        last;
-    }
-} ## end foreach (@{ $tg->job_servers...})
+($tg->check_server_connection(@{ $tg->job_servers }[0])) || plan skip_all => "connection check $_ failed";
 
 plan tests => 7;
 
@@ -59,6 +56,7 @@ my $num = sub {
     my $n    = 0;
     print $sock "gladiator all\r\n";
     while (<$sock>) {
+      print $_;
         last if /^\./;
         /(\d+)\s$what/ or next;
         $n = $1;
