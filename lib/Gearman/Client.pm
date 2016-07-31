@@ -88,8 +88,8 @@ this function currently overrides them.
 
 =head2 $client-E<gt>dispatch_background($funcname, $arg, \%options)
 
-Dispatches a task and doesn't wait for the result.  Return value
-is an opaque scalar that can be used to refer to the task.
+Dispatches a task and doesn't wait for the result. Return value
+is an opaque scalar that can be used to refer to the task with get_status.
 
 =head2 $taskset = $client-E<gt>new_task_set
 
@@ -442,7 +442,11 @@ sub add_hook {
 
 =head2 get_status($handle)
 
-return L<Gearman::JobStatus> on success
+The Gearman Server will assign a scalar job handle when you request a 
+background job with dispatch_background. Save this scalar, and use it later in 
+order to request the status of this job. 
+
+B<return> L<Gearman::JobStatus> on success
 
 =cut
 
