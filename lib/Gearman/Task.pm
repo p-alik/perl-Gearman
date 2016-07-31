@@ -61,9 +61,9 @@ process.
 =item * on_fail
 
 A subroutine reference to be invoked when the task fails (or fails for
-the last time, if retries were specified).  No arguments are
-passed to this callback.  This callback won't be called after a failure
-if more retries are still possible.
+the last time, if retries were specified). The reason could be passed
+to this callback as an argument. This callback won't be called after a
+failure if more retries are still possible.
 
 =item * on_retry
 
