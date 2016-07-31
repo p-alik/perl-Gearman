@@ -6,17 +6,11 @@ use IO::Socket::SSL;
 my $mn = "Gearman::Objects";
 use_ok($mn);
 
-can_ok(
-    $mn, qw/
-        _property
-        canonicalize_job_servers
-        debug
-        job_servers
-        prefix
-        set_job_servers
-        socket
-        use_ssl
-        /
+my @servers = qw/foo:12345 bar:54321/;
+my $c = new_ok(
+    'Gearman::Objects',
+    [job_servers => $servers[0]],
+    "Gearman::Objects->new(job_servers => $servers[0])"
 );
 
 subtest "job servers", sub {
