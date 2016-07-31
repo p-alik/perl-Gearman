@@ -1,6 +1,6 @@
 package Gearman::JobStatus;
 use version;
-$Gearman::JobStatus::VERSION = qv("2.001.001_1");
+$Gearman::JobStatus::VERSION = qv("1.130.001");
 
 use strict;
 use warnings;

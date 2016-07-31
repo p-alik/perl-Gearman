@@ -1,6 +1,6 @@
 package Gearman::ResponseParser;
 use version;
-$Gearman::ResponseParser::VERSION = qv("2.001.001_1");
+$Gearman::ResponseParser::VERSION = qv("1.130.001");
 
 use strict;
 use warnings;
