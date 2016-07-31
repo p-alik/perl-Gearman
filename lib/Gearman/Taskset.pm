@@ -246,11 +246,12 @@ sub wait {
 
             # TODO: deal with error vector
 
-            my $sock = $watching{$fd};
-            my $parser = $parser{$fd} ||= Gearman::ResponseParser::Taskset->new(
+            my $sock   = $watching{$fd};
+            my $parser = $parser{$fd}
+                ||= Gearman::ResponseParser::Taskset->new(
                 source  => $sock,
                 taskset => $ts
-            );
+                );
             eval { $parser->parse_sock($sock); };
 
             if ($@) {
@@ -282,7 +283,7 @@ sub add_task {
 
     my $jssock = $task->{jssock};
 
-    return $task->fail unless ($jssock);
+    return $task->fail("undefined jssock") unless ($jssock);
 
     my $req = $task->pack_submit_packet($ts->client);
     my $len = length($req);
@@ -297,8 +298,12 @@ sub add_task {
         if (!$rv) {
             shift @{ $ts->{need_handle} }; # ditch it, it failed.
                                            # this will resubmit it if it failed.
-            return $task->fail;
-        }
+            return $task->fail(
+                join(' ',
+                    "no rv on waiting for packet",
+                    defined($rv) ? $rv : $!)
+            );
+        } ## end if (!$rv)
     } ## end while (@{ $ts->{need_handle...}})
 
     return $task->handle;
@@ -355,8 +360,10 @@ sub _get_hashed_sock {
 # otherwise, return value is undefined.
 sub _wait_for_packet {
     my Gearman::Taskset $ts = shift;
-    my $sock                = shift;    # socket to singularly read from
-    my $timeout             = shift;
+
+    # socket to singularly read from
+    my $sock    = shift;
+    my $timeout = shift;
 
     my ($res, $err);
     $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
@@ -413,7 +420,7 @@ sub _fail_jshandle {
         or Carp::croak
         "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
 
-    $task->fail;
+    $task->fail("jshandle fail");
     delete $ts->{waiting}{$shandle} unless @$task_list;
 } ## end sub _fail_jshandle
 
