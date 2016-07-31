@@ -5,6 +5,14 @@ $Gearman::Objects::VERSION = qv("1.130.001");
 use strict;
 use warnings;
 
+=head1 NAME
+
+Gearman::Objects - a parrent class for L<Gearman::Client> and L<Gearman::Worker>
+
+=head1 METHODS
+
+=cut
+
 use constant DEFAULT_PORT => 4730;
 
 use fields qw/
@@ -36,7 +44,14 @@ sub new {
     return $self;
 } ## end sub new
 
-# getter/setter
+=head2 job_servers([$js])
+
+getter/setter
+
+C<$js> may be an array reference or scalar
+
+=cut
+
 sub job_servers {
     my ($self) = shift;
     (@_) && $self->set_job_servers(@_);
@@ -54,7 +69,8 @@ sub set_job_servers {
 
 sub canonicalize_job_servers {
     my ($self) = shift;
-    my $list = ref $_[0] ? $_[0] : [@_];    # take arrayref or array
+    # take arrayref or array
+    my $list = ref $_[0] ? $_[0] : [@_];
     foreach (@$list) {
         $_ .= ':' . Gearman::Objects::DEFAULT_PORT unless /:/;
     }
@@ -67,6 +83,11 @@ sub debug {
     return $self->{debug} || 0;
 }
 
+=head2 prefix([$prefix])
+
+getter/setter
+
+=cut
 sub prefix {
     my $self = shift;
     if (@_) {
