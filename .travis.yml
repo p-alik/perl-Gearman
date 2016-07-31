@@ -9,7 +9,7 @@ perl:
   - "5.12"
   - "5.10"
 
-sudo: false
+sudo: true
 
 matrix:
   include:
@@ -17,6 +17,8 @@ matrix:
       env: COVERAGE=1
 
 before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y gearman-job-server
   - git clone git://github.com/travis-perl/helpers ~/travis-perl-helpers
   - source ~/travis-perl-helpers/init
   - build-perl
