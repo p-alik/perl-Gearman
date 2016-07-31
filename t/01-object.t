@@ -4,9 +4,7 @@ use Test::More;
 
 use_ok('Gearman::Objects');
 
-my @servers = $ENV{GEARMAN_SERVERS}
-    ? split /,/, $ENV{GEARMAN_SERVERS}
-    : qw/foo bar/;
+my @servers = qw/foo:12345 bar:54321/;
 my $c = new_ok(
     'Gearman::Objects',
     [job_servers => $servers[0]],
