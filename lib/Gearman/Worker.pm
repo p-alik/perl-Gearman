@@ -357,7 +357,7 @@ sub uncache_sock {
 
 =head2 work(%opts)
 
-Do one job and returns (no value returned).
+Endless loop takes a job and wait for the next one.
 You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
 
 =cut
