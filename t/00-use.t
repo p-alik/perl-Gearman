@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use version;
 use Test::More;
 
 my @mn = qw/
@@ -14,7 +15,7 @@ my @mn = qw/
     Gearman::Worker
     /;
 
-my $v = '1.13.001';
+my $v = qv("1.130.001");
 
 
 foreach my $n (@mn) {
