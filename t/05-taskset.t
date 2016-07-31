@@ -1,11 +1,21 @@
 use strict;
 use warnings;
 
+use FindBin qw/ $Bin /;
 use IO::Socket::INET;
 use Test::More;
 use Test::Exception;
 
-my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
+use lib "$Bin/lib";
+use Test::Gearman;
+
+my $tg = Test::Gearman->new(
+    count  => 3,
+    ip     => "127.0.0.1",
+    daemon => $ENV{GEARMAND_PATH} || undef
+);
+
+my @js = $tg->start_servers() ? @{ $tg->job_servers } : ();
 my $mn = "Gearman::Taskset";
 use_ok($mn);
 use_ok("Gearman::Client");
