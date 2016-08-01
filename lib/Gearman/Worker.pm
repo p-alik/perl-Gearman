@@ -376,6 +376,10 @@ sub work {
 
     my $last_job_time;
 
+    my $on_connect = sub {
+      return Gearman::Util::send_req($_[0], \$presleep_req);
+    };
+
     # "Active" job servers are servers that have woken us up and should be
     # queried to see if they have jobs for us to handle. On our first pass
     # in the loop we contact all servers.
@@ -400,7 +404,7 @@ sub work {
         for (my $i = 0; $i < $js_count; $i++) {
             my $js_index = ($i + $js_offset) % $js_count;
             my $js       = $jobby_js[$js_index];
-            my $jss      = $self->_get_js_sock($js)
+            my $jss      = $self->_get_js_sock($js, on_connect => $on_connect)
                 or next;
 
             # TODO: add an optional sleep in here for the test suite
@@ -509,10 +513,6 @@ sub work {
         } ## end for (my $i = 0; $i < $js_count...)
 
         my @jss;
-
-        my $on_connect = sub {
-            return Gearman::Util::send_req($_[0], \$presleep_req);
-        };
 
         foreach my $js (@{ $self->{job_servers} }) {
             my $jss = $self->_get_js_sock($js, on_connect => $on_connect)
