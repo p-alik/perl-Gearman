@@ -148,8 +148,8 @@ use fields (
     'hooks',         # hookname -> coderef
     'exceptions',
     'backoff_max',
-    'command_timeout'
-    , # maximum time a gearman command should take to get a result (not a job timeout)
+    # maximum time a gearman command should take to get a result (not a job timeout)
+    'command_timeout',
 );
 
 use Carp;
