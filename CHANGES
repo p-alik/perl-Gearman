@@ -1,3 +1,10 @@
+1.130.001 (2016-08-02)
+     -- refactoring of Gearman::Util::read_res_packet: no goto/redo
+     -- test suite refactoring
+     -- solved issue 85191 Programming error prevents Gearman::Worker::work() from connecting to servers
+     -- solved issue 59185 document Gearman::Client::get_status
+     -- solved issue 56508 using $task->fail("reason goes here") in Gearman::Taskset
+
 1.12.009 (2016-06-04)
      -- run t/30-maxqueue.t and t/40-prefix.t only with AUTHOR_TESTING
      -- s/::Object/::Objects/
