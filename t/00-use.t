@@ -15,7 +15,7 @@ my @mn = qw/
     Gearman::Worker
     /;
 
-my $v = qv("1.130.001");
+my $v = qv("1.130.002");
 
 
 foreach my $n (@mn) {
