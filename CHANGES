@@ -1,3 +1,6 @@
+1.130.002 (2016-08-03)
+     -- skip worker _get_js_sock test without gearmand
+
 1.130.001 (2016-08-02)
      -- refactoring of Gearman::Util::read_res_packet: no goto/redo
      -- test suite refactoring
