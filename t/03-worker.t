@@ -103,14 +103,19 @@ subtest "_get_js_sock", sub {
     delete $w->{parent_pipe};
     is($w->_get_js_sock($hp), undef);
 
-    $hp = $w->job_servers()->[0];
+SKIP: {
+        @{ $w->job_servers() } || skip "no job server available", 3;
 
-    $w->{last_connect_fail}{$hp} = 1;
-    $w->{down_since}{$hp}        = 1;
-    isa_ok($w->_get_js_sock($hp, on_connect => sub {1}), "IO::Socket::INET");
+        $hp = $w->job_servers()->[0];
 
-    is($w->{last_connect_fail}{$hp}, undef);
-    is($w->{down_since}{$hp},        undef);
+        $w->{last_connect_fail}{$hp} = 1;
+        $w->{down_since}{$hp}        = 1;
+
+        isa_ok($w->_get_js_sock($hp, on_connect => sub {1}),
+            "IO::Socket::INET");
+        is($w->{last_connect_fail}{$hp}, undef);
+        is($w->{down_since}{$hp},        undef);
+    } ## end SKIP:
 };
 
 subtest "_on_connect-_set_ability", sub {
