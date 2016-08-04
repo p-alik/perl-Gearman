@@ -14,7 +14,7 @@ WriteMakefile(
     VERSION_FROM   => "lib/Gearman/Client.pm",
     BUILD_REQUIRES => {
         "IO::Socket::INET" => 0,
-        "IO::Socket::SSL"  => 0,
+        "Perl::OSType"     => 0,
         "Storable"         => 0,
         "Test::Exception"  => 0,
         "Test::More"       => 0,
