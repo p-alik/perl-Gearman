@@ -1,6 +1,4 @@
 package Test::Gearman;
-use base qw(Exporter);
-
 use strict;
 use warnings;
 
@@ -14,6 +12,7 @@ use fields qw/
     /;
 
 use IO::Socket::INET;
+use Perl::OSType qw/ is_os_type /;
 use POSIX qw/ :sys_wait_h /;
 
 use FindBin qw/ $Bin /;
@@ -35,11 +34,17 @@ sub new {
     my ($class, %args) = @_;
     my $self = fields::new($class);
 
-    $self->{daemon} = $args{daemon} || qx/which gearmand/;
-    chomp $self->{daemon};
+    $self->{ip}     = $args{ip};
+    $self->{daemon} = $args{daemon};
 
-    $self->{ports} = $self->_free_ports($args{count});
-    $self->{ip}    = $args{ip};
+    unless (is_os_type('Windows')) {
+        $self->{daemon} ||= qx/which gearmand/;
+        chomp $self->{daemon};
+    }
+
+    if ($self->{daemon}) {
+        $self->{ports} = $self->_free_ports($args{count});
+    }
 
     return $self;
 } ## end sub new
