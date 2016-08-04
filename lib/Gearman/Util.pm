@@ -106,7 +106,7 @@ sub pack_res_command {
     return _pack_command("RES", @_);
 }
 
-=heade2 read_res_packet($sock, $err_ref, $timeout)
+=head2 read_res_packet($sock, $err_ref, $timeout)
 
 B<return> undef on closed socket or malformed packet
 
