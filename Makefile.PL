@@ -22,7 +22,7 @@ WriteMakefile(
     },
     PREREQ_PM => {
         "Carp"             => 0,
-        "Errno"            => 0,
+        "POSIX"            => 0,
         "IO::Handle"       => 0,
         "IO::Socket::INET" => 0,
         "Scalar::Util"     => 0,
