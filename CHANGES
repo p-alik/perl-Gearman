@@ -1,3 +1,8 @@
+1.130.003 (2016-08-05)
+     -- check OS in Test::Gearman and don't use "which" on Windows
+     -- replace 'use Errno qw(EAGAIN)' by 'POSIX qw(:errno_h)'
+        see: http://www.cpantesters.org/cpan/report/d801a704-5975-11e6-9451-9b92aab8e0c0
+
 1.130.002 (2016-08-03)
      -- skip worker _get_js_sock test without gearmand
 
