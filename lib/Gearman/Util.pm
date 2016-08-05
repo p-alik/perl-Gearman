@@ -8,7 +8,7 @@ use warnings;
 # man errno
 # Resource temporarily unavailable
 # (may be the same value as EWOULDBLOCK) (POSIX.1)
-use Errno qw(EAGAIN);
+use POSIX qw(:errno_h);
 use Time::HiRes qw();
 use IO::Handle;
 
