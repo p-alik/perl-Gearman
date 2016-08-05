@@ -14,7 +14,7 @@ use IO::Handle;
 
 =head1 NAME
 
-Gearman::Util
+Gearman::Util - Utility functions for gearman distributed job system
 
 =head1 METHODS
 
