@@ -368,7 +368,7 @@ sub _wait_for_packet {
     my ($res, $err);
     $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
 
-    return $res ? $ts->_process_packet($res, $sock) : 0;
+    return $res ? $ts->process_packet($res, $sock) : 0;
 } ## end sub _wait_for_packet
 
 #
@@ -424,10 +424,11 @@ sub _fail_jshandle {
     delete $ts->{waiting}{$shandle} unless @$task_list;
 } ## end sub _fail_jshandle
 
-#
-# _process_packet($res, $sock)
-#
-sub _process_packet {
+=head2 process_packet($res, $sock)
+
+=cut
+
+sub process_packet {
     my Gearman::Taskset $ts = shift;
     my ($res, $sock) = @_;
 
@@ -523,7 +524,6 @@ sub _process_packet {
 
     Carp::croak
         "Unknown/unimplemented packet type: $res->{type} [${$res->{blobref}}]";
-
-} ## end sub _process_packet
+} ## end sub process_packet
 
 1;
