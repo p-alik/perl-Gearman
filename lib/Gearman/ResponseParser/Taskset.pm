@@ -1,6 +1,6 @@
 package Gearman::ResponseParser::Taskset;
 use version;
-$Gearman::ResponseParser::Taskset::VERSION = qv("1.130.003");
+$Gearman::ResponseParser::Taskset::VERSION = qv("1.130.004");
 
 use strict;
 use warnings;
