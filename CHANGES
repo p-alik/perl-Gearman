@@ -1,3 +1,9 @@
+1.130.004 (2016-08-06)
+     -- add Gearman::ResponseParser pod
+     -- add Gearman::ResposeParser::Taskset pod
+     -- rename Gearman::Taskset->_process_packet to process_packet
+     -- issue 116744 Utility pod
+
 1.130.003 (2016-08-05)
      -- check OS in Test::Gearman and don't use "which" on Windows
      -- replace 'use Errno qw(EAGAIN)' by 'POSIX qw(:errno_h)'
