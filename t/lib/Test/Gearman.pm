@@ -11,8 +11,8 @@ use fields qw/
     _job_servers
     /;
 
+use File::Which qw//;
 use IO::Socket::INET;
-use Perl::OSType qw/ is_os_type /;
 use POSIX qw/ :sys_wait_h /;
 
 use FindBin qw/ $Bin /;
@@ -37,10 +37,7 @@ sub new {
     $self->{ip}     = $args{ip};
     $self->{daemon} = $args{daemon};
 
-    unless (is_os_type('Windows')) {
-        $self->{daemon} ||= qx/which gearmand/;
-        chomp $self->{daemon};
-    }
+    $self->{daemon} ||= File::Which::which("gearmand");
 
     if ($self->{daemon}) {
         $self->{ports} = $self->_free_ports($args{count});
