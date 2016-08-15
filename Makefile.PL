@@ -13,6 +13,7 @@ WriteMakefile(
         "Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
     VERSION_FROM   => "lib/Gearman/Client.pm",
     BUILD_REQUIRES => {
+        "File::Which"      => 0,
         "IO::Socket::INET" => 0,
         "Perl::OSType"     => 0,
         "Storable"         => 0,
