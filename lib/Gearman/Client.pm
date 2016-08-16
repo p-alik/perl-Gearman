@@ -384,11 +384,12 @@ sub do_task {
 } ## end sub do_task
 
 =head2 dispatch_background($func, $arg_p, $opts)
+
 =head2 dispatch_background($task)
 
 dispatches job in background
 
-return the handle from the jobserver, or false if any failure
+return the handle from the jobserver, or undef on failure
 
 =cut
 
