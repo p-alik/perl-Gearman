@@ -5,6 +5,7 @@ $Gearman::Taskset::VERSION = qv("1.130.004");
 use strict;
 use warnings;
 
+use Scalar::Util;
 use Socket;
 
 =head1 NAME
@@ -72,7 +73,7 @@ use Time::HiRes  ();
 sub new {
     my $self   = shift;
     my $client = shift;
-    ref($client) eq "Gearman::Client"
+    (Scalar::Util::blessed($client) && $client->isa("Gearman::Client"))
         || Carp::croak
         "provided client argument is not a Gearman::Client reference";
 
