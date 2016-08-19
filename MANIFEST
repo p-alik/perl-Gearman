@@ -25,8 +25,6 @@ t/09-connect.t
 t/10-all.t
 t/11-job.t
 t/12-util.t
-t/20-leaktest.t
-t/30-maxqueue.t
 t/40-prefix.t
 t/50-wait_timeout.t
 t/60-stop-if.t
