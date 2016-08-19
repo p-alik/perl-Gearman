@@ -6,6 +6,8 @@ use strict;
 use warnings;
 
 use base 'Gearman::ResponseParser';
+use Carp;
+use Scalar::Util ();
 
 =head1 NAME
 
@@ -23,8 +25,9 @@ derived from L<Gearman::ResponseParser>
 sub new {
     my ($class, %opts) = @_;
     my $ts = delete $opts{taskset};
-    ref($ts) eq "Gearman::Taskset"
-        || die "provided argument is not a Gearman::Taskset reference";
+    (Scalar::Util::blessed($ts) && $ts->isa("Gearman::Taskset"))
+        || Carp::croak
+        "provided taskset argument is not a Gearman::Taskset reference";
 
     my $self = $class->SUPER::new(%opts);
     $self->{_taskset} = $ts;
