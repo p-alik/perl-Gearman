@@ -148,6 +148,7 @@ use fields (
     'hooks',         # hookname -> coderef
     'exceptions',
     'backoff_max',
+
     # maximum time a gearman command should take to get a result (not a job timeout)
     'command_timeout',
 );
@@ -166,9 +167,10 @@ use Socket qw/
 use Time::HiRes;
 
 sub new {
-    my ($class, %opts) = @_;
-    my Gearman::Client $self = $class;
-    $self = fields::new($class) unless ref $self;
+    my ($self, %opts) = @_;
+    unless (ref $self) {
+        $self = fields::new($self);
+    }
 
     $self->SUPER::new(%opts);
 
@@ -199,20 +201,20 @@ B<return> Gearman::Taskset
 =cut
 
 sub new_task_set {
-    my Gearman::Client $self = shift;
+    my $self    = shift;
     my $taskset = Gearman::Taskset->new($self);
     $self->run_hook('new_task_set', $self, $taskset);
     return $taskset;
 } ## end sub new_task_set
 
 #
-# _job_server_status_command($command=status\n)
+# _job_server_status_command($command, $each_line_sub)
+# $command e.g. "status\n".
+# $each_line_sub A sub to be called on each line of response;
+#                takes $hostport and the $line as args.
 #
 sub _job_server_status_command {
-    my Gearman::Client $self = shift;
-    my $command = shift;    # e.g. "status\n".
-    my $each_line_sub = shift;    # A sub to be called on each line of response;
-                                  # takes $hostport and the $line as args.
+    my ($self, $command, $each_line_sub) = (shift, shift, shift);
 
     my $list = $self->canonicalize_job_servers(@_);
     $list = $self->{job_servers} unless @$list;
@@ -227,9 +229,15 @@ sub _job_server_status_command {
 
         my $err;
         my @lines = Gearman::Util::read_text_status($sock, \$err);
-        next if $err;
+        if ($err) {
 
-        $each_line_sub->($hostport, $_) foreach @lines;
+            #TODO warn
+            next;
+        }
+
+        foreach my $l (@lines) {
+            $each_line_sub->($hostport, $l);
+        }
 
         $self->_put_js_sock($hostport, $sock);
     } ## end foreach my $hostport (@$list)
@@ -242,7 +250,7 @@ B<return> {job => {capable, queued, running}}
 =cut
 
 sub get_job_server_status {
-    my Gearman::Client $self = shift;
+    my $self = shift;
 
     my $js_status = {};
     $self->_job_server_status_command(
@@ -250,7 +258,9 @@ sub get_job_server_status {
         sub {
             my ($hostport, $line) = @_;
 
-            return unless $line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
+            unless ($line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/) {
+                return;
+            }
 
             my ($job, $queued, $running, $capable) = ($1, $2, $3, $4);
             $js_status->{$hostport}->{$job} = {
@@ -273,7 +283,7 @@ B<return> {job => {address, listeners, key}}
 =cut
 
 sub get_job_server_jobs {
-    my Gearman::Client $self = shift;
+    my $self    = shift;
     my $js_jobs = {};
     $self->_job_server_status_command(
         "jobs\n",
@@ -302,7 +312,7 @@ supported only by L<Gearman::Server>
 =cut
 
 sub get_job_server_clients {
-    my Gearman::Client $self = shift;
+    my $self = shift;
 
     my $js_clients = {};
     my $client;
@@ -334,11 +344,11 @@ sub get_job_server_clients {
 #
 sub _get_task_from_args {
     my $self = shift;
-    my Gearman::Task $task;
+    my $task;
     if (ref $_[0]) {
         $task = shift;
-        Carp::croak("Argument isn't a Gearman::Task")
-            unless ref $task eq "Gearman::Task";
+        $task->isa("Gearman::Task")
+            || Carp::croak("Argument isn't a Gearman::Task");
     }
     else {
         my $func   = shift;
@@ -356,15 +366,15 @@ sub _get_task_from_args {
 
 =head2 do_task($task)
 
-given a (func, arg_p, opts?), 
+given a (func, arg_p, opts?)
 
 B<return> either undef (on fail) or scalarref of result
 
 =cut
 
 sub do_task {
-    my Gearman::Client $self = shift;
-    my Gearman::Task $task   = $self->_get_task_from_args(@_);
+    my $self = shift;
+    my $task = $self->_get_task_from_args(@_);
 
     my $ret     = undef;
     my $did_err = 0;
@@ -395,8 +405,8 @@ return the handle from the jobserver, or undef on failure
 =cut
 
 sub dispatch_background {
-    my Gearman::Client $self = shift;
-    my Gearman::Task $task   = $self->_get_task_from_args(@_);
+    my $self = shift;
+    my $task = $self->_get_task_from_args(@_);
 
     $task->{background} = 1;
 
@@ -411,8 +421,8 @@ run a hook callback if defined
 =cut
 
 sub run_hook {
-    my Gearman::Client $self = shift;
-    my $hookname = shift || return;
+    my ($self, $hookname) = @_;
+    $hookname || return;
 
     my $hook = $self->{hooks}->{$hookname};
     return unless $hook;
@@ -429,8 +439,8 @@ add a hook
 =cut
 
 sub add_hook {
-    my Gearman::Client $self = shift;
-    my $hookname = shift || return;
+    my ($self, $hookname) = (shift, shift);
+    $hookname || return;
 
     if (@_) {
         $self->{hooks}->{$hookname} = shift;
@@ -451,9 +461,9 @@ B<return> L<Gearman::JobStatus> on success
 =cut
 
 sub get_status {
-    my Gearman::Client $self = shift;
-    my $handle = shift;
+    my ($self, $handle) = @_;
     $handle || return;
+
     my ($hostport, $shandle) = split(m!//!, $handle);
 
     #TODO simple check for $hostport in job_server doesn't work if
@@ -479,10 +489,15 @@ sub get_status {
     }
 
     return undef unless $res && $res->{type} eq "status_res";
+
     my @args = split(/\0/, ${ $res->{blobref} });
-    return undef unless $args[0];
+
+    #FIXME returns on '', 0
+    $args[0] || return;
+
     shift @args;
     $self->_put_js_sock($hostport, $sock);
+
     return Gearman::JobStatus->new(@args);
 } ## end sub get_status
 
@@ -490,9 +505,7 @@ sub get_status {
 # _option_request($sock, $option)
 #
 sub _option_request {
-    my Gearman::Client $self = shift;
-    my $sock                 = shift;
-    my $option               = shift;
+    my ($self, $sock, $option) = @_;
 
     my $req = Gearman::Util::pack_req_command("option_req", $option);
     my $len = length($req);
@@ -518,8 +531,7 @@ sub _option_request {
 # cache with _put_js_sock. the hostport isn't verified. the caller
 # should verify that $hostport is in the set of jobservers.
 sub _get_js_sock {
-    my Gearman::Client $self = shift;
-    my $hostport = shift;
+    my ($self, $hostport) = @_;
 
     if (my $sock = delete $self->{sock_cache}{$hostport}) {
         return $sock if $sock->connected;
@@ -567,19 +579,20 @@ sub _get_js_sock {
 # the $hostport isn't verified, so the caller should verify the
 # $hostport is still in the set of jobservers.
 sub _put_js_sock {
-    my Gearman::Client $self = shift;
-    my ($hostport, $sock) = @_;
+    my ($self, $hostport, $sock) = @_;
 
     $self->{sock_cache}{$hostport} ||= $sock;
-} ## end sub _put_js_sock
+}
 
 sub _get_random_js_sock {
-    my Gearman::Client $self = shift;
-    my $getter = shift;
-    return undef unless $self->{js_count};
+    my ($self, $getter) = @_;
 
-    $getter
-        ||= sub { my $hostport = shift; return $self->_get_js_sock($hostport); };
+    $self->{js_count} || return;
+
+    $getter ||= sub {
+        my $hostport = shift;
+        return $self->_get_js_sock($hostport);
+    };
 
     my $ridx = int(rand($self->{js_count}));
     for (my $try = 0; $try < $self->{js_count}; $try++) {
