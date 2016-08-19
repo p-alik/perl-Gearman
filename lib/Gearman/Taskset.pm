@@ -59,7 +59,7 @@ use fields (
 );
 
 use Carp ();
-use Gearman::Util;
+use Gearman::Util ();
 use Gearman::ResponseParser::Taskset;
 
 # i thought about weakening taskset's client, but might be too weak.
