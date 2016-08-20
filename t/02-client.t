@@ -12,7 +12,7 @@ use lib "$Bin/lib";
 use Test::Gearman;
 
 my $tg = Test::Gearman->new(
-    count  => 3,
+    count  => 2,
     ip     => "127.0.0.1",
     daemon => $ENV{GEARMAND_PATH} || undef
 );
@@ -53,7 +53,7 @@ is(keys(%{ $c->{hooks} }),      0, join "->", $mn, "{hooks}");
 is(keys(%{ $c->{sock_cache} }), 0, join "->", $mn, "{sock_cache}");
 
 foreach ($c->job_servers()) {
-    ok(my $s = $c->_get_js_sock($_), "_get_js_sock($_)");
+    ok(my $s = $c->_get_js_sock($_), "_get_js_sock($_)") || next;
     isa_ok($s, "IO::Socket::INET");
 }
 
