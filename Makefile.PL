@@ -10,10 +10,10 @@ WriteMakefile(
     NAME   => "Gearman",
     AUTHOR => 'Brad Fitzpatrick <brad@danga.com>',
     ABSTRACT =>
-        "Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
+"Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
     VERSION_FROM   => "lib/Gearman/Client.pm",
     BUILD_REQUIRES => {
-	"version"          => 0,
+        "version"          => 0,
         "File::Which"      => 0,
         "IO::Socket::INET" => 0,
         "Perl::OSType"     => 0,
@@ -21,9 +21,10 @@ WriteMakefile(
         "Test::Exception"  => 0,
         "Test::More"       => 0,
         "Test::Timer"      => 0,
+        "Test::TCP"        => "2.17",
     },
     PREREQ_PM => {
-	"version"          => 0,
+        "version"          => 0,
         "Carp"             => 0,
         "POSIX"            => 0,
         "IO::Handle"       => 0,
