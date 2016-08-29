@@ -5,7 +5,6 @@ use warnings;
 # OK Gearman::Server
 
 use File::Which qw//;
-use FindBin qw/ $Bin /;
 use Test::More;
 use Test::Exception;
 use Test::TCP;
@@ -37,17 +36,20 @@ can_ok(
       /
 );
 
-my $c = new_ok($mn);
-isa_ok( $c, "Gearman::Objects" );
-is( $c->{backoff_max},             90, join "->", $mn, "{backoff_max}" );
-is( $c->{command_timeout},         30, join "->", $mn, "{command_timeout}" );
-is( $c->{exceptions},              0,  join "->", $mn, "{exceptions}" );
-is( $c->{js_count},                0,  "js_count" );
-is( keys( %{ $c->{hooks} } ),      0,  join "->", $mn, "{hooks}" );
-is( keys( %{ $c->{sock_cache} } ), 0,  join "->", $mn, "{sock_cache}" );
+subtest "new", sub {
+    my $c = new_ok($mn);
+    isa_ok( $c, "Gearman::Objects" );
+    is( $c->{backoff_max},        90, join "->", $mn, "{backoff_max}" );
+    is( $c->{command_timeout},    30, join "->", $mn, "{command_timeout}" );
+    is( $c->{exceptions},         0,  join "->", $mn, "{exceptions}" );
+    is( $c->{js_count},           0,  "js_count" );
+    is( keys( %{ $c->{hooks} } ), 0,  join "->", $mn, "{hooks}" );
+    is( keys( %{ $c->{sock_cache} } ), 0, join "->", $mn, "{sock_cache}" );
+};
 
 subtest "new_task_set", sub {
-    my $h = "new_task_set";
+    my $c  = new_ok($mn);
+    my $h  = "new_task_set";
     my $cb = sub { pass("$h cb") };
     ok( $c->add_hook( $h, $cb ), "add_hook($h, cb)" );
     is( $c->{hooks}->{$h}, $cb, "$h eq cb" );
@@ -57,7 +59,7 @@ subtest "new_task_set", sub {
 };
 
 subtest "js socket", sub {
-    -e $bin || plan skip_all => "no gearmand";
+    $bin || plan skip_all => "no $daemon";
     my $gs = Test::TCP->new(
         code => sub {
             my $port = shift;
@@ -66,9 +68,9 @@ subtest "js socket", sub {
         },
     );
 
-    my @js = ( join( ':', $host, $gs->port ) );
-    my $gc = new_ok( $mn, [ job_servers => [@js] ] );
-    foreach ( $c->job_servers() ) {
+    my $gc =
+      new_ok( $mn, [ job_servers => [ join( ':', $host, $gs->port ) ] ] );
+    foreach ( $gc->job_servers() ) {
         ok( my $s = $gc->_get_js_sock($_), "_get_js_sock($_)" ) || next;
         isa_ok( $s, "IO::Socket::INET" );
     }
