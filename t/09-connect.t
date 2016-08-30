@@ -6,8 +6,6 @@ use IO::Socket::INET;
 use Test::More;
 use Time::HiRes;
 
-plan skip_all => "$0 fails sometimes";
-
 my @paddr = qw/
     192.0.2.1:1
     192.0.2.2:1
