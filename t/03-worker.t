@@ -96,7 +96,7 @@ subtest "_get_js_sock", sub {
     is( $w->_get_js_sock($hp), undef );
 
   SKIP: {
-        $bin || plan skip_all => "no $daemon", 4;
+        $bin || skip "no $daemon", 4;
         my $gs = Test::TCP->new(
             code => sub {
                 my $port = shift;
