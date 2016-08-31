@@ -366,6 +366,8 @@ sub _get_task_from_args {
 
 =head2 do_task($task)
 
+=head2 do_task($funcname, $arg, \%options)
+
 given a (func, arg_p, opts?)
 
 B<return> either undef (on fail) or scalarref of result
