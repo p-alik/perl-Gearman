@@ -8,12 +8,15 @@ our @EXPORT = qw/
     /;
 
 sub new_server {
-    my ($bin, $host) = @_;
+    my ($bin, $host, $debug) = @_;
     my $s = Test::TCP->new(
         host => $host,
         code => sub {
             my $port = shift;
-            exec $bin, "--port" => $port;    #, "--verbose=INFO";
+            my %args
+                = ("--port" => $port, $debug ? ("--verbose" => "DEBUG") : ());
+
+            exec $bin, %args;
             die "cannot execute $bin: $!";
         },
     );
