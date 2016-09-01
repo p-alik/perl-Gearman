@@ -12,8 +12,8 @@ sub new_worker {
     my ($job_servers, %func) = @_;
     my $w = Gearman::Worker->new(job_servers => $job_servers);
 
-    while (my ($f, $cb) = each(%func)) {
-        $w->register_function($f => $cb);
+    while (my ($f, $v) = each(%func)) {
+        $w->register_function($f, ref($v) eq "ARRAY" ? @{$v} : $v);
     }
 
     my $pg = Proc::Guard->new(
@@ -31,4 +31,5 @@ sub new_worker {
 
     return $pg;
 } ## end sub new_worker
+
 1;
