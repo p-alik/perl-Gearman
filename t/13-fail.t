@@ -9,7 +9,7 @@ use t::Server qw/ new_server /;
 use t::Worker qw/ new_worker /;
 
 my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || File::Which::which($daemon);
+my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
 my $host   = "127.0.0.1";
 
 $bin      || plan skip_all => "Can't find $daemon to test with";
