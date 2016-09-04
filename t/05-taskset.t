@@ -1,27 +1,16 @@
 use strict;
 use warnings;
 
-use File::Which qw//;
+use File::Which qw/ which /;
 use IO::Socket::INET;
 use Test::More;
 use Test::Exception;
-
-use Test::TCP;
+use t::Server qw/ new_server /;
 
 my $daemon = "gearmand";
-my $bin    = File::Which::which($daemon);
+my $bin    = which($daemon);
 my $host   = "127.0.0.1";
 
-# use lib "$Bin/lib";
-# use Test::Gearman;
-
-# my $tg = Test::Gearman->new(
-#     count  => 3,
-#     ip     => "127.0.0.1",
-#     daemon => $ENV{GEARMAND_PATH} || undef
-# );
-
-# my @js = $tg->start_servers() ? @{ $tg->job_servers } : ();
 my @js;
 my ($cn, $mn) = qw/
     Gearman::Client
@@ -91,15 +80,10 @@ subtest "cancel", sub {
 };
 
 subtest "socket", sub {
-    $bin || plan skip_all => "no $daemon";
+$bin      || plan skip_all => "Can't find $daemon to test with";
+(-X $bin) || plan skip_all => "$bin is not executable";
 
-    my $gs = Test::TCP->new(
-        code => sub {
-            my $port = shift;
-            exec $bin, '-p' => $port;
-            die "cannot execute $bin: $!";
-        },
-    );
+    my $gs = new_server($bin, $host);
 
     my $c = new_ok($cn, [job_servers => [join(':', $host, $gs->port)]]);
     my $ts = new_ok($mn, [$c]);
