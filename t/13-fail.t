@@ -35,16 +35,22 @@ my $client = new_ok(
 ## Test some failure conditions:
 ## Normal failure (worker returns undef or dies within eval).
 subtest "wokrker process fails", sub {
-    my @workers = map(new_worker([$job_server], fail => sub {undef}),
+    my $func    = "fail";
+    my @workers = map(new_worker(
+            job_servers => [$job_server],
+            func        => {
+                $func => sub {undef}
+            }
+        ),
         (0 .. int(rand(1) + 1)));
-    is($client->do_task("fail"),
+    is($client->do_task($func),
         undef, "Job that failed naturally returned undef");
 
     ## Test retry_count.
     my $retried = 0;
     is(
         $client->do_task(
-            "fail" => '',
+            $func => '',
             {
                 on_retry    => sub { $retried++ },
                 retry_count => 3,
@@ -58,7 +64,7 @@ subtest "wokrker process fails", sub {
     my $ts = $client->new_task_set;
     my ($completed, $failed) = (0, 0);
     $ts->add_task(
-        fail => '',
+        $func => '',
         {
             on_complete => sub { $completed = 1 },
             on_fail     => sub { $failed    = 1 },
@@ -71,14 +77,19 @@ subtest "wokrker process fails", sub {
 
 subtest "worker process dies", sub {
     plan skip_all => "subtest fails with gearman v1.1.12";
-    my $worker
-        = new_worker([$job_server], fail_die => sub { die "test reason" });
+
+    my $func   = "fail_die";
+    my $worker = new_worker(
+        job_servers => [$job_server],
+        func        => {
+            $func => sub { die "test reason" }
+        }
+    );
 
     # the die message is available in the on_fail sub
     my $msg   = undef;
     my $tasks = $client->new_task_set;
-    $tasks->add_task("fail_die", undef,
-        { on_exception => sub { $msg = shift }, });
+    $tasks->add_task($func, undef, { on_exception => sub { $msg = shift }, });
     $tasks->wait;
     like(
         $msg,
@@ -92,12 +103,17 @@ subtest "worker process dies", sub {
 subtest "worker process exits", sub {
     plan skip_all => "TODO supported only by Gearman::Server";
 
-    my @workers = map(new_worker([$job_server], fail_exit => sub { exit 255 }),
+    my $func    = "fail_exit";
+    my @workers = map(new_worker(
+            job_servers => [$job_server],
+            func        => {
+                $func => sub { exit 255 }
+            }
+        ),
         (0 .. int(rand(1) + 1)));
     is(
         $client->do_task(
-            "fail_exit",
-            undef,
+            $func, undef,
             {
                 on_fail     => sub { warn "on fail" },
                 on_complete => sub { warn "on success" },
