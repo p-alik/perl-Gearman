@@ -1,20 +1,15 @@
 use strict;
 use warnings;
 
-use File::Which qw//;
+use File::Which qw/ which /;
 use List::Util;
 use Test::More;
 
-use t::Server qw/
-    new_server
-    /;
-
-use t::Worker qw/
-    new_worker
-    /;
+use t::Server qw/ new_server /;
+use t::Worker qw/ new_worker /;
 
 my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || File::Which::which($daemon);
+my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
 my $host   = "127.0.0.1";
 
 $bin      || plan skip_all => "Can't find $daemon to test with";
@@ -100,10 +95,12 @@ subtest "hight priority", sub {
 
     note "start workers";
     my $pg = new_worker(
-        [$job_server],
-        echo_ws => sub {
-            select undef, undef, undef, 0.25;
-            $_[0]->arg eq 'x' ? undef : $_[0]->arg;
+        job_servers => [$job_server],
+        func        => {
+            echo_ws => sub {
+                select undef, undef, undef, 0.25;
+                $_[0]->arg eq 'x' ? undef : $_[0]->arg;
+                }
         }
     );
     note "worker pid:", $pg->pid;
