@@ -45,7 +45,9 @@ my $cb   = sub {
 };
 
 my @workers
-    = map(new_worker([keys %job_servers], $func, $cb), (0 .. int(rand(1) + 1)));
+    = map(
+    new_worker(job_servers => [keys %job_servers], func => { $func, $cb }),
+    (0 .. int(rand(1) + 1)));
 
 subtest "taskset 1", sub {
     throws_ok { $client->do_task(sum => []) }
