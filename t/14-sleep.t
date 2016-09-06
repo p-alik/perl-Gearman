@@ -35,7 +35,7 @@ my %cb = (
     ],
 );
 
-my @workers = map(new_worker([$job_server], %cb), (0 .. int(rand(1) + 1)));
+my @workers = map(new_worker(job_servers => [$job_server], func => {%cb}), (0 .. int(rand(1) + 1)));
 
 use_ok("Gearman::Client");
 
