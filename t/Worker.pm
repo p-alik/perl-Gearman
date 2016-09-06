@@ -9,8 +9,10 @@ our @EXPORT = qw/
     /;
 
 sub new_worker {
-    my ($job_servers, %func) = @_;
-    my $w = Gearman::Worker->new(job_servers => $job_servers);
+    my (%args) = @_;
+    defined($args{func}) || die "no func in passed arguments";
+    my %func = %{ delete $args{func} };
+    my $w    = Gearman::Worker->new(%args);
 
     while (my ($f, $v) = each(%func)) {
         $w->register_function($f, ref($v) eq "ARRAY" ? @{$v} : $v);
