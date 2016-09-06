@@ -23,10 +23,12 @@ my $job_server = join(':', $host, $gs->port);
 my $func = "sleep";
 
 my $worker = new_worker(
-    [$job_server],
-    $func => sub {
-        sleep $_[0]->arg;
-        return 1;
+    job_servers => [$job_server],
+    func        => {
+        $func => sub {
+            sleep $_[0]->arg;
+            return 1;
+            }
     }
 );
 
