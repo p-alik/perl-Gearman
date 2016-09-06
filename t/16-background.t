@@ -30,14 +30,16 @@ my $client = new_ok("Gearman::Client",
 my $func = "long";
 
 my $worker = new_worker(
-    [$job_server],
-    $func => sub {
-        my ($job) = @_;
-        $job->set_status(50, 100);
-        sleep 2;
-        $job->set_status(100, 100);
-        sleep 2;
-        return $job->arg;
+    job_servers => [$job_server],
+    func        => {
+        $func => sub {
+            my ($job) = @_;
+            $job->set_status(50, 100);
+            sleep 2;
+            $job->set_status(100, 100);
+            sleep 2;
+            return $job->arg;
+            }
     }
 );
 
