@@ -4,8 +4,6 @@ use warnings;
 # OK gearmand v1.0.6
 
 use File::Which qw/ which /;
-use Gearman::Client;
-use Storable qw/freeze/;
 use Test::More;
 use Time::HiRes qw/sleep/;
 
@@ -24,6 +22,7 @@ $gs || BAIL_OUT "couldn't start $bin";
 
 my $job_server = join(':', $host, $gs->port);
 
+use_ok("Gearman::Client");
 use_ok("Gearman::Task");
 
 subtest "echo prefix", sub {
