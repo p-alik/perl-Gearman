@@ -2,31 +2,43 @@ use strict;
 use warnings;
 
 # OK gearmand v1.0.6
-# OK Gearman::Server
 
-use FindBin qw/$Bin/;
-use Gearman::Client;
+use File::Which qw/ which /;
 use Test::More;
 use Test::Timer;
 
-use lib "$Bin/lib";
-use Test::Gearman;
+use t::Server qw/ new_server /;
+use t::Worker qw/ new_worker /;
 
-my $tg = Test::Gearman->new(
-    ip     => "127.0.0.1",
-    daemon => $ENV{GEARMAND_PATH} || undef
+my $daemon = "gearmand";
+my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
+my $host   = "127.0.0.1";
+
+$bin      || plan skip_all => "Can't find $daemon to test with";
+(-X $bin) || plan skip_all => "$bin is not executable";
+
+my $gs = new_server($bin, $host);
+$gs || BAIL_OUT "couldn't start $bin";
+
+my $job_server = join(':', $host, $gs->port);
+my $func = "long";
+
+use_ok("Gearman::Client");
+my $client = new_ok("Gearman::Client", [job_servers => $job_server]);
+
+my $worker = new_worker(
+    job_servers => [$job_server],
+    func        => {
+        $func => sub {
+            my ($job) = @_;
+            $job->set_status(50, 100);
+            sleep 2;
+            $job->set_status(100, 100);
+            sleep 2;
+            return $job->arg;
+            }
+    }
 );
-
-$tg->start_servers() || plan skip_all => "Can't find server to test with";
-
-($tg->check_server_connection(@{ $tg->job_servers }[0]))
-    || plan skip_all => "connection check $_ failed";
-
-plan tests => 3;
-
-$tg->start_worker();
-
-my $client = new_ok("Gearman::Client", [job_servers => $tg->job_servers()]);
 
 subtest "wait with timeout", sub {
     ok(my $tasks = $client->new_task_set, "new_task_set");
@@ -47,7 +59,7 @@ subtest "wait with timeout", sub {
 
     # For a total of 5 events, that will be 20 seconds; till they complete.
     foreach $iter (1 .. 5) {
-        ok($tasks->add_task("long", $iter, $opt), "add_task('long', $iter)");
+        ok($tasks->add_task($func, $iter, $opt), "add_task('$func', $iter)");
     }
 
     my $to = 11;
@@ -57,14 +69,14 @@ subtest "wait with timeout", sub {
     is($failed, 0, "no failed jobs");
 };
 
-subtest "long args", sub {
+subtest "$func args", sub {
     my $tasks = $client->new_task_set;
     isa_ok($tasks, 'Gearman::Taskset');
 
     my $arg = 'x' x (5 * 1024 * 1024);
 
     $tasks->add_task(
-        "long",
+        $func,
         \$arg,
         {
             on_complete => sub {
@@ -91,3 +103,5 @@ subtest "long args", sub {
     my $to = 10;
     time_ok(sub { $tasks->wait(timeout => $to) }, $to, "timeout");
 };
+
+done_testing();
