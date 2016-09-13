@@ -10,13 +10,14 @@ WriteMakefile(
     NAME   => "Gearman",
     AUTHOR => 'Brad Fitzpatrick <brad@danga.com>',
     ABSTRACT =>
-"Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
+        "Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
     VERSION_FROM   => "lib/Gearman/Client.pm",
     BUILD_REQUIRES => {
         "version"          => 0,
         "File::Which"      => 0,
         "IO::Socket::INET" => 0,
         "Perl::OSType"     => 0,
+        "Proc::Guard"      => "0.07",
         "Storable"         => 0,
         "Test::Exception"  => 0,
         "Test::More"       => 0,
