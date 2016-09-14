@@ -1,6 +1,6 @@
 package Gearman::Worker;
 use version;
-$Gearman::Worker::VERSION = qv("2.001.001_1");
+$Gearman::Worker::VERSION = qv("2.001_001");
 
 use strict;
 use warnings;
@@ -165,9 +165,7 @@ sub new {
 # _get_js_sock($ipport, %opts)
 #
 sub _get_js_sock {
-    my Gearman::Worker $self = shift;
-    my $ipport               = shift;
-    my %opts                 = @_;
+    my ($self, $ipport, %opts)  = @_;
     $ipport || return;
 
     my $on_connect = delete $opts{on_connect};
@@ -254,9 +252,7 @@ sub _on_connect {
 # _set_ability($sock, $ability, $timeout)
 #
 sub _set_ability {
-    my Gearman::Worker $self = shift;
-    my ($sock, $ability, $timeout) = @_;
-
+    my ($self, $sock, $ability, $timeout) = @_;
     my $req;
     if (defined $timeout) {
         $req = Gearman::Util::pack_req_command("can_do_timeout",
@@ -275,8 +271,8 @@ tell all the jobservers that this worker can't do anything
 =cut
 
 sub reset_abilities {
-    my Gearman::Worker $self = shift;
-    my $req = Gearman::Util::pack_req_command("reset_abilities");
+    my $self = shift;
+    my $req  = Gearman::Util::pack_req_command("reset_abilities");
     foreach my $js (@{ $self->{job_servers} }) {
         my $jss = $self->_get_js_sock($js)
             or next;
@@ -310,14 +306,13 @@ sub uncache_sock {
 
 =head2 work(%opts)
 
-Do one job and returns (no value returned).
+Endless loop takes a job and wait for the next one.
 You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
 
 =cut
 
 sub work {
-    my Gearman::Worker $self = shift;
-    my %opts = @_;
+    my ($self, %opts) = @_;
     my $stop_if     = delete $opts{'stop_if'} || sub {0};
     my $complete_cb = delete $opts{on_complete};
     my $fail_cb     = delete $opts{on_fail};
@@ -328,6 +323,10 @@ sub work {
     my $presleep_req = Gearman::Util::pack_req_command("pre_sleep");
 
     my $last_job_time;
+
+    my $on_connect = sub {
+        return Gearman::Util::send_req($_[0], \$presleep_req);
+    };
 
     # "Active" job servers are servers that have woken us up and should be
     # queried to see if they have jobs for us to handle. On our first pass
@@ -353,7 +352,7 @@ sub work {
         for (my $i = 0; $i < $js_count; $i++) {
             my $js_index = ($i + $js_offset) % $js_count;
             my $js       = $jobby_js[$js_index];
-            my $jss      = $self->_get_js_sock($js)
+            my $jss      = $self->_get_js_sock($js, on_connect => $on_connect)
                 or next;
 
             # TODO: add an optional sleep in here for the test suite
@@ -463,10 +462,6 @@ sub work {
 
         my @jss;
 
-        my $on_connect = sub {
-            return Gearman::Util::send_req($_[0], \$presleep_req);
-        };
-
         foreach my $js (@{ $self->{job_servers} }) {
             my $jss = $self->_get_js_sock($js, on_connect => $on_connect)
                 or next;
@@ -532,10 +527,10 @@ to the job server.
 =cut
 
 sub register_function {
-    my Gearman::Worker $self = shift;
-    my $func = shift;
+    my $self    = shift;
+    my $func    = shift;
     my $timeout = shift unless (ref $_[0] eq 'CODE');
-    my $subref = shift;
+    my $subref  = shift;
 
     my $prefix = $self->prefix;
     my $ability = defined($prefix) ? "$prefix\t$func" : "$func";
@@ -559,9 +554,7 @@ sub register_function {
 =cut
 
 sub unregister_function {
-    my Gearman::Worker $self = shift;
-    my $func = shift;
-
+    my ($self, $func) = @_;
     my $prefix = $self->prefix;
     my $ability = defined($prefix) ? "$prefix\t$func" : "$func";
 
@@ -575,8 +568,7 @@ sub unregister_function {
 # _register_all($req)
 #
 sub _register_all {
-    my Gearman::Worker $self = shift;
-    my $req = shift;
+    my ($self, $req) = @_;
 
     foreach my $js (@{ $self->{job_servers} }) {
         my $jss = $self->_get_js_sock($js)
@@ -599,7 +591,7 @@ process of a gearman server.
 =cut
 
 sub job_servers {
-    my Gearman::Worker $self = shift;
+    my $self = shift;
     return if ($ENV{GEARMAN_WORKER_USE_STDIO});
 
     return $self->SUPER::job_servers(@_);

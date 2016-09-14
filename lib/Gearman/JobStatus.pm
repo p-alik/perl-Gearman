@@ -1,6 +1,6 @@
 package Gearman::JobStatus;
 use version;
-$Gearman::JobStatus::VERSION = qv("2.001.001_1");
+$Gearman::JobStatus::VERSION = qv("2.001_001");
 
 use strict;
 use warnings;
@@ -22,10 +22,7 @@ sub new {
     $nu = '' unless defined($nu) && length($nu);
     $de = '' unless defined($de) && length($de);
 
-    # my $self = [$known, $running, $nu, $de];
     return bless [$known, $running, $nu, $de], $class;
-
-    # return $self;
 } ## end sub new
 
 =head2 known()

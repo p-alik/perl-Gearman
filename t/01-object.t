@@ -19,6 +19,17 @@ can_ok(
         /
 );
 
+my @servers = qw/
+    foo:12345
+    bar:54321
+    /;
+
+my $c = new_ok(
+    'Gearman::Objects',
+    [job_servers => $servers[0]],
+    "Gearman::Objects->new(job_servers => $servers[0])"
+);
+
 subtest "job servers", sub {
     my @servers
         = $ENV{GEARMAN_SERVERS}
@@ -82,6 +93,7 @@ subtest "prefix", sub {
     is($c->prefix(),   undef);
     is($c->prefix($p), $p);
 };
+
 subtest "use ssl", sub {
     my $c = new_ok($mn, [use_ssl => 1]);
     is($c->use_ssl(),  1);
@@ -106,7 +118,8 @@ subtest "socket", sub {
 
 SKIP: {
         my $sock = $c->socket($dst);
-        $sock || skip "failed connect to $dst or ssl handshake: $!,$SSL_ERROR", 2;
+        $sock || skip "failed connect to $dst or ssl handshake: $!,$SSL_ERROR",
+            2;
         isa_ok($sock, "IO::Socket::SSL");
         is($sock->timeout, $to, "ssl socket callback");
     } ## end SKIP:

@@ -4,6 +4,7 @@ use Test::More;
 use Test::Exception;
 
 use IO::Socket::INET;
+use Perl::OSType qw/ is_os_type /;
 
 my $mn = "Gearman::Util";
 
@@ -83,6 +84,7 @@ subtest "send_req", sub {
 };
 
 subtest "wait_for_readability", sub {
+    is_os_type("Windows") && plan skip_all => "Windows test in TODO";
     is(&{"$mn\:\:wait_for_readability"}(2, 3), 0);
 };
 

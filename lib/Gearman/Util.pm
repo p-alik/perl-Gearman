@@ -1,6 +1,6 @@
 package Gearman::Util;
 use version;
-$Gearman::Util::VERSION = qv("2.001.001_1");
+$Gearman::Util::VERSION = qv("2.001_001");
 
 use strict;
 use warnings;
@@ -8,13 +8,13 @@ use warnings;
 # man errno
 # Resource temporarily unavailable
 # (may be the same value as EWOULDBLOCK) (POSIX.1)
-use Errno qw(EAGAIN);
+use POSIX qw(:errno_h);
 use Time::HiRes qw();
 use IO::Handle;
 
 =head1 NAME
 
-Gearman::Util
+Gearman::Util - Utility functions for gearman distributed job system
 
 =head1 METHODS
 
@@ -65,10 +65,10 @@ our %cmd = (
     # for worker to declare to the jobserver that this worker is only connected
     # to one jobserver, so no polls/grabs will take place, and server is free
     # to push "job_assign" packets back down.
-    24 => ['I', "all_yours"],     # W->J ---
+    24 => ['I', "all_yours"],    # W->J ---
 );
 
-our %num;                         # name -> num
+our %num;                        # name -> num
 while (my ($num, $ary) = each %cmd) {
     die if $num{ $ary->[1] };
     $num{ $ary->[1] } = $num;
@@ -106,7 +106,7 @@ sub pack_res_command {
     return _pack_command("RES", @_);
 }
 
-=heade2 read_res_packet($sock, $err_ref, $timeout)
+=head2 read_res_packet($sock, $err_ref, $timeout)
 
 B<return> undef on closed socket or malformed packet
 
@@ -140,7 +140,7 @@ sub read_res_packet {
 
     warn " Starting up event loop\n" if DEBUG;
 
-LOOP: while (1) {
+    while (1) {
         my $time_remaining = undef;
         if (defined $timeout) {
             warn "  We have a timeout of $timeout\n" if DEBUG;
@@ -153,33 +153,17 @@ LOOP: while (1) {
 
         warn "   Got $nfound fds back from select\n" if DEBUG;
 
-        next LOOP unless vec($rout, $fileno, 1);
+        next unless vec($rout, $fileno, 1);
 
         warn "   Entering read loop\n" if DEBUG;
 
-    READ: {
-            local $!;
-            my $rv = sysread($sock, $buf, $readlen, $offset);
-
-            unless ($rv) {
-                warn "   Read error: $!\n" if DEBUG;
-                next LOOP if $! == EAGAIN;
-            }
-
-            return $err->("read_error") unless defined $rv;
-            return $err->("eof") unless $rv;
-
-            unless ($rv >= $readlen) {
-                warn
-                    "   Partial read of $rv bytes, at offset $offset, readlen was $readlen\n"
-                    if DEBUG;
-                $offset += $rv;
-                $readlen -= $rv;
-                redo READ;
-            } ## end unless ($rv >= $readlen)
-
-            warn "   Finished reading\n" if DEBUG;
-        } ## end READ:
+        my ($ok, $err_code) = _read_sock($sock, \$buf, \$readlen, \$offset);
+        if (!defined($ok)) {
+            next;
+        }
+        elsif ($ok == 0) {
+            return $err->($err_code);
+        }
 
         if (!defined $type) {
             next unless length($buf) >= 12;
@@ -190,9 +174,16 @@ LOOP: while (1) {
             $readlen = $len - $starting;
             $offset  = $starting;
 
-            #TODO rm goto
-            no warnings 'deprecated';
-            goto READ if $readlen;
+            if ($readlen) {
+                my ($ok, $err_code)
+                    = _read_sock($sock, \$buf, \$readlen, \$offset);
+                if (!defined($ok)) {
+                    next;
+                }
+                elsif ($ok == 0) {
+                    return $err->($err_code);
+                }
+            } ## end if ($readlen)
         } ## end if (!defined $type)
 
         $type = $cmd{$type};
@@ -205,12 +196,39 @@ LOOP: while (1) {
         IO::Handle::blocking($sock, 1);
 
         return {
-            'type'    => $type->[1],
-            'len'     => $len,
-            'blobref' => \$buf,
+            type    => $type->[1],
+            len     => $len,
+            blobref => \$buf,
         };
-    } ## end LOOP: while (1)
+    } ## end while (1)
 } ## end sub read_res_packet
+
+sub _read_sock {
+    my ($sock, $buf_ref, $readlen_ref, $offset_ref) = @_;
+    local $!;
+    my $rv = sysread($sock, $$buf_ref, $$readlen_ref, $$offset_ref);
+
+    unless ($rv) {
+        warn "   Read error: $!\n" if DEBUG;
+        $! == EAGAIN && return;
+    } ## end unless ($rv)
+
+    return (0, "read_error") unless defined $rv;
+    return (0, "eof")        unless $rv;
+
+    unless ($rv >= $$readlen_ref) {
+        warn
+            "   Partial read of $rv bytes, at offset $$offset_ref, readlen was $$readlen_ref\n"
+            if DEBUG;
+        $$offset_ref += $rv;
+        $$readlen_ref -= $rv;
+
+        return _read_sock($sock, $buf_ref, $readlen_ref, $offset_ref);
+    } ## end unless ($rv >= $$readlen_ref)
+
+    warn "   Finished reading\n" if DEBUG;
+    return (1);
+} ## end sub _read_sock
 
 =head2 read_text_status($sock, $err_ref)
 
@@ -292,4 +310,5 @@ sub _pack_command {
     my $len = length($arg);
     return "\0$prefix" . pack("NN", $num{$key}, $len) . $arg;
 } ## end sub _pack_command
+
 1;

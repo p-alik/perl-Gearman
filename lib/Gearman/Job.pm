@@ -1,13 +1,11 @@
 package Gearman::Job;
 use version;
-$Gearman::Job::VERSION = qv("2.001.001_1");
+$Gearman::Job::VERSION = qv("2.001_001");
 
 use strict;
 use warnings;
 
-#TODO: retries?
-#
-use Gearman::Util;
+use Gearman::Util ();
 use Carp ();
 
 =head1 NAME
@@ -51,7 +49,7 @@ represent the percentage completion of the job.
 =cut
 
 sub set_status {
-    my Gearman::Job $self = shift;
+    my $self = shift;
     my ($nu, $de) = @_;
 
     my $req = Gearman::Util::pack_req_command("work_status",
@@ -68,7 +66,7 @@ sub set_status {
 =cut
 
 sub argref {
-    my Gearman::Job $self = shift;
+    my $self = shift;
     return $self->{argref};
 }
 
@@ -79,7 +77,7 @@ B<return> the scalar argument that the client sent to the job server.
 =cut
 
 sub arg {
-    my Gearman::Job $self = shift;
+    my $self = shift;
     return ${ $self->{argref} };
 }
 
@@ -90,7 +88,7 @@ B<return> handle
 =cut
 
 sub handle {
-    my Gearman::Job $self = shift;
+    my $self = shift;
     return $self->{handle};
 }
 

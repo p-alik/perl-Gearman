@@ -1,6 +1,6 @@
 package Gearman::Task;
 use version;
-$Gearman::Task::VERSION = qv("2.001.001_1");
+$Gearman::Task::VERSION = qv("2.001_001");
 
 use strict;
 use warnings;
@@ -61,9 +61,9 @@ process.
 =item * on_fail
 
 A subroutine reference to be invoked when the task fails (or fails for
-the last time, if retries were specified).  No arguments are
-passed to this callback.  This callback won't be called after a failure
-if more retries are still possible.
+the last time, if retries were specified). The reason could be passed
+to this callback as an argument. This callback won't be called after a
+failure if more retries are still possible.
 
 =item * on_retry
 
@@ -106,10 +106,11 @@ never.
 
 =cut
 
-use Carp ();
-use Gearman::Util;
+use Carp          ();
+use Gearman::Util ();
+use Scalar::Util  ();
 use String::CRC32 ();
-use Storable;
+use Storable      ();
 
 use fields (
 
@@ -155,17 +156,17 @@ use fields (
 
 # constructor, given: ($func, $argref, $opts);
 sub new {
-    my $class = shift;
-
-    my $self = $class;
-    $self = fields::new($class) unless ref $self;
+    my $self = shift;
+    unless (ref $self) {
+        $self = fields::new($self);
+    }
 
     $self->{func} = shift
         or Carp::croak("No function given");
 
     $self->{argref} = shift || do { my $empty = ""; \$empty; };
-    Carp::croak("Argref not a scalar reference")
-        unless ref $self->{argref} eq "SCALAR";
+    (ref $self->{argref} eq "SCALAR")
+        || Carp::croak("Argref not a scalar reference");
 
     my $opts = shift || {};
 
@@ -204,8 +205,7 @@ run a hook callback if defined
 =cut
 
 sub run_hook {
-    my Gearman::Task $self = shift;
-    my $name = shift;
+    my ($self, $name) = (shift, shift);
     ($name && $self->{hooks}->{$name}) || return;
 
     eval { $self->{hooks}->{$name}->(@_) };
@@ -219,8 +219,8 @@ add a hook
 =cut
 
 sub add_hook {
-    my Gearman::Task $self = shift;
-    my $name = shift || return;
+    my ($self, $name) = (shift, shift);
+    $name || return;
 
     if (@_) {
         $self->{hooks}->{$name} = shift;
@@ -239,8 +239,7 @@ on_complete callback has been called)
 =cut
 
 sub is_finished {
-    my Gearman::Task $task = $_[0];
-    return $task->{is_finished};
+    return shift->{is_finished};
 }
 
 =head2 taskset()
@@ -256,25 +255,25 @@ B<return> Gearman::Taskset
 =cut
 
 sub taskset {
-    my Gearman::Task $task = shift;
+    my $self = shift;
 
     # getter
-    return $task->{taskset} unless @_;
+    return $self->{taskset} unless @_;
 
     # setter
     my $ts = shift;
-    ref($ts) eq "Gearman::Taskset"
+    (Scalar::Util::blessed($ts) && $ts->isa("Gearman::Taskset"))
         || Carp::croak("argument is not an instance of Gearman::Taskset");
-    $task->{taskset} = $ts;
+    $self->{taskset} = $ts;
 
-    if (my $hash_num = $task->hash()) {
-        $task->{jssock} = $ts->_get_hashed_sock($hash_num);
+    if (my $hash_num = $self->hash()) {
+        $self->{jssock} = $ts->_get_hashed_sock($hash_num);
     }
     else {
-        $task->{jssock} = $ts->_get_default_sock;
+        $self->{jssock} = $ts->_get_default_sock;
     }
 
-    return $task->{taskset};
+    return $self->{taskset};
 } ## end sub taskset
 
 =head2 hash()
@@ -284,14 +283,14 @@ B<return> undef on non-uniq packet, or the hash value (0-32767) if uniq
 =cut
 
 sub hash {
-    my Gearman::Task $task = shift;
-    my $merge_on = $task->{uniq}
-        && $task->{uniq} eq "-" ? $task->{argref} : \$task->{uniq};
+    my $self     = shift;
+    my $merge_on = $self->{uniq}
+        && $self->{uniq} eq "-" ? $self->{argref} : \$self->{uniq};
     if (${$merge_on}) {
         return (String::CRC32::crc32(${$merge_on}) >> 16) & 0x7fff;
     }
     else {
-        return undef;
+        return;
     }
 } ## end sub hash
 
@@ -302,19 +301,17 @@ B<return> Gearman::Util::pack_req_command(mode, func, uniq, argref)
 =cut
 
 sub pack_submit_packet {
-    my Gearman::Task $task = shift;
-    my $client = shift;
-
-    my $func = $task->{func};
+    my ($self, $client) = @_;
+    my $func = $self->{func};
 
     if ($client && $client->prefix()) {
-        $func = join "\t", $client->prefix(), $task->{func};
+        $func = join "\t", $client->prefix(), $self->{func};
     }
 
     return Gearman::Util::pack_req_command(
-        $task->mode,
+        $self->mode,
         join(
-            "\0", $func || '', $task->{uniq} || '', ${ $task->{argref} } || ''
+            "\0", $func || '', $self->{uniq} || '', ${ $self->{argref} } || ''
         )
     );
 } ## end sub pack_submit_packet
@@ -324,19 +321,18 @@ sub pack_submit_packet {
 =cut
 
 sub fail {
-    my Gearman::Task $task = shift;
-    my $reason = shift;
-    return if $task->{is_finished};
+    my ($self, $reason) = @_;
+    return if $self->{is_finished};
 
     # try to retry, if we can
-    if ($task->{retries_done} < $task->{retry_count}) {
-        $task->{retries_done}++;
-        $task->{on_retry}->($task->{retries_done}) if $task->{on_retry};
-        $task->handle(undef);
-        return $task->{taskset}->add_task($task);
-    } ## end if ($task->{retries_done...})
+    if ($self->{retries_done} < $self->{retry_count}) {
+        $self->{retries_done}++;
+        $self->{on_retry}->($self->{retries_done}) if $self->{on_retry};
+        $self->handle(undef);
+        return $self->{taskset}->add_task($self);
+    } ## end if ($self->{retries_done...})
 
-    $task->final_fail($reason);
+    $self->final_fail($reason);
 } ## end sub fail
 
 =head2 final_fail($reason)
@@ -358,19 +354,18 @@ on_post_hooks
 =cut
 
 sub final_fail {
-    my Gearman::Task $task = $_[0];
-    my $reason = $_[1];
+    my ($self, $reason) = @_;
 
-    return if $task->{is_finished};
-    $task->{is_finished} = $_[1] || 1;
+    return if $self->{is_finished};
+    $self->{is_finished} = $reason || 1;
 
-    $task->run_hook('final_fail', $task);
+    $self->run_hook('final_fail', $self);
 
-    $task->{on_fail}->($reason) if $task->{on_fail};
-    $task->{on_post_hooks}->()  if $task->{on_post_hooks};
-    $task->wipe;
+    $self->{on_fail}->($reason) if $self->{on_fail};
+    $self->{on_post_hooks}->()  if $self->{on_post_hooks};
+    $self->wipe;
 
-    return undef;
+    return;
 } ## end sub final_fail
 
 #FIXME obsolete?
@@ -384,29 +379,29 @@ run on_exception if defined
 =cut
 
 sub exception {
-    my Gearman::Task $task = shift;
-    my $exception_ref      = shift;
-    my $exception          = Storable::thaw($$exception_ref);
-    $task->{on_exception}->($$exception) if $task->{on_exception};
+    my ($self, $exc_ref) = @_;
+    my $exception = Storable::thaw($$exc_ref);
+    $self->{on_exception}->($$exception) if $self->{on_exception};
     return;
 } ## end sub exception
 
-=head2 complete()
+=head2 complete($result)
+
+C<$result> a reference profided to on_complete cb
 
 =cut
 
 sub complete {
-    my Gearman::Task $task = shift;
-    return if $task->{is_finished};
+    my ($self, $result_ref) = @_;
+    return if $self->{is_finished};
 
-    my $result_ref = shift;
-    $task->{is_finished} = 'complete';
+    $self->{is_finished} = 'complete';
 
-    $task->run_hook('complete', $task);
+    $self->run_hook('complete', $self);
 
-    $task->{on_complete}->($result_ref) if $task->{on_complete};
-    $task->{on_post_hooks}->() if $task->{on_post_hooks};
-    $task->wipe;
+    $self->{on_complete}->($result_ref) if $self->{on_complete};
+    $self->{on_post_hooks}->() if $self->{on_post_hooks};
+    $self->wipe;
 } ## end sub complete
 
 =head2 status()
@@ -414,11 +409,11 @@ sub complete {
 =cut
 
 sub status {
-    my Gearman::Task $task = shift;
-    return if $task->{is_finished};
-    return unless $task->{on_status};
+    my $self = shift;
+    return if $self->{is_finished};
+    return unless $self->{on_status};
     my ($nu, $de) = @_;
-    $task->{on_status}->($nu, $de);
+    $self->{on_status}->($nu, $de);
 } ## end sub status
 
 =head2 handle()
@@ -434,11 +429,11 @@ shandle is an opaque handle specific to the job server running on IP:port
 =cut
 
 sub handle {
-    my Gearman::Task $task = shift;
+    my $self = shift;
     if (@_) {
-        $task->{handle} = shift;
+        $self->{handle} = shift;
     }
-    return $task->{handle};
+    return $self->{handle};
 } ## end sub handle
 
 #FIXME obsolete?
@@ -448,9 +443,8 @@ sub handle {
 =cut
 
 sub set_on_post_hooks {
-    my Gearman::Task $task = shift;
-    my $code = shift;
-    $task->{on_post_hooks} = $code;
+    my ($self, $code) = @_;
+    $self->{on_post_hooks} = $code;
 }
 
 =head2 wipe()
@@ -488,8 +482,8 @@ hooks
 =cut
 
 sub wipe {
-    my Gearman::Task $task = shift;
-    my @h = qw/
+    my $self = shift;
+    my @h    = qw/
         on_post_hooks
         on_complete
         on_fail
@@ -499,7 +493,7 @@ sub wipe {
         /;
 
     foreach my $f (@h) {
-        $task->{$f} = undef;
+        $self->{$f} = undef;
     }
 } ## end sub wipe
 
@@ -508,8 +502,8 @@ sub wipe {
 =cut
 
 sub func {
-    my Gearman::Task $task = shift;
-    return $task->{func};
+    my $self = shift;
+    return $self->{func};
 }
 
 =head2 timeout()
@@ -524,11 +518,11 @@ B<return> timeout
 =cut
 
 sub timeout {
-    my Gearman::Task $task = shift;
+    my $self = shift;
     if (@_) {
-        $task->{timeout} = shift;
+        $self->{timeout} = shift;
     }
-    return $task->{timeout};
+    return $self->{timeout};
 } ## end sub timeout
 
 =head2 mode()
@@ -538,15 +532,15 @@ B<return> mode in depends of background and hight_priority
 =cut
 
 sub mode {
-    my Gearman::Task $task = shift;
-    return $task->{background}
+    my $self = shift;
+    return $self->{background}
         ? (
-        $task->{high_priority}
+        $self->{high_priority}
         ? "submit_job_high_bg"
         : "submit_job_bg"
         )
         : (
-        $task->{high_priority}
+        $self->{high_priority}
         ? "submit_job_high"
         : "submit_job"
         );

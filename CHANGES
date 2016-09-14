@@ -1,3 +1,24 @@
+1.130.004 (2016-08-06)
+     -- add Gearman::ResponseParser pod
+     -- add Gearman::ResposeParser::Taskset pod
+     -- rename Gearman::Taskset->_process_packet to process_packet
+     -- issue 116744 Utility pod
+
+1.130.003 (2016-08-05)
+     -- check OS in Test::Gearman and don't use "which" on Windows
+     -- replace 'use Errno qw(EAGAIN)' by 'POSIX qw(:errno_h)'
+        see: http://www.cpantesters.org/cpan/report/d801a704-5975-11e6-9451-9b92aab8e0c0
+
+1.130.002 (2016-08-03)
+     -- skip worker _get_js_sock test without gearmand
+
+1.130.001 (2016-08-02)
+     -- refactoring of Gearman::Util::read_res_packet: no goto/redo
+     -- test suite refactoring
+     -- solved issue 85191 Programming error prevents Gearman::Worker::work() from connecting to servers
+     -- solved issue 59185 document Gearman::Client::get_status
+     -- solved issue 56508 using $task->fail("reason goes here") in Gearman::Taskset
+
 1.12.009 (2016-06-04)
      -- run t/30-maxqueue.t and t/40-prefix.t only with AUTHOR_TESTING
      -- s/::Object/::Objects/

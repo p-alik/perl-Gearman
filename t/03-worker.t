@@ -1,52 +1,58 @@
 use strict;
 use warnings;
+
+# OK gearmand v1.0.6
+# OK Gearman::Server
+
+use File::Which qw//;
+use IO::Socket::INET;
 use Test::More;
 use Test::Timer;
-use IO::Socket::INET;
+use Test::TCP;
 
-my $debug = $ENV{DEBUG};
-my @js    = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
-my $mn    = "Gearman::Worker";
+my $daemon = "gearmand";
+my $bin    = File::Which::which($daemon);
+my $host   = "127.0.0.1";
+my $mn     = "Gearman::Worker";
 use_ok($mn);
 
 can_ok(
     $mn, qw/
-        _get_js_sock
-        _on_connect
-        _register_all
-        _set_ability
-        job_servers
-        register_function
-        reset_abilities
-        uncache_sock
-        unregister_function
-        work
-
-        /
+      _get_js_sock
+      _on_connect
+      _register_all
+      _set_ability
+      job_servers
+      register_function
+      reset_abilities
+      uncache_sock
+      unregister_function
+      work
+      /
 );
 
 subtest "new", sub {
-    my $w = _w();
-    isa_ok($w, 'Gearman::Objects');
+    my $w = new_ok($mn);
+    isa_ok( $w, 'Gearman::Objects' );
 
-    is(ref($w->{sock_cache}),        "HASH");
-    is(ref($w->{last_connect_fail}), "HASH");
-    is(ref($w->{down_since}),        "HASH");
-    is(ref($w->{can}),               "HASH");
-    is(ref($w->{timeouts}),          "HASH");
-    ok($w->{client_id} =~ /^\p{Lowercase}+$/);
+    is( ref( $w->{sock_cache} ),        "HASH" );
+    is( ref( $w->{last_connect_fail} ), "HASH" );
+    is( ref( $w->{down_since} ),        "HASH" );
+    is( ref( $w->{can} ),               "HASH" );
+    is( ref( $w->{timeouts} ),          "HASH" );
+    ok( $w->{client_id} =~ /^\p{Lowercase}+$/ );
 };
 
 subtest "register_function", sub {
-    my $w = _w();
-    my ($tn, $to) = qw/foo 2/;
+    my $w = new_ok($mn);
+    my ( $tn, $to ) = qw/foo 2/;
     my $cb = sub { 1 };
 
-    ok($w->register_function($tn => $cb), "register_function($tn)");
+    ok( $w->register_function( $tn => $cb ), "register_function($tn)" );
 
     time_ok(
         sub {
-            $w->register_function($tn, $to, $cb);
+            $w->register_function( $tn, $to, $cb );
         },
         $to,
         "register_function($to, cb)"
@@ -54,27 +60,22 @@ subtest "register_function", sub {
 };
 
 subtest "reset_abilities", sub {
-    my $w = _w();
+    my $w = new_ok($mn);
     $w->{can}->{x}      = 1;
     $w->{timeouts}->{x} = 1;
 
-    ok($w->reset_abilities());
+    ok( $w->reset_abilities() );
 
-    is(keys %{ $w->{can} },      0);
-    is(keys %{ $w->{timeouts} }, 0);
+    is( keys %{ $w->{can} },      0 );
+    is( keys %{ $w->{timeouts} }, 0 );
 };
 
 subtest "work", sub {
-
-    # $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
-    # $ENV{GEARMAN_SERVERS}
-    #     || plan skip_all => 'without $ENV{GEARMAN_SERVERS}';
-
-    my $w = _w();
+    my $w = new_ok($mn);
 
     time_ok(
         sub {
-            $w->work(stop_if => sub { pass "work stop if"; });
+            $w->work( stop_if => sub { pass "work stop if"; } );
         },
         12,
         "stop if timeout"
@@ -82,58 +83,51 @@ subtest "work", sub {
 };
 
 subtest "_get_js_sock", sub {
-    my $w = _w();
-    is($w->_get_js_sock(), undef);
+    my $w = new_ok($mn);
+
+    is( $w->_get_js_sock(), undef );
 
     $w->{parent_pipe} = rand(10);
     my $hp = "127.0.0.1:9050";
 
-    is($w->_get_js_sock($hp), $w->{parent_pipe});
+    is( $w->_get_js_sock($hp), $w->{parent_pipe} );
 
     delete $w->{parent_pipe};
-    is($w->_get_js_sock($hp), undef);
+    is( $w->_get_js_sock($hp), undef );
 
-SKIP: {
-        @{ $w->job_servers() } || skip 'without $ENV{GEARMAN_SERVERS}', 3;
+  SKIP: {
+        $bin || skip "no $daemon", 4;
+        my $gs = Test::TCP->new(
+            code => sub {
+                my $port = shift;
+                exec $bin, '-p' => $port;
+                die "cannot execute $bin: $!";
+            },
+        );
 
-        my $hp = $w->job_servers()->[0];
+        ok( $w->job_servers( join( ':', $host, $gs->port ) ) );
 
+        $hp                          = $w->job_servers()->[0];
         $w->{last_connect_fail}{$hp} = 1;
         $w->{down_since}{$hp}        = 1;
-        isa_ok($w->_get_js_sock($hp, on_connect => sub {1}),
-            "IO::Socket::INET");
 
-        is($w->{last_connect_fail}{$hp}, undef);
-        is($w->{down_since}{$hp},        undef);
+        isa_ok( $w->_get_js_sock( $hp, on_connect => sub { 1 } ),
+            "IO::Socket::INET" );
+        is( $w->{last_connect_fail}{$hp}, undef );
+        is( $w->{down_since}{$hp},        undef );
     } ## end SKIP:
-
 };
 
 subtest "_on_connect-_set_ability", sub {
-    my $w = _w();
+    my $w = new_ok($mn);
     my $m = "foo";
 
-    is($w->_on_connect(), undef);
+    is( $w->_on_connect(), undef );
 
-    is($w->_set_ability(), 0);
-    is($w->_set_ability(undef, $m), 0);
-    is($w->_set_ability(undef, $m, 2), 0);
-
-    my @js = @{ $w->job_servers() };
-    if (@js) {
-        my $s = IO::Socket::INET->new(
-            PeerAddr => $js[0],
-            Timeout  => 1
-        );
-        is($w->_on_connect($s), 1);
-
-        is($w->_set_ability($s, $m), 1);
-        is($w->_set_ability($s, $m, 2), 1);
-    } ## end if (@js)
+    is( $w->_set_ability(), 0 );
+    is( $w->_set_ability( undef, $m ), 0 );
+    is( $w->_set_ability( undef, $m, 2 ), 0 );
 };
 
 done_testing();
 
-sub _w {
-    return new_ok($mn, [job_servers => [@js], debug => $debug]);
-}

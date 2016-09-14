@@ -1,14 +1,23 @@
 use strict;
 use warnings;
 
+use File::Which qw/ which /;
 use IO::Socket::INET;
 use Test::More;
 use Test::Exception;
+use t::Server qw/ new_server /;
 
-my @js = $ENV{GEARMAN_SERVERS} ? split /,/, $ENV{GEARMAN_SERVERS} : ();
-my $mn = "Gearman::Taskset";
+my $daemon = "gearmand";
+my $bin    = which($daemon);
+my $host   = "127.0.0.1";
+
+my @js;
+my ($cn, $mn) = qw/
+    Gearman::Client
+    Gearman::Taskset
+    /;
 use_ok($mn);
-use_ok("Gearman::Client");
+use_ok($cn);
 
 can_ok(
     $mn, qw/
@@ -24,32 +33,32 @@ can_ok(
         _wait_for_packet
         _ip_port
         _fail_jshandle
-        _process_packet
+        process_packet
         /
 );
 
-my $c = new_ok("Gearman::Client", [job_servers => [@js]]);
+my $c = new_ok($cn, [job_servers => [@js]]);
 my $ts = new_ok($mn, [$c]);
 
-is($ts->{cancelled},        0);
-is(ref($ts->{hooks}),       "HASH");
-is(ref($ts->{loaned_sock}), "HASH");
-is(ref($ts->{need_handle}), "ARRAY");
-is(ref($ts->{waiting}),     "HASH");
-is($ts->client, $c, "client");
+is($ts->{cancelled},        0,       "cancelled");
+is(ref($ts->{hooks}),       "HASH",  "hooks");
+is(ref($ts->{loaned_sock}), "HASH",  "loaned_sock");
+is(ref($ts->{need_handle}), "ARRAY", "need_handle");
+is(ref($ts->{waiting}),     "HASH",  "waiting");
+is($ts->client,             $c,      "client");
 
 throws_ok { $mn->new('a') }
-qr/^provided client argument is not a Gearman::Client reference/,
+qr/^provided client argument is not a $cn reference/,
     "caught die off on client argument check";
 
 subtest "hook", sub {
     my $cb = sub { 2 * shift };
     my $h = "ahook";
-    ok($ts->add_hook($h, $cb));
-    is($ts->{hooks}->{$h}, $cb);
-    $ts->run_hook($h, 2);
-    ok($ts->add_hook($h));
-    is($ts->{hooks}->{$h}, undef);
+    ok($ts->add_hook($h, $cb), "add_hook($h, ..)");
+    is($ts->{hooks}->{$h}, $cb, "$h is a cb");
+    $ts->run_hook($h, 2, "run_hook($h)");
+    ok($ts->add_hook($h), "add_hook($h, undef)");
+    is($ts->{hooks}->{$h}, undef, "$h undef");
 };
 
 subtest "cancel", sub {
@@ -61,22 +70,27 @@ subtest "cancel", sub {
 
     $ts->cancel();
 
-    is($ts->{cancelled},          1);
-    is($ts->{default_sock},       undef);
-    is(keys(%{ $ts->{waiting} }), 0);
-    is(@{ $ts->{need_handle} },   0);
-    is($ts->{client},             undef);
+    is($ts->{cancelled},          1,     "cancelled");
+    is($ts->{default_sock},       undef, "default_sock");
+    is(keys(%{ $ts->{waiting} }), 0,     "waiting");
+    is(@{ $ts->{need_handle} },   0,     "need_handle");
+    is($ts->{client},             undef, "client");
 
     delete $ts->{loaned_sock}->{x};
 };
 
 subtest "socket", sub {
-    $ts->{client} = new_ok("Gearman::Client");
-    is($ts->_get_hashed_sock(0), undef);
+$bin      || plan skip_all => "Can't find $daemon to test with";
+(-X $bin) || plan skip_all => "$bin is not executable";
 
-    $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
+    my $gs = new_server($bin, $host);
+
+    my $c = new_ok($cn, [job_servers => [join(':', $host, $gs->port)]]);
+    my $ts = new_ok($mn, [$c]);
+
     my @js = @{ $ts->{client}->job_servers() };
     for (my $i = 0; $i < scalar(@js); $i++) {
+
         ok(my $ls = $ts->_get_loaned_sock($js[$i]),
             "_get_loaned_sock($js[$i])");
         isa_ok($ls, "IO::Socket::INET");
@@ -84,16 +98,8 @@ subtest "socket", sub {
             $ls, "_get_hashed_sock($i) = _get_loaned_sock($js[$i])");
     } ## end for (my $i = 0; $i < scalar...)
 
-    if (scalar(@js)) {
-        ok($ts->_get_default_sock(), "_get_default_sock");
-        ok($ts->_ip_port($ts->_get_default_sock()));
-    }
-    else {
-        # undef
-        is($ts->_get_default_sock(), undef, "_get_default_sock");
-        is($ts->_ip_port($ts->_get_default_sock()), undef);
-    }
-
+    ok($ts->_get_default_sock(), "_get_default_sock");
+    ok($ts->_ip_port($ts->_get_default_sock()), "_ip_port");
 };
 
 subtest "task", sub {
@@ -107,7 +113,7 @@ subtest "task", sub {
     dies_ok { $ts->add_task() } "add_task() dies";
     my $f = "foo";
     $ts->{need_handle} = [];
-    $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
+    $ts->{client} = new_ok($cn, [job_servers => [@js]]);
     if (!@js) {
         is($ts->add_task($f), undef, "add_task($f) returns undef");
     }
@@ -124,52 +130,52 @@ subtest "task", sub {
 
 };
 
-subtest "_process_packet", sub {
+subtest "process_packet", sub {
     my $f = "foo";
     my $h = "H:localhost:12345";
 
     $ts->{need_handle} = [];
     $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
     my $r = { type => "job_created", blobref => \$h };
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/unexpected job_created/, "job_created exception";
 
     $ts->{need_handle} = [$ts->client()->_get_task_from_args($f)];
-    dies_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
-    "_process_packet dies";
+    dies_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
+    "process_packet dies";
     $r->{type} = "work_fail";
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/work_fail for unknown handle/,
-        "caught _process_packet({type => work_fail})";
+        "caught process_packet({type => work_fail})";
 
     $r->{type} = "work_complete";
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/Bogus work_complete from server/,
-        "caught _process_packet({type => work_complete})";
+        "caught process_packet({type => work_complete})";
 
     $r->{blobref} = \join "\0", $h, "abc";
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/got work_complete for unknown handle/,
-        "caught _process_packet({type => work_complete}) unknown handle";
+        "caught process_packet({type => work_complete}) unknown handle";
 
     $r = { type => "work_exception", blobref => \$h };
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/Bogus work_exception from server/,
-        "caught _process_packet({type => work_exception})";
+        "caught process_packet({type => work_exception})";
     $r->{blobref} = \join "\0", ${ $r->{blobref} }, "abc";
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/got work_exception for unknown handle/,
-        "caught _process_packet({type => work_exception}) unknown handle";
+        "caught process_packet({type => work_exception}) unknown handle";
 
     $r = { type => "work_status", blobref => \$h };
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/got work_status for unknown handle/,
-        "caught _process_packet({type => work_status}) unknown handle";
+        "caught process_packet({type => work_status}) unknown handle";
 
     $r->{type} = $f;
-    throws_ok { $ts->_process_packet($r, $ts->_get_default_sock()) }
+    throws_ok { $ts->process_packet($r, $ts->_get_default_sock()) }
     qr/unimplemented packet type/,
-        "caught _process_packet({type => $f }) unknown handle";
+        "caught process_packet({type => $f }) unknown handle";
 };
 
 done_testing();

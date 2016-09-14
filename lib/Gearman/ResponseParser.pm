@@ -1,15 +1,28 @@
 package Gearman::ResponseParser;
 use version;
-$Gearman::ResponseParser::VERSION = qv("2.001.001_1");
+$Gearman::ResponseParser::VERSION = qv("2.001_001");
 
 use strict;
 use warnings;
 
-# this is an abstract base class.  See:
-#    Gearman::ResponseParser::Taskset  (for Gearman::Client, the sync version), or
-#    Gearman::ResponseParser::Danga    (for Gearman::Client::Danga, the async version)
+=head1 NAME
 
-# subclasses should call this first, then add their own data in underscore members
+Gearman::ResponseParser - gearmand abstract response parser implementation
+
+=head1 DESCRIPTION
+
+
+I<Gearman::ResponseParser> is an abstract base class.
+
+See: L<Gearman::ResponseParser::Taskset>
+
+Subclasses should call this first, then add their own data in underscore members
+
+=head1 METHODS
+
+=cut
+
+#    Gearman::ResponseParser::Danga    (for Gearman::Client::Danga, the async version)
 sub new {
     my $class = shift;
     my %opts  = @_;
@@ -17,23 +30,42 @@ sub new {
     die "unsupported arguments '@{[keys %opts]}'" if %opts;
 
     my $self = bless {
-        source =>
-            $src,    # the source object/socket that is primarily feeding this.
+
+        # the source object/socket that is primarily feeding this.
+        source => $src,
     }, $class;
 
     $self->reset;
     return $self;
 } ## end sub new
 
+=head2 source()
+
+B<return> source. The source is object/socket
+
+=cut
+
 sub source {
     my $self = shift;
     return $self->{source};
 }
 
+=head2 on_packet($packet, $parser)
+
+subclasses should override this
+
+=cut
+
 sub on_packet {
     my ($self, $packet, $parser) = @_;
     die "SUBCLASSES SHOULD OVERRIDE THIS";
 }
+
+=head2 on_error($msg, $parser)
+
+subclasses should override this
+
+=cut
 
 sub on_error {
     my ($self, $errmsg, $parser) = @_;
@@ -42,15 +74,24 @@ sub on_error {
     die "SUBCLASSES SHOULD OVERRIDE THIS";
 } ## end sub on_error
 
+=head2 reset()
+
+=cut
+
 sub reset {
     my $self = shift;
     $self->{header} = '';
     $self->{pkt}    = undef;
 }
 
-# don't override:
-# FUTURE OPTIMIZATION: let caller say "you can own this scalarref", and then we can keep it
-#  on the initial setting of $self->{data} and avoid copying into our own.  overkill for now.
+=head2 parse_data($data)
+
+don't override:
+FUTURE OPTIMIZATION: let caller say "you can own this scalarref", and then we can keep it
+on the initial setting of $self->{data} and avoid copying into our own.  overkill for now.
+
+=cut
+
 sub parse_data {
     my ($self, $data) = @_;    # where $data is a scalar or scalarref to parse
     my $dataref = ref $data ? $data : \$data;
@@ -104,7 +145,12 @@ sub parse_data {
     } ## end if (defined($self->{pkt...}))
 } ## end sub parse_data
 
-# don't override:
+=head2 eof()
+
+don't override
+
+=cut
+
 sub eof {
     my $self = shift;
 
@@ -113,12 +159,16 @@ sub eof {
     # ERROR if in middle of packet
 } ## end sub eof
 
-# don't override:
-sub parse_sock {
-    my ($self, $sock)
-        = @_
-        ; # $sock is readable, we should sysread it and feed it to $self->parse_data
+=head2 parse_sock($sock)
 
+don't override
+
+C<$sock> is readable, we should sysread it and feed it to L<parse_data($data)>
+
+=cut
+
+sub parse_sock {
+    my ($self, $sock) = @_;
     my $data;
     my $rv = sysread($sock, $data, 128 * 1024);
 
