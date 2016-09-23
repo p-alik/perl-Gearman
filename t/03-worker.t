@@ -2,16 +2,15 @@ use strict;
 use warnings;
 
 # OK gearmand v1.0.6
-# OK Gearman::Server
 
-use File::Which qw//;
+use File::Which qw/ which /;
 use IO::Socket::INET;
 use Test::More;
 use Test::Timer;
-use Test::TCP;
+use t::Server qw/ new_server /;
 
 my $daemon = "gearmand";
-my $bin    = File::Which::which($daemon);
+my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
 my $host   = "127.0.0.1";
 my $mn     = "Gearman::Worker";
 use_ok($mn);
@@ -96,14 +95,11 @@ subtest "_get_js_sock", sub {
     is( $w->_get_js_sock($hp), undef );
 
   SKIP: {
-        $bin || skip "no $daemon", 4;
-        my $gs = Test::TCP->new(
-            code => sub {
-                my $port = shift;
-                exec $bin, '-p' => $port;
-                die "cannot execute $bin: $!";
-            },
-        );
+        $bin || skip "can't find $daemon to test with", 4;
+        (-X $bin) || skip "$bin is not executable", 4;
+
+        my $gs = new_server($bin, $host);
+        $gs || plan skip_all => "couldn't start $bin";
 
         ok( $w->job_servers( join( ':', $host, $gs->port ) ) );
 
