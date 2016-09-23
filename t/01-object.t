@@ -31,10 +31,6 @@ my $c = new_ok(
 );
 
 subtest "job servers", sub {
-    my @servers
-        = $ENV{GEARMAN_SERVERS}
-        ? split /,/, $ENV{GEARMAN_SERVERS}
-        : qw/foo bar/;
     my $c = new_ok(
         $mn,
         [job_servers => $servers[0]],
