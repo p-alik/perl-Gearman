@@ -83,7 +83,7 @@ subtest "use ssl", sub {
 
 subtest "socket", sub {
     my $dh  = "google.com";
-    my $dst = join ':', $dh, 443;
+    my $dst = $ENV{GEARMAND_ADDR_SSL} || join(':', $dh, 443);
     my $to  = int(rand(5)) + 1;
     my $c   = new_ok(
         $mn,
@@ -101,7 +101,7 @@ SKIP: {
         is($sock->timeout, $to, "ssl socket callback");
     } ## end SKIP:
 
-    $dst = join ':', $dh, 80;
+    $dst = $ENV{GEARMAND_ADDR} ? $ENV{GEARMAND_ADDR} : join(':', $dh, 80);
     $c = new_ok($mn, [job_servers => $dst]);
 
 SKIP: {
