@@ -15,6 +15,7 @@ Gearman::Objects - a parrent class for L<Gearman::Client> and L<Gearman::Worker>
 
 use constant DEFAULT_PORT => 4730;
 
+use Carp             ();
 use IO::Socket::INET ();
 use IO::Socket::SSL  ();
 
@@ -56,7 +57,7 @@ sub new {
 
 getter/setter
 
-C<$js> may be an array reference or scalar
+C<$js> array reference or scalar
 
 =cut
 
@@ -67,6 +68,12 @@ sub job_servers {
     return wantarray ? @{ $self->{job_servers} } : $self->{job_servers};
 } ## end sub job_servers
 
+=head2 set_job_servers($js)
+
+set job_servers attribute by canonicalized C<$js>_
+
+=cut
+
 sub set_job_servers {
     my $self = shift;
     my $list = $self->canonicalize_job_servers(@_);
@@ -75,14 +82,40 @@ sub set_job_servers {
     return $self->{job_servers} = $list;
 } ## end sub set_job_servers
 
+=head2 canonicalize_job_servers($js)
+
+C<$js> array reference or scalar
+
+B<return> [canonicalized list]
+
+=cut
+
 sub canonicalize_job_servers {
     my ($self) = shift;
+    my @in;
+
     # take arrayref or array
-    my $list = ref $_[0] ? $_[0] : [@_];
-    foreach (@$list) {
-        $_ .= ':' . Gearman::Objects::DEFAULT_PORT unless /:/;
+    if (ref($_[0])) {
+        ref($_[0]) eq "ARRAY"
+            || Carp::croak
+            "canonicalize_job_servers argument is not a reference on array";
+        @in = @{ $_[0] };
+    } ## end if (ref($_[0]))
+    else {
+        @in = @_;
     }
-    return $list;
+
+    my $out = [];
+    foreach my $i (@in) {
+        $i
+            || Carp::croak
+            "canonicalize_job_servers argument contails an undefined parameter";
+        if ($i !~ /:/) {
+            $i .= ':' . Gearman::Objects::DEFAULT_PORT;
+        }
+        push @{$out}, $i;
+    } ## end foreach my $i (@in)
+    return $out;
 } ## end sub canonicalize_job_servers
 
 sub debug {
@@ -94,6 +127,7 @@ sub debug {
 getter/setter
 
 =cut
+
 sub prefix {
     return shift->_property("prefix", @_);
 }
