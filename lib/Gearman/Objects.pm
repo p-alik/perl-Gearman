@@ -173,7 +173,13 @@ sub socket {
         $sc = "IO::Socket::INET";
     }
 
-    return $sc->new(%opts);
+    my $s = $sc->new(%opts);
+    $s || Carp::croak("connection failed error='$@'",
+        $self->use_ssl()
+        ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
+        : "");
+
+    return $s;
 } ## end sub socket
 
 #
