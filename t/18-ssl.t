@@ -19,7 +19,6 @@ BEGIN {
         SSL_KEY_FILE
         /;
     my $skip;
-
     while (my $e = shift @env) {
         defined($ENV{$e}) && next;
         $skip = $e;
@@ -51,14 +50,7 @@ subtest "client echo request", sub {
         ]
     );
     ok(my $sock = $client->_get_random_js_sock(), "get socket");
-    ok(my $req = Gearman::Util::pack_req_command("echo_req"),
-        "prepare echo req");
-    my $len = length($req);
-    ok(my $rv = $sock->write($req, $len), "write to socket");
-    my $err;
-    ok(my $res = Gearman::Util::read_res_packet($sock, \$err), "read respose");
-    is(ref($res),    "HASH",     "respose is a hash");
-    is($res->{type}, "echo_res", "response type");
+    _echo($sock);
 };
 
 subtest "worker echo request", sub {
@@ -70,22 +62,23 @@ subtest "worker echo request", sub {
             use_ssl       => 1,
             ssl_socket_cb => $ssl_cb,
             job_servers   => [$job_server],
-            debug         => 1,
+            debug         => 0,
         ]
     );
-
-    my $on_con = sub {
-        warn explain @_;
-        return 1;
-    };
 
     ok(
         my $sock = $worker->_get_js_sock(
             $worker->job_servers()->[0],
-            on_connect => $on_con
+            on_connect => sub {return 1;}
         ),
         "get socket"
     ) || return;
+
+    _echo($sock);
+};
+
+sub _echo {
+  my ($sock) = @_;
     ok(my $req = Gearman::Util::pack_req_command("echo_req"),
         "prepare echo req");
     my $len = length($req);
@@ -94,7 +87,7 @@ subtest "worker echo request", sub {
     ok(my $res = Gearman::Util::read_res_packet($sock, \$err), "read respose");
     is(ref($res),    "HASH",     "respose is a hash");
     is($res->{type}, "echo_res", "response type");
-};
+}
 
 done_testing();
 
