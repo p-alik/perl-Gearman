@@ -16,7 +16,7 @@ Gearman::Objects - a parrent class for L<Gearman::Client> and L<Gearman::Worker>
 use constant DEFAULT_PORT => 4730;
 
 use Carp             ();
-use IO::Socket::INET ();
+use IO::Socket::IP   ();
 use IO::Socket::SSL  ();
 
 use fields qw/
@@ -170,7 +170,7 @@ sub socket {
         $self->{ssl_socket_cb} && $self->{ssl_socket_cb}->(\%opts);
     }
     else {
-        $sc = "IO::Socket::INET";
+        $sc = "IO::Socket::IP";
     }
 
     my $s = $sc->new(%opts);
