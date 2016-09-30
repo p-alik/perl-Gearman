@@ -1,7 +1,13 @@
 use strict;
 use warnings;
 
+use List::Util qw/ sum /;
 use Test::More;
+use t::Worker qw/ new_worker /;
+use Storable qw/
+    freeze
+    thaw
+    /;
 
 BEGIN {
     use IO::Socket::SSL ();
@@ -19,6 +25,7 @@ BEGIN {
         SSL_KEY_FILE
         /;
     my $skip;
+
     while (my $e = shift @env) {
         defined($ENV{$e}) && next;
         $skip = $e;
@@ -38,17 +45,9 @@ my $ssl_cb = sub {
     return $hr;
 };
 
+use_ok("Gearman::Client");
 subtest "client echo request", sub {
-    use_ok("Gearman::Client");
-    my $client = new_ok(
-        "Gearman::Client",
-        [
-            exceptions    => 1,
-            use_ssl       => 1,
-            ssl_socket_cb => $ssl_cb,
-            job_servers   => [$job_server]
-        ]
-    );
+    my $client = _client();
     ok(my $sock = $client->_get_random_js_sock(), "get socket");
     _echo($sock);
 };
@@ -58,7 +57,6 @@ subtest "worker echo request", sub {
     my $worker = new_ok(
         "Gearman::Worker",
         [
-            exceptions    => 1,
             use_ssl       => 1,
             ssl_socket_cb => $ssl_cb,
             job_servers   => [$job_server],
@@ -69,7 +67,7 @@ subtest "worker echo request", sub {
     ok(
         my $sock = $worker->_get_js_sock(
             $worker->job_servers()->[0],
-            on_connect => sub {return 1;}
+            on_connect => sub { return 1; }
         ),
         "get socket"
     ) || return;
@@ -77,8 +75,33 @@ subtest "worker echo request", sub {
     _echo($sock);
 };
 
+subtest "sum", sub {
+    my $func = "sum";
+    my $cb   = sub {
+        my $sum = 0;
+        $sum += $_ for @{ thaw($_[0]->arg) };
+        return $sum;
+    };
+
+    my $worker = new_worker(
+        use_ssl       => 1,
+        ssl_socket_cb => $ssl_cb,
+        job_servers   => [$job_server],
+        debug         => 0,
+        func          => { $func, $cb }
+    );
+
+    my $client = _client();
+    my @a      = map { int(rand(100)) } (0 .. int(rand(10) + 1));
+    my $sum    = sum(@a);
+    my $out    = $client->do_task(sum => freeze([@a]));
+    is($$out, $sum, "do_task returned $sum for sum");
+};
+
+done_testing();
+
 sub _echo {
-  my ($sock) = @_;
+    my ($sock) = @_;
     ok(my $req = Gearman::Util::pack_req_command("echo_req"),
         "prepare echo req");
     my $len = length($req);
@@ -87,7 +110,16 @@ sub _echo {
     ok(my $res = Gearman::Util::read_res_packet($sock, \$err), "read respose");
     is(ref($res),    "HASH",     "respose is a hash");
     is($res->{type}, "echo_res", "response type");
-}
+} ## end sub _echo
 
-done_testing();
-
+sub _client {
+    return new_ok(
+        "Gearman::Client",
+        [
+            exceptions    => 1,
+            use_ssl       => 1,
+            ssl_socket_cb => $ssl_cb,
+            job_servers   => [$job_server]
+        ]
+    );
+} ## end sub _client
