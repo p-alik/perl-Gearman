@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
-use IO::Socket::SSL;
+use IO::Socket::SSL ();
 
 my $mn = "Gearman::Objects";
 use_ok($mn);
@@ -114,7 +114,7 @@ subtest "socket", sub {
 
 SKIP: {
         my $sock = $c->socket($dst);
-        $sock || skip "failed connect to $dst or ssl handshake: $!,$SSL_ERROR",
+        $sock || skip "failed connect to $dst or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
             2;
         isa_ok($sock, "IO::Socket::SSL");
         is($sock->timeout, $to, "ssl socket callback");
@@ -125,8 +125,8 @@ SKIP: {
 
 SKIP: {
         my $sock = $c->socket($dst);
-        $sock || skip "failed connect or ssl handshake: $!,$SSL_ERROR", 1;
-        isa_ok($sock, "IO::Socket::INET");
+        $sock || skip "failed connect: $!", 1;
+        isa_ok($sock, "IO::Socket::IP");
     }
 };
 
