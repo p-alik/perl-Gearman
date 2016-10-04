@@ -101,7 +101,7 @@ use Socket qw(
     SOCK_STREAM);
 
 use fields (
-    'sock_cache',           # host:port -> IO::Socket::INET
+    'sock_cache',           # host:port -> IO::Socket::IP
     'last_connect_fail',    # host:port -> unixtime
     'down_since',           # host:port -> unixtime
     'connecting',           # host:port -> unixtime connect started at
