@@ -3,7 +3,7 @@ use warnings;
 use Test::More;
 use Test::Exception;
 
-use IO::Socket::INET;
+use IO::Socket::IP;
 use Perl::OSType qw/ is_os_type /;
 
 my $mn = "Gearman::Util";
@@ -75,12 +75,12 @@ throws_ok(sub { &{"$mn\:\:pack_res_command"}('x') }, qr/Bogus type arg of/);
 # };
 
 subtest "read_text_status", sub {
-    is(&{"$mn\:\:read_text_status"}(IO::Socket::INET->new(), \my $e), undef);
+    is(&{"$mn\:\:read_text_status"}(IO::Socket::IP->new(), \my $e), undef);
     is($e, "eof");
 };
 
 subtest "send_req", sub {
-    is(&{"$mn\:\:send_req"}(IO::Socket::INET->new(), \"foo"), 0);
+    is(&{"$mn\:\:send_req"}(IO::Socket::IP->new(), \"foo"), 0);
 };
 
 subtest "wait_for_readability", sub {
