@@ -139,7 +139,7 @@ sub use_ssl {
 =head2 socket($host_port, [$timeout])
 
 depends on C<use_ssl> 
-prepare L<IO::Socket::INET>
+prepare L<IO::Socket::IP>
 or L<IO::Socket::SSL>
 
 =over
@@ -154,7 +154,7 @@ C<$timeout> default: 1
 
 =back
 
-B<return> depends on C<use_ssl> IO::Socket::(INET|SSL) on success
+B<return> depends on C<use_ssl> IO::Socket::(IP|SSL) on success
 
 =cut
 
