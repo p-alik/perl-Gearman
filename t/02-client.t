@@ -66,7 +66,7 @@ subtest "js socket", sub {
     my $gc = new_ok($mn, [job_servers => [join(':', $host, $gs->port)]]);
     foreach ($gc->job_servers()) {
         ok(my $s = $gc->_get_js_sock($_), "_get_js_sock($_)") || next;
-        isa_ok($s, "IO::Socket::INET");
+        isa_ok($s, "IO::Socket::IP");
     }
 
     ok($gc->_get_random_js_sock());
