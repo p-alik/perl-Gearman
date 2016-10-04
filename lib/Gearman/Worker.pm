@@ -148,7 +148,7 @@ use base 'Gearman::Objects';
 use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
 
 use fields (
-    'sock_cache',           # host:port -> IO::Socket::INET
+    'sock_cache',           # host:port -> IO::Socket::IP
     'last_connect_fail',    # host:port -> unixtime
     'down_since',           # host:port -> unixtime
     'connecting',           # host:port -> unixtime connect started at
