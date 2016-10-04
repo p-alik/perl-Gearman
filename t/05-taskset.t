@@ -1,14 +1,14 @@
 use strict;
 use warnings;
 
-use File::Which qw/ which /;
-use IO::Socket::INET;
+use File::Which ();
+use IO::Socket::IP;
 use Test::More;
 use Test::Exception;
 use t::Server qw/ new_server /;
 
 my $daemon = "gearmand";
-my $bin    = which($daemon);
+my $bin    = File::Which::which($daemon);
 my $host   = "127.0.0.1";
 
 my @js;
@@ -65,8 +65,8 @@ subtest "cancel", sub {
     is($ts->{cancelled}, 0);
 
     # just in order to test close in cancel sub
-    $ts->{default_sock} = IO::Socket::INET->new();
-    $ts->{loaned_sock}->{x} = IO::Socket::INET->new();
+    $ts->{default_sock} = IO::Socket::IP->new();
+    $ts->{loaned_sock}->{x} = IO::Socket::IP->new();
 
     $ts->cancel();
 
@@ -80,8 +80,8 @@ subtest "cancel", sub {
 };
 
 subtest "socket", sub {
-$bin      || plan skip_all => "Can't find $daemon to test with";
-(-X $bin) || plan skip_all => "$bin is not executable";
+    $bin      || plan skip_all => "Can't find $daemon to test with";
+    (-X $bin) || plan skip_all => "$bin is not executable";
 
     my $gs = new_server($bin, $host);
 
@@ -93,12 +93,12 @@ $bin      || plan skip_all => "Can't find $daemon to test with";
 
         ok(my $ls = $ts->_get_loaned_sock($js[$i]),
             "_get_loaned_sock($js[$i])");
-        isa_ok($ls, "IO::Socket::INET");
+        isa_ok($ls, "IO::Socket::IP");
         is($ts->_get_hashed_sock($i),
             $ls, "_get_hashed_sock($i) = _get_loaned_sock($js[$i])");
     } ## end for (my $i = 0; $i < scalar...)
 
-    ok($ts->_get_default_sock(), "_get_default_sock");
+    ok($ts->_get_default_sock(),                "_get_default_sock");
     ok($ts->_ip_port($ts->_get_default_sock()), "_ip_port");
 };
 
