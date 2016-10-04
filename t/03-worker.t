@@ -4,7 +4,7 @@ use warnings;
 # OK gearmand v1.0.6
 
 use File::Which qw/ which /;
-use IO::Socket::INET;
+use Net::EmptyPort qw/ empty_port /;
 use Test::More;
 use Test::Timer;
 use Test::Exception;
@@ -94,15 +94,15 @@ subtest "work", sub {
 subtest "_get_js_sock", sub {
     my $w = new_ok($mn);
 
-    is($w->_get_js_sock(), undef);
+    is($w->_get_js_sock(), undef, "_get_js_sock() returns undef");
 
     $w->{parent_pipe} = rand(10);
-    my $hp = "127.0.0.1:9050";
+    my $hp = join ':', "127.0.0.1", empty_port();
 
-    is($w->_get_js_sock($hp), $w->{parent_pipe});
+    is($w->_get_js_sock($hp), $w->{parent_pipe}, "parent_pipe");
 
     delete $w->{parent_pipe};
-    is($w->_get_js_sock($hp), undef);
+    dies_ok { $w->_get_js_sock($hp) } "_get_js_sock($hp) dies";
 
 SKIP: {
         $bin      || skip "can't find $daemon to test with", 4;
@@ -117,8 +117,7 @@ SKIP: {
         $w->{last_connect_fail}{$hp} = 1;
         $w->{down_since}{$hp}        = 1;
 
-        isa_ok($w->_get_js_sock($hp, on_connect => sub {1}),
-            "IO::Socket::INET");
+        isa_ok($w->_get_js_sock($hp, on_connect => sub {1}), "IO::Socket::IP");
         is($w->{last_connect_fail}{$hp}, undef);
         is($w->{down_since}{$hp},        undef);
     } ## end SKIP:
