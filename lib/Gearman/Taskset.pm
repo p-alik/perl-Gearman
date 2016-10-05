@@ -306,7 +306,7 @@ sub add_task {
 } ## end sub add_task
 
 #
-# _get_default_soc()
+# _get_default_sock()
 # used in Gearman::Task->taskset only
 #
 sub _get_default_sock {
