@@ -3,12 +3,11 @@ use warnings;
 
 # OK gearmand v1.0.6
 
-use File::Which qw/ which /;
 use List::Util qw/ sum /;
 use Test::Exception;
 use Test::More;
 
-use t::Server qw/ new_server /;
+use t::Server ();
 use t::Worker qw/ new_worker /;
 
 use Storable qw/
@@ -16,26 +15,22 @@ use Storable qw/
     thaw
     /;
 
-my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
-my $host   = "127.0.0.1";
+my $gts = t::Server->new();
+$gts || plan skip_all => $t::Server::ERROR;
 
-$bin      || plan skip_all => "Can't find $daemon to test with";
-(-X $bin) || plan skip_all => "$bin is not executable";
-
-my %job_servers;
+my @job_servers;
 
 for (0 .. int(rand(1) + 1)) {
-    my $gs = new_server($bin, $host);
-    $gs || BAIL_OUT "couldn't start $bin";
+    my $gs = $gts->new_server();
+    $gs || BAIL_OUT "couldn't start ", $gts->bin();
 
-    $job_servers{ join(':', $host, $gs->port) } = $gs;
+    push @job_servers, $gs;
 } ## end for (0 .. int(rand(1) +...))
 
 use_ok("Gearman::Client");
 
 my $client = new_ok("Gearman::Client",
-    [exceptions => 1, job_servers => [keys %job_servers]]);
+    [exceptions => 1, job_servers => [@job_servers]]);
 
 my $func = "sum";
 my $cb   = sub {
@@ -46,7 +41,7 @@ my $cb   = sub {
 
 my @workers
     = map(
-    new_worker(job_servers => [keys %job_servers], func => { $func, $cb }),
+    new_worker(job_servers => [@job_servers], func => { $func, $cb }),
     (0 .. int(rand(1) + 1)));
 
 subtest "taskset 1", sub {
