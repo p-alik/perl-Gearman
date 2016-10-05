@@ -174,7 +174,7 @@ sub socket {
     }
 
     my $s = $sc->new(%opts);
-    $s || Carp::croak("connection failed error='$@'",
+    $s || Carp::carp("connection failed error='$@'",
         $self->use_ssl()
         ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
         : "");
