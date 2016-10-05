@@ -2,9 +2,11 @@ use strict;
 use warnings;
 
 use Gearman::Client;
-use IO::Socket::INET;
+use IO::Socket::IP;
 use Test::More;
 use Time::HiRes;
+
+$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
 
 my @paddr = qw/
     192.0.2.1:1
@@ -13,7 +15,7 @@ my @paddr = qw/
 
 foreach my $pa (@paddr) {
     my $start_time = [Time::HiRes::gettimeofday];
-    my $sock       = IO::Socket::INET->new(PeerAddr => $pa, Timeout => 2);
+    my $sock       = IO::Socket::IP->new(PeerAddr => $pa, Timeout => 2);
     my $delta      = Time::HiRes::tv_interval($start_time);
 
     if ($sock) {
