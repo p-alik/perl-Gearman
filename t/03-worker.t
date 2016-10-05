@@ -102,7 +102,7 @@ subtest "_get_js_sock", sub {
     is($w->_get_js_sock($hp), $w->{parent_pipe}, "parent_pipe");
 
     delete $w->{parent_pipe};
-    dies_ok { $w->_get_js_sock($hp) } "_get_js_sock($hp) dies";
+    is($w->_get_js_sock($hp), undef, "_get_js_sock($hp) undef");
 
 SKIP: {
         $bin      || skip "can't find $daemon to test with", 4;
