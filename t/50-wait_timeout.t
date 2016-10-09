@@ -3,24 +3,18 @@ use warnings;
 
 # OK gearmand v1.0.6
 
-use File::Which qw/ which /;
 use Test::More;
 use Test::Timer;
 
-use t::Server qw/ new_server /;
+use t::Server ();
 use t::Worker qw/ new_worker /;
 
-my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
-my $host   = "127.0.0.1";
+my $gts = t::Server->new();
+$gts || plan skip_all => $t::Server::ERROR;
 
-$bin      || plan skip_all => "Can't find $daemon to test with";
-(-X $bin) || plan skip_all => "$bin is not executable";
+my $job_server = $gts->job_servers();
+$job_server || BAIL_OUT "couldn't start ", $gts->bin();
 
-my $gs = new_server($bin, $host);
-$gs || BAIL_OUT "couldn't start $bin";
-
-my $job_server = join(':', $host, $gs->port);
 my $func = "long";
 
 use_ok("Gearman::Client");

@@ -3,22 +3,17 @@ use warnings;
 
 # OK gearmand v1.0.6
 
-use File::Which qw/ which /;
 use Test::More;
 use Test::Timer;
 
-use t::Server qw/ new_server /;
+use t::Server ();
 use t::Worker qw/ new_worker /;
 
-my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
-my $host   = "127.0.0.1";
+my $gts = t::Server->new();
+$gts || plan skip_all => $t::Server::ERROR;
 
-$bin      || plan skip_all => "Can't find $daemon to test with";
-(-X $bin) || plan skip_all => "$bin is not executable";
-
-my $gs = new_server($bin, $host, $ENV{DEBUG});
-my $job_server = join(':', $host, $gs->port);
+my $job_server = $gts->job_servers();
+$job_server || BAIL_OUT "couldn't start ", $gts->bin();
 
 my %cb = (
     sleep => sub {
@@ -105,7 +100,7 @@ subtest "taskset a", sub {
 #TODO there is some magic time_ok influence on following sleeping subtest, which fails if timeout ok
 ## Worker process times out (takes longer than timeout seconds).
 subtest "timeout task", sub {
-    plan skip_all => "doen't work properly with some $daemon";
+    plan skip_all => "doen't work properly with some gearmand";
     my $to = 3;
     time_ok(sub { $client->do_task("sleep", 5, { timeout => $to }) },
         $to, "Job that timed out after $to seconds returns failure");
@@ -117,7 +112,7 @@ subtest "timeout task", sub {
 ## 'uniq' field. Both should fail.
 
 subtest "timeout worker", sub {
-    plan skip_all => "doen't work properly with some $daemon";
+    plan skip_all => "doen't work properly with some gearmand";
     my $tasks = $client->new_task_set;
     $tasks->add_task(
         "sleep_three",

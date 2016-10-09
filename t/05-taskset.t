@@ -5,11 +5,7 @@ use File::Which ();
 use IO::Socket::IP;
 use Test::More;
 use Test::Exception;
-use t::Server qw/ new_server /;
-
-my $daemon = "gearmand";
-my $bin    = File::Which::which($daemon);
-my $host   = "127.0.0.1";
+use t::Server ();
 
 my @js;
 my ($cn, $mn) = qw/
@@ -80,12 +76,13 @@ subtest "cancel", sub {
 };
 
 subtest "socket", sub {
-    $bin      || plan skip_all => "Can't find $daemon to test with";
-    (-X $bin) || plan skip_all => "$bin is not executable";
+    my $gts = t::Server->new();
+    $gts || plan skip_all => $t::Server::ERROR;
 
-    my $gs = new_server($bin, $host);
+    my $job_server = $gts->job_servers();
+    $job_server || plan skip_all => "couldn't start ", $gts->bin();
 
-    my $c = new_ok($cn, [job_servers => [join(':', $host, $gs->port)]]);
+    my $c = new_ok($cn, [job_servers => [$job_server]]);
     my $ts = new_ok($mn, [$c]);
 
     my @js = @{ $ts->{client}->job_servers() };

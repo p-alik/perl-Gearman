@@ -21,7 +21,7 @@ $gts || plan skip_all => $t::Server::ERROR;
 my @job_servers;
 
 for (0 .. int(rand(1) + 1)) {
-    my $gs = $gts->new_server();
+    my $gs = $gts->job_servers();
     $gs || BAIL_OUT "couldn't start ", $gts->bin();
 
     push @job_servers, $gs;
