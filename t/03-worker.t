@@ -8,12 +8,9 @@ use Net::EmptyPort qw/ empty_port /;
 use Test::More;
 use Test::Timer;
 use Test::Exception;
-use t::Server qw/ new_server /;
+use t::Server ();
 
-my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
-my $host   = "127.0.0.1";
-my $mn     = "Gearman::Worker";
+my $mn = "Gearman::Worker";
 use_ok($mn);
 
 can_ok(
@@ -104,14 +101,14 @@ subtest "_get_js_sock", sub {
     delete $w->{parent_pipe};
     is($w->_get_js_sock($hp), undef, "_get_js_sock($hp) undef");
 
+    my $gts = t::Server->new();
 SKIP: {
-        $bin      || skip "can't find $daemon to test with", 4;
-        (-X $bin) || skip "$bin is not executable",          4;
+        $gts || skip $t::Server::ERROR, 4;
 
-        my $gs = new_server($bin, $host);
-        $gs || plan skip_all => "couldn't start $bin";
+        my $job_server = $gts->job_servers();
+        $job_server || skip "couldn't start ", $gts->bin(), 4;
 
-        ok($w->job_servers(join(':', $host, $gs->port)));
+        ok($w->job_servers($job_server));
 
         $hp                          = $w->job_servers()->[0];
         $w->{last_connect_fail}{$hp} = 1;

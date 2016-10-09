@@ -36,7 +36,7 @@ sub new {
         unless ($bin) {
             $ERROR = "Can't find $daemon to test with";
         }
-        unless (-X $bin) {
+        elsif (!-X $bin) {
             $ERROR = "$bin is not executable";
         }
 
@@ -50,23 +50,31 @@ sub new {
     return $self;
 } ## end sub new
 
-sub new_server {
-    my ($self, $debug) = @_;
+sub job_servers {
+    my ($self) = @_;
     my $s = Test::TCP->new(
         host => $self->{_ip},
         code => sub {
             my $port = shift;
-            my %args
-                = ("--port" => $port, $debug ? ("--verbose" => "DEBUG") : ());
+            my %args = (
+                "--port" => $port,
+                $ENV{GEARMAND_DEBUG} ? ("--verbose" => "DEBUG") : ()
+            );
 
             exec $self->bin(), %args;
-            die sprintf "cannot execute %s: $!", $self->bin;
+
+            # $ERROR = sprintf "cannot execute %s: $!", $self->bin;
         },
     );
 
+    if ($ERROR) {
+        undef($s);
+        return;
+    }
+
     $self->{_servers}->{ $s->port } = $s;
     return join ':', $self->host, $s->port;
-} ## end sub new_server
+} ## end sub job_servers
 
 sub bin {
     return shift->{_bin};
@@ -75,4 +83,5 @@ sub bin {
 sub host {
     return shift->{_ip};
 }
+
 1;

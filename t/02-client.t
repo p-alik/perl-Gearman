@@ -3,15 +3,11 @@ use warnings;
 
 # OK gearmand v1.0.6
 
-use File::Which qw/ which /;
 use Test::More;
 use Test::Exception;
-use t::Server qw/ new_server /;
+use t::Server ();
 
-my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
-my $host   = "127.0.0.1";
-my $mn     = "Gearman::Client";
+my $mn = "Gearman::Client";
 
 use_ok($mn);
 
@@ -58,12 +54,13 @@ subtest "new_task_set", sub {
 };
 
 subtest "js socket", sub {
-    $bin    || plan skip_all => "Can't find $daemon to test with";
-    -X $bin || plan skip_all => "$bin is not executable";
-    my $gs = new_server($bin, $host);
-    $gs || plan skip_all => "couldn't start $bin";
+    my $gts = t::Server->new();
+    $gts || plan skip_all => $t::Server::ERROR;
 
-    my $gc = new_ok($mn, [job_servers => [join(':', $host, $gs->port)]]);
+    my $job_server = $gts->job_servers();
+    $job_server || plan skip_all => "couldn't start ", $gts->bin();
+
+    my $gc = new_ok($mn, [job_servers => [$job_server]]);
     foreach ($gc->job_servers()) {
         ok(my $s = $gc->_get_js_sock($_), "_get_js_sock($_)") || next;
         isa_ok($s, "IO::Socket::IP");

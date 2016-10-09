@@ -1,23 +1,18 @@
 use strict;
 use warnings;
 
-use File::Which qw/ which /;
 use List::Util;
 use Test::More;
 
-use t::Server qw/ new_server /;
+use t::Server ();
 use t::Worker qw/ new_worker /;
 
-my $daemon = "gearmand";
-my $bin    = $ENV{GEARMAND_PATH} || which($daemon);
-my $host   = "127.0.0.1";
+my $gts = t::Server->new();
+$gts || plan skip_all => $t::Server::ERROR;
 
-$bin      || plan skip_all => "Can't find $daemon to test with";
-(-X $bin) || plan skip_all => "$bin is not executable";
+my $job_server = $gts->job_servers();
+$job_server || BAIL_OUT "couldn't start ", $gts->bin();
 
-my $gs = new_server($bin, $host);
-
-my $job_server = join(':', $gs->{host}, $gs->port);
 
 note explain $job_server;
 
