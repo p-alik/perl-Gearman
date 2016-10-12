@@ -86,7 +86,7 @@ sub job_servers {
         push @r, join(':', $self->host, $s->port);
     } ## end while ($count--)
 
-    return @r;
+    return wantarray ? @r : $r[0];
 } ## end sub job_servers
 
 sub bin {
