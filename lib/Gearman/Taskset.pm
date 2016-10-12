@@ -5,9 +5,6 @@ $Gearman::Taskset::VERSION = qv("2.001_001");
 use strict;
 use warnings;
 
-use Scalar::Util;
-use Socket;
-
 =head1 NAME
 
 Gearman::Taskset - a taskset in Gearman, from the point of view of a client
@@ -58,20 +55,21 @@ use fields (
     'hooks',
 );
 
-use Carp ();
+use Carp          ();
 use Gearman::Util ();
 use Gearman::ResponseParser::Taskset;
 
 # i thought about weakening taskset's client, but might be too weak.
 use Scalar::Util ();
-use Time::HiRes  ();
+use Socket       ();
+use Time::HiRes ();
 
 =head2 new($client)
 
 =cut
 
 sub new {
-    my ($self, $client)   = @_;
+    my ($self, $client) = @_;
     (Scalar::Util::blessed($client) && $client->isa("Gearman::Client"))
         || Carp::croak
         "provided client argument is not a Gearman::Client reference";
@@ -258,7 +256,7 @@ sub wait {
             } ## end if ($@)
         } ## end foreach my $fd (keys %watching)
 
-    } ## end while (!$self->{cancelled} ...)
+    } ## end while (!$self->{cancelled...})
 } ## end sub wait
 
 =head2 add_task(Gearman::Task)
@@ -290,10 +288,12 @@ sub add_task {
     push @{ $self->{need_handle} }, $task;
     while (@{ $self->{need_handle} }) {
         my $rv
-            = $self->_wait_for_packet($jssock, $self->{client}->{command_timeout});
+            = $self->_wait_for_packet($jssock,
+            $self->{client}->{command_timeout});
         if (!$rv) {
-            shift @{ $self->{need_handle} }; # ditch it, it failed.
-                                           # this will resubmit it if it failed.
+            # ditch it, it failed.
+            # this will resubmit it if it failed.
+            shift @{ $self->{need_handle} };
             return $task->fail(
                 join(' ',
                     "no rv on waiting for packet",
@@ -337,7 +337,7 @@ sub _get_default_sock {
 # return a socket
 sub _get_hashed_sock {
     my $self = shift;
-    my $hv = shift;
+    my $hv   = shift;
 
     my $cl = $self->client;
     my $sock;
@@ -358,7 +358,8 @@ sub _get_hashed_sock {
 # returns boolean when given a sock to wait on.
 # otherwise, return value is undefined.
 sub _wait_for_packet {
-    my ($self, $sock, $timeout)  = @_;
+    my ($self, $sock, $timeout) = @_;
+
     #TODO check $err after read
     my $err;
     my $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
@@ -391,8 +392,15 @@ sub _ip_port {
     # hopefully it solves client->get_status mismatch
     $hostport && return $hostport;
 
-    my ($port, $iaddr) = Socket::sockaddr_in($pn);
-    return join ':', Socket::inet_ntoa($iaddr), $port;
+    my $fam = Socket::sockaddr_family($pn);
+    my ($port, $iaddr)
+        = ($fam == Socket::AF_INET6)
+        ? Socket::sockaddr_in6($pn)
+        : Socket::sockaddr_in($pn);
+
+    my $addr = Socket::inet_ntop($fam, $iaddr);
+
+    return join ':', $addr, $port;
 } ## end sub _ip_port
 
 #
