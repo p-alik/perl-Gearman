@@ -27,7 +27,7 @@ sub new {
     }
 
     if ($ENV{GEARMAND_ADDR}) {
-
+        $self->{_servers} = [split ',', $ENV{GEARMAND_ADDR}];
     }
     else {
         my $daemon = "gearmand";
@@ -44,36 +44,49 @@ sub new {
 
         $self->{_ip}      = $ENV{GEARMAND_IP} || "127.0.0.1";
         $self->{_bin}     = $bin;
-        $self->{_servers} = {};
+        $self->{_servers} = [];
     } ## end else [ if ($ENV{GEARMAND_ADDR...})]
 
     return $self;
 } ## end sub new
 
-sub job_servers {
+sub _start_server {
     my ($self) = @_;
     my $s = Test::TCP->new(
-        host => $self->{_ip},
+        host => $self->host,
         code => sub {
             my $port = shift;
             my %args = (
-                "--port" => $port,
+                "--port"   => $port,
+                "--listen" => $self->host,
                 $ENV{GEARMAND_DEBUG} ? ("--verbose" => "DEBUG") : ()
             );
 
-            exec $self->bin(), %args;
-
-            # $ERROR = sprintf "cannot execute %s: $!", $self->bin;
+            exec($self->bin(), %args) or do {
+                $ERROR = sprintf "cannot execute %s: $!", $self->bin;
+            };
         },
     );
 
-    if ($ERROR) {
-        undef($s);
-        return;
-    }
+    ($ERROR) && return;
 
-    $self->{_servers}->{ $s->port } = $s;
-    return join ':', $self->host, $s->port;
+    return $s;
+} ## end sub _start_server
+
+sub job_servers {
+    my ($self, $count) = @_;
+    $self->bin || return @{ $self->{_servers} };
+
+    $count ||= 1;
+    my @r;
+    while ($count--) {
+        my $s = $self->_start_server;
+        $s || die $ERROR;
+        push @{ $self->{_servers} }, $s;
+        push @r, join(':', $self->host, $s->port);
+    } ## end while ($count--)
+
+    return @r;
 } ## end sub job_servers
 
 sub bin {
