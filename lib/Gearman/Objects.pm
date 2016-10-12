@@ -15,9 +15,9 @@ Gearman::Objects - a parrent class for L<Gearman::Client> and L<Gearman::Worker>
 
 use constant DEFAULT_PORT => 4730;
 
-use Carp             ();
-use IO::Socket::IP   ();
-use IO::Socket::SSL  ();
+use Carp            ();
+use IO::Socket::IP  ();
+use IO::Socket::SSL ();
 
 use fields qw/
     debug
@@ -160,8 +160,11 @@ B<return> depends on C<use_ssl> IO::Socket::(IP|SSL) on success
 
 sub socket {
     my ($self, $pa, $t) = @_;
+    my ($h, $p) = ($pa =~ /^(.*):(\d+)$/);
+
     my %opts = (
-        PeerAddr => $pa,
+        PeerPort => $p,
+        PeerHost => $h,
         Timeout  => $t || 1
     );
     my $sc;
