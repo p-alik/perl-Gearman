@@ -18,6 +18,7 @@ use constant DEFAULT_PORT => 4730;
 use Carp            ();
 use IO::Socket::IP  ();
 use IO::Socket::SSL ();
+use Socket          ();
 
 use fields qw/
     debug
@@ -184,6 +185,17 @@ sub socket {
 
     return $s;
 } ## end sub socket
+
+=head2 sock_nodelay($sock)
+
+set TCP_NODELAY on $sock, die on failure
+
+=cut
+sub sock_nodelay {
+    my ($self, $sock) = @_;
+    setsockopt($sock, Socket::IPPROTO_TCP, Socket::TCP_NODELAY, pack("l", 1))
+        or Carp::croak "setsockopt: $!";
+}
 
 #
 # _property($name, [$value])

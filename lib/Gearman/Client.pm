@@ -157,12 +157,6 @@ use Carp;
 use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
-
-use Socket qw/
-    IPPROTO_TCP
-    TCP_NODELAY
-    SOL_SOCKET
-    /;
 use Time::HiRes;
 
 sub new {
@@ -552,8 +546,7 @@ sub _get_js_sock {
         return;
     } ## end unless ($sock)
 
-    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1))
-        or Carp::croak "setsockopt: $!";
+    $self->sock_nodelay($sock);
     $sock->autoflush(1);
 
     # If exceptions support is to be requested, and the request fails, disable

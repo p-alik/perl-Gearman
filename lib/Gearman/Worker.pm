@@ -93,13 +93,6 @@ use Gearman::Util;
 use Gearman::Job;
 use Carp ();
 
-use Socket qw(
-    IPPROTO_TCP
-    TCP_NODELAY
-    SOL_SOCKET
-    PF_INET
-    SOCK_STREAM);
-
 use fields (
     'sock_cache',           # host:port -> IO::Socket::IP
     'last_connect_fail',    # host:port -> unixtime
@@ -211,7 +204,7 @@ sub _get_js_sock {
     delete $self->{down_since}{$ipport};
 
     $sock->autoflush(1);
-    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
+    $self->sock_nodelay($sock);
 
     $self->{sock_cache}{$ipport} = $sock;
 

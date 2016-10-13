@@ -14,6 +14,7 @@ can_ok(
         job_servers
         prefix
         set_job_servers
+        sock_nodelay
         socket
         use_ssl
         /
