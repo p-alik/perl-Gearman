@@ -1,6 +1,6 @@
 package Gearman::Taskset;
 use version;
-$Gearman::Taskset::VERSION = qv("2.001_001");
+$Gearman::Taskset::VERSION = qv("2.001.001"); # TRIAL
 
 use strict;
 use warnings;
