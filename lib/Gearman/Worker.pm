@@ -93,60 +93,6 @@ use Gearman::Util;
 use Gearman::Job;
 use Carp ();
 
-# this is the object that's handed to the worker subrefs
-package Gearman::Job;
-
-use fields (
-    'func',
-    'argref',
-    'handle',
-    'jss',    # job server's socket
-);
-
-sub new {
-    my ($class, $func, $argref, $handle, $jss) = @_;
-    my $self = $class;
-    $self = fields::new($class) unless ref $self;
-
-    $self->{func}   = $func;
-    $self->{handle} = $handle;
-    $self->{argref} = $argref;
-    $self->{jss}    = $jss;
-    return $self;
-} ## end sub new
-
-# ->set_status($numerator, $denominator) : $bool_sent_to_jobserver
-sub set_status {
-    my Gearman::Job $self = shift;
-    my ($nu, $de) = @_;
-
-    my $req = Gearman::Util::pack_req_command("work_status",
-        join("\0", $self->{handle}, $nu, $de));
-    die "work_status write failed"
-        unless Gearman::Util::send_req($self->{jss}, \$req);
-    return 1;
-} ## end sub set_status
-
-sub argref {
-    my Gearman::Job $self = shift;
-    return $self->{argref};
-}
-
-sub arg {
-    my Gearman::Job $self = shift;
-    return ${ $self->{argref} };
-}
-
-sub handle {
-    my Gearman::Job $self = shift;
-    return $self->{handle};
-}
-
-package Gearman::Worker;
-use base 'Gearman::Objects';
-
-use Socket qw(IPPROTO_TCP TCP_NODELAY SOL_SOCKET PF_INET SOCK_STREAM);
-
 use fields (
     'sock_cache',           # host:port -> IO::Socket::IP
     'last_connect_fail',    # host:port -> unixtime
@@ -258,7 +204,7 @@ sub _get_js_sock {
     delete $self->{down_since}{$ipport};
 
     $sock->autoflush(1);
-    setsockopt($sock, IPPROTO_TCP, TCP_NODELAY, pack("l", 1)) or die;
+    $self->sock_nodelay($sock);
 
     $self->{sock_cache}{$ipport} = $sock;
 
