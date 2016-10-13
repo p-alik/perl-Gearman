@@ -1,6 +1,6 @@
 package Gearman::Objects;
 use version;
-$Gearman::Objects::VERSION = qv("1.130.004");
+$Gearman::Objects::VERSION = qv("2.001.001"); # TRIAL
 
 use strict;
 use warnings;
