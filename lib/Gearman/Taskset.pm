@@ -485,6 +485,23 @@ sub process_packet {
         return 1;
     } ## end if ($res->{type} eq "work_complete")
 
+    if ($res->{type} eq "work_data") {
+        ${ $res->{'blobref'} } =~ s/^(.+?)\0//
+            or Carp::croak "Bogus work_data from server";
+        my $shandle = $1;
+
+        my $task_list = $self->{waiting}{$shandle} or
+            Carp::croak "Uhhhh:  got work_data for unknown handle: $shandle\n";
+
+        my $task = $task_list->[0] or
+            Carp::croak "Uhhhh:  task_list is empty on work_data for handle $shandle\n";
+
+        $task->data($res->{'blobref'});
+
+        return 1;
+    }
+
+
     if ($res->{type} eq "work_exception") {
 
         # ${ $res->{'blobref'} } =~ s/^(.+?)\0//
