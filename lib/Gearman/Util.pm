@@ -54,6 +54,7 @@ our %cmd = (
     13 => ['IO', "work_complete"],    # W->J/C: HANDLE[0]RES
     14 => ['IO', "work_fail"],        # W->J/C: HANDLE
     25 => ['IO', "work_exception"],   # W->J/C: HANDLE[0]EXCEPTION
+    28 => ['IO', "work_data"],        # W->J/C: HANDLE[0]RES
 
     15 => ['I', "get_status"],    # C->J: HANDLE
     20 => ['O', "status_res"],    # C->J: HANDLE[0]KNOWN[0]RUNNING[0]NUM[0]DENOM

@@ -15,7 +15,7 @@ no strict "refs";
 my @chr = ('a' .. 'z', 'A' .. 'Z', 0 .. 9);
 
 ok(my %cmd = %{"$mn\:\:cmd"});
-is(keys(%cmd), 27);
+is(keys(%cmd), 28);
 
 foreach my $n (keys %cmd) {
     my $t = $cmd{$n}->[1];
