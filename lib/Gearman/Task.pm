@@ -121,6 +121,7 @@ use fields (
     # opts from client:
     'uniq',
     'on_complete',
+    'on_data',
     'on_fail',
     'on_exception',
     'on_retry',
@@ -415,6 +416,18 @@ sub status {
     my ($nu, $de) = @_;
     $self->{on_status}->($nu, $de);
 } ## end sub status
+
+=head2 data()
+
+=cut
+
+sub data {
+    my Gearman::Task $task = shift;
+    return if $task->{is_finished};
+    my $result_ref = shift;
+
+    $task->{on_data}->($result_ref) if $task->{on_data};
+} ## end sub data
 
 =head2 handle()
 
