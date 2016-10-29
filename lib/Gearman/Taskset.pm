@@ -437,115 +437,117 @@ sub _fail_jshandle {
 sub process_packet {
     my ($self, $res, $sock) = @_;
 
-    if ($res->{type} eq "job_created") {
-        my $task = shift @{ $self->{need_handle} };
-        ($task && ref($task) eq "Gearman::Task")
-            or Carp::croak "Um, got an unexpected job_created notification";
-        my $shandle = ${ $res->{'blobref'} };
-        my $ipport  = $self->_ip_port($sock);
+    my $qr   = qr/(.+?)\0/;
+    my %type = (
+        job_created => sub {
+            my ($blob) = shift;
+            my $task = shift @{ $self->{need_handle} };
+            ($task && ref($task) eq "Gearman::Task")
+                or Carp::croak "Um, got an unexpected job_created notification";
+            my $shandle = $blob;
+            my $ipport  = $self->_ip_port($sock);
 
-        # did sock become disconnected in the meantime?
-        if (!$ipport) {
+            # did sock become disconnected in the meantime?
+            if (!$ipport) {
+                $self->_fail_jshandle($shandle);
+                return 1;
+            }
+
+            $task->handle("$ipport//$shandle");
+            return 1 if $task->{background};
+            push @{ $self->{waiting}{$shandle} ||= [] }, $task;
+            return 1;
+        },
+        work_complete => sub {
+            my ($blob) = shift;
+            ($blob =~ /^$qr/)
+                or Carp::croak "Bogus work_complete from server";
+            $blob =~ s/^$qr//;
+            my $shandle = $1;
+
+            my $task_list = $self->{waiting}{$shandle}
+                or Carp::croak
+                "Uhhhh:  got work_complete for unknown handle: $shandle\n";
+
+            my $task = shift @$task_list;
+            ($task && ref($task) eq "Gearman::Task")
+                or Carp::croak
+                "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
+
+            $task->complete(\$blob);
+            delete $self->{waiting}{$shandle} unless @$task_list;
+
+            return 1;
+        },
+        work_data => sub {
+            my ($blob) = shift;
+            $blob =~ s/^(.+?)\0//
+                or Carp::croak "Bogus work_data from server";
+            my $shandle = $1;
+
+            my $task_list = $self->{waiting}{$shandle}
+                or Carp::croak
+                "Uhhhh:  got work_data for unknown handle: $shandle\n";
+
+            my $task = $task_list->[0]
+                or Carp::croak
+                "Uhhhh:  task_list is empty on work_data for handle $shandle\n";
+
+            $task->data($blob);
+
+            return 1;
+        },
+        work_exception => sub {
+            my ($blob) = shift;
+            ($blob =~ /^$qr/)
+                or Carp::croak "Bogus work_exception from server";
+            $blob =~ s/^$qr//;
+            my $shandle = $1;
+
+            my $task_list = $self->{waiting}{$shandle}
+                or Carp::croak
+                "Uhhhh:  got work_exception for unknown handle: $shandle\n";
+
+            my $task = $task_list->[0];
+            ($task && ref($task) eq "Gearman::Task")
+                or Carp::croak
+                "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
+
+            $task->exception(\$blob);
+
+            return 1;
+        },
+        work_fail => sub {
+            my ($blob) = shift;
+            my $shandle = $blob;
             $self->_fail_jshandle($shandle);
             return 1;
-        }
+        },
+        work_status => sub {
+            my ($blob) = shift;
+            my ($shandle, $nu, $de) = split(/\0/, $blob);
 
-        $task->handle("$ipport//$shandle");
-        return 1 if $task->{background};
-        push @{ $self->{waiting}{$shandle} ||= [] }, $task;
-        return 1;
-    } ## end if ($res->{type} eq "job_created")
+            my $task_list = $self->{waiting}{$shandle}
+                or Carp::croak
+                "Uhhhh:  got work_status for unknown handle: $shandle\n";
 
-    if ($res->{type} eq "work_fail") {
-        my $shandle = ${ $res->{'blobref'} };
-        $self->_fail_jshandle($shandle);
-        return 1;
-    }
+            # FIXME: the server is (probably) sending a work_status packet for each
+            # interested client, even if the clients are the same, so probably need
+            # to fix the server not to do that.  just put this FIXME here for now,
+            # though really it's a server issue.
+            foreach my $task (@$task_list) {
+                $task->status($nu, $de);
+            }
 
-    my $qr = qr/(.+?)\0/;
+            return 1;
+        },
+    );
 
-    if ($res->{type} eq "work_complete") {
-        (${ $res->{'blobref'} } =~ /^$qr/)
-            or Carp::croak "Bogus work_complete from server";
-        ${ $res->{'blobref'} } =~ s/^$qr//;
-        my $shandle = $1;
+    defined($type{ $res->{type} })
+        || Carp::croak
+        "Unimplemented packet type: $res->{type} [${$res->{blobref}}]";
 
-        my $task_list = $self->{waiting}{$shandle}
-            or Carp::croak
-            "Uhhhh:  got work_complete for unknown handle: $shandle\n";
-
-        my $task = shift @$task_list;
-        ($task && ref($task) eq "Gearman::Task")
-            or Carp::croak
-            "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
-
-        $task->complete($res->{'blobref'});
-        delete $self->{waiting}{$shandle} unless @$task_list;
-
-        return 1;
-    } ## end if ($res->{type} eq "work_complete")
-
-    if ($res->{type} eq "work_data") {
-        ${ $res->{'blobref'} } =~ s/^(.+?)\0//
-            or Carp::croak "Bogus work_data from server";
-        my $shandle = $1;
-
-        my $task_list = $self->{waiting}{$shandle} or
-            Carp::croak "Uhhhh:  got work_data for unknown handle: $shandle\n";
-
-        my $task = $task_list->[0] or
-            Carp::croak "Uhhhh:  task_list is empty on work_data for handle $shandle\n";
-
-        $task->data($res->{'blobref'});
-
-        return 1;
-    }
-
-
-    if ($res->{type} eq "work_exception") {
-
-        # ${ $res->{'blobref'} } =~ s/^(.+?)\0//
-        #     or Carp::croak "Bogus work_exception from server";
-
-        (${ $res->{'blobref'} } =~ /^$qr/)
-            or Carp::croak "Bogus work_exception from server";
-        ${ $res->{'blobref'} } =~ s/^$qr//;
-        my $shandle = $1;
-
-        my $task_list = $self->{waiting}{$shandle}
-            or Carp::croak
-            "Uhhhh:  got work_exception for unknown handle: $shandle\n";
-
-        my $task = $task_list->[0];
-        ($task && ref($task) eq "Gearman::Task")
-            or Carp::croak
-            "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
-
-        $task->exception($res->{'blobref'});
-
-        return 1;
-    } ## end if ($res->{type} eq "work_exception")
-
-    if ($res->{type} eq "work_status") {
-        my ($shandle, $nu, $de) = split(/\0/, ${ $res->{'blobref'} });
-
-        my $task_list = $self->{waiting}{$shandle}
-            or Carp::croak
-            "Uhhhh:  got work_status for unknown handle: $shandle\n";
-
-        # FIXME: the server is (probably) sending a work_status packet for each
-        # interested client, even if the clients are the same, so probably need
-        # to fix the server not to do that.  just put this FIXME here for now,
-        # though really it's a server issue.
-        foreach my $task (@$task_list) {
-            $task->status($nu, $de);
-        }
-
-        return 1;
-    } ## end if ($res->{type} eq "work_status")
-
-    Carp::croak
-        "Unknown/unimplemented packet type: $res->{type} [${$res->{blobref}}]";
+    return $type{ $res->{type} }->(${ $res->{blobref} });
 } ## end sub process_packet
 
 1;
