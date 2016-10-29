@@ -30,44 +30,37 @@ sub DEBUG () {0}
 # J: jobserver
 our %cmd = (
     1  => ['I', "can_do"],             # from W:  [FUNC]
-    23 => ['I', "can_do_timeout"],     # from W: FUNC[0]TIMEOUT
     2  => ['I', "cant_do"],            # from W:  [FUNC]
     3  => ['I', "reset_abilities"],    # from W:  ---
-    22 => ['I', "set_client_id"],      # W->J: [RANDOM_STRING_NO_WHITESPACE]
     4  => ['I', "pre_sleep"],          # from W: ---
-
-    26 => ['I', "option_req"],         # C->J: [OPT]
-    27 => ['O', "option_res"],         # J->C: [OPT]
-
     6  => ['O', "noop"],               # J->W  ---
     7  => ['I', "submit_job"],         # C->J  FUNC[0]UNIQ[0]ARGS
-    21 => ['I', "submit_job_high"],    # C->J  FUNC[0]UNIQ[0]ARGS
-    18 => ['I', "submit_job_bg"],      # C->J     " "   "  " "
-    32 => ['I', "submit_job_high_bg"], # C->J  FUNC[0]UNIQ[0]ARGS
-
     8  => ['O', "job_created"],        # J->C HANDLE
     9  => ['I', "grab_job"],           # W->J --
     10 => ['O', "no_job"],             # J->W --
     11 => ['O', "job_assign"],         # J->W HANDLE[0]FUNC[0]ARG
-
     12 => ['IO', "work_status"],      # W->J/C: HANDLE[0]NUMERATOR[0]DENOMINATOR
     13 => ['IO', "work_complete"],    # W->J/C: HANDLE[0]RES
     14 => ['IO', "work_fail"],        # W->J/C: HANDLE
-    25 => ['IO', "work_exception"],   # W->J/C: HANDLE[0]EXCEPTION
-    28 => ['IO', "work_data"],        # W->J/C: HANDLE[0]RES
-
     15 => ['I', "get_status"],    # C->J: HANDLE
-    20 => ['O', "status_res"],    # C->J: HANDLE[0]KNOWN[0]RUNNING[0]NUM[0]DENOM
-
     16 => ['I', "echo_req"],      # ?->J TEXT
     17 => ['O', "echo_res"],      # J->? TEXT
-
+    18 => ['I', "submit_job_bg"],      # C->J     " "   "  " "
     19 => ['O', "error"],         # J->? ERRCODE[0]ERR_TEXT
+    20 => ['O', "status_res"],    # C->J: HANDLE[0]KNOWN[0]RUNNING[0]NUM[0]DENOM
+    21 => ['I', "submit_job_high"],    # C->J  FUNC[0]UNIQ[0]ARGS
+    22 => ['I', "set_client_id"],      # W->J: [RANDOM_STRING_NO_WHITESPACE]
+    23 => ['I', "can_do_timeout"],     # from W: FUNC[0]TIMEOUT
 
     # for worker to declare to the jobserver that this worker is only connected
     # to one jobserver, so no polls/grabs will take place, and server is free
     # to push "job_assign" packets back down.
     24 => ['I', "all_yours"],    # W->J ---
+    25 => ['IO', "work_exception"],   # W->J/C: HANDLE[0]EXCEPTION
+    26 => ['I', "option_req"],         # C->J: [OPT]
+    27 => ['O', "option_res"],         # J->C: [OPT]
+    28 => ['IO', "work_data"],        # W->J/C: HANDLE[0]RES
+    32 => ['I', "submit_job_high_bg"], # C->J  FUNC[0]UNIQ[0]ARGS
 );
 
 our %num;                        # name -> num
