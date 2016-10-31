@@ -382,6 +382,8 @@ run on_exception if defined
 
 sub exception {
     my ($self, $exc_ref) = @_;
+    #FIXME the only on_exception callback get dereferenced value
+    # could it be changed without damage?
     my $exception = Storable::thaw($$exc_ref);
     $self->{on_exception}->($$exception) if $self->{on_exception};
     return;
