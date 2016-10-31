@@ -175,6 +175,7 @@ sub new {
         background
         high_priority
         on_complete
+        on_data
         on_exception
         on_fail
         on_retry

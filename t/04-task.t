@@ -151,7 +151,6 @@ subtest "exception", sub {
     my $exc = Storable::freeze(\$f);
     $t->{on_exception} = sub { is(shift, $f) };
     is($t->exception(\$exc), undef);
-    pass("x");
 };
 
 subtest "complete", sub {
@@ -165,6 +164,12 @@ subtest "status", sub {
     $t->{is_finished} = undef;
     $t->{on_status} = sub { is(shift, $f), is(shift, $arg) };
     $t->status($f, $arg);
+};
+
+subtest "data", sub {
+    $t->{is_finished} = undef;
+    $t->{on_data} = sub { is(shift, $f) };
+    $t->data($f);
 };
 
 subtest "handle", sub {
