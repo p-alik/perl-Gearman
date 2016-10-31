@@ -63,6 +63,7 @@ use Gearman::ResponseParser::Taskset;
 # i thought about weakening taskset's client, but might be too weak.
 use Scalar::Util ();
 use Socket       ();
+use Storable     ();
 use Time::HiRes  ();
 
 =head2 new($client)
@@ -409,22 +410,22 @@ sub _ip_port {
 } ## end sub _ip_port
 
 #
-# _fail_jshandle($shandle)
+# _fail_jshandle($shandle, $type)
 #
 # note the failure of a task given by its jobserver-specific handle
 #
 sub _fail_jshandle {
-    my ($self, $shandle) = @_;
+    my ($self, $shandle, $type) = @_;
     $shandle
         or Carp::croak "_fail_jshandle() called without shandle parameter";
 
     my $task_list = $self->{waiting}{$shandle}
-        or Carp::croak "Uhhhh:  got work_fail for unknown handle: $shandle";
+        or Carp::croak "Uhhhh:  got $type for unknown handle: $shandle";
 
     my $task = shift @$task_list;
-    ($task && ref($task) eq "Gearman::Task")
-        or Carp::croak
-        "Uhhhh:  task_list is empty on work_fail for handle $shandle\n";
+    (Scalar::Util::blessed($task) && $task->isa("Gearman::Task"))
+        || Carp::croak
+        "Uhhhh:  task_list is empty on $type for handle $shandle\n";
 
     $task->fail("jshandle fail");
     delete $self->{waiting}{$shandle} unless @$task_list;
@@ -437,19 +438,26 @@ sub _fail_jshandle {
 sub process_packet {
     my ($self, $res, $sock) = @_;
 
-    my $qr   = qr/(.+?)\0/;
+    my $qr     = qr/(.+?)\0/;
+    my %assert = (
+        task => sub {
+            my ($task, $msg) = @_;
+            (Scalar::Util::blessed($task) && $task->isa("Gearman::Task"))
+                || Carp::croak $msg;
+        }
+    );
     my %type = (
         job_created => sub {
             my ($blob) = shift;
             my $task = shift @{ $self->{need_handle} };
-            ($task && ref($task) eq "Gearman::Task")
-                or Carp::croak "Um, got an unexpected job_created notification";
+            $assert{task}
+                ->($task, "Um, got an unexpected job_created notification");
             my $shandle = $blob;
             my $ipport  = $self->_ip_port($sock);
 
             # did sock become disconnected in the meantime?
             if (!$ipport) {
-                $self->_fail_jshandle($shandle);
+                $self->_fail_jshandle($shandle, "job_created");
                 return 1;
             }
 
@@ -465,14 +473,12 @@ sub process_packet {
             $blob =~ s/^$qr//;
             my $shandle = $1;
 
-            my $task_list = $self->{waiting}{$shandle}
-                or Carp::croak
-                "Uhhhh:  got work_complete for unknown handle: $shandle\n";
-
-            my $task = shift @$task_list;
-            ($task && ref($task) eq "Gearman::Task")
-                or Carp::croak
-                "Uhhhh:  task_list is empty on work_complete for handle $shandle\n";
+            my $task_list = $self->{waiting}{$shandle};
+            my $task      = shift @$task_list;
+            $assert{task}->(
+                $task,
+                "Uhhhh:  task_list is empty on work_complete for handle $shandle"
+            );
 
             $task->complete(\$blob);
             delete $self->{waiting}{$shandle} unless @$task_list;
@@ -485,15 +491,14 @@ sub process_packet {
                 or Carp::croak "Bogus work_data from server";
             my $shandle = $1;
 
-            my $task_list = $self->{waiting}{$shandle}
-                or Carp::croak
-                "Uhhhh:  got work_data for unknown handle: $shandle\n";
+            my $task_list = $self->{waiting}{$shandle};
+            my $task      = $task_list->[0];
+            $assert{task}->(
+                $task,
+                "Uhhhh:  task_list is empty on work_data for handle $shandle"
+            );
 
-            my $task = $task_list->[0]
-                or Carp::croak
-                "Uhhhh:  task_list is empty on work_data for handle $shandle\n";
-
-            $task->data($blob);
+            $task->data(\$blob);
 
             return 1;
         },
@@ -504,32 +509,31 @@ sub process_packet {
             $blob =~ s/^$qr//;
             my $shandle = $1;
 
-            my $task_list = $self->{waiting}{$shandle}
-                or Carp::croak
-                "Uhhhh:  got work_exception for unknown handle: $shandle\n";
+            my $task_list = $self->{waiting}{$shandle};
+            my $task      = $task_list->[0];
+            $assert{task}->(
+                $task,
+                "Uhhhh:  task_list is empty on work_exception for handle $shandle"
+            );
 
-            my $task = $task_list->[0];
-            ($task && ref($task) eq "Gearman::Task")
-                or Carp::croak
-                "Uhhhh:  task_list is empty on work_exception for handle $shandle\n";
-
-            $task->exception(\$blob);
+            #FIXME we have to freeze $blob because Task->exception expected it in this form.
+            # The only reason I see to do it so, is Worker->work implementation. With Gearman::Server it uses nfreeze for exception value.
+            $task->exception(\Storable::freeze(\$blob));
 
             return 1;
         },
         work_fail => sub {
             my ($blob) = shift;
-            my $shandle = $blob;
-            $self->_fail_jshandle($shandle);
+            $self->_fail_jshandle($blob, "work_fail");
             return 1;
         },
         work_status => sub {
             my ($blob) = shift;
             my ($shandle, $nu, $de) = split(/\0/, $blob);
-
-            my $task_list = $self->{waiting}{$shandle}
+            my $task_list = $self->{waiting}{$shandle};
+            ref($task_list) eq "ARRAY" && scalar(@{$task_list})
                 or Carp::croak
-                "Uhhhh:  got work_status for unknown handle: $shandle\n";
+                "Uhhhh:  got work_status for unknown handle: $shandle";
 
             # FIXME: the server is (probably) sending a work_status packet for each
             # interested client, even if the clients are the same, so probably need
