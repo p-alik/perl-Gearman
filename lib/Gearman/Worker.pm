@@ -468,8 +468,8 @@ sub unregister_function {
 
 =head2 job_servers(@servers)
 
-override L<Gearman::Objects> method to skip job server initialization
-if defined C<$ENV{GEARMAN_WORKER_USE_STDIO}>
+Override L<Gearman::Objects> method to skip job server initialization if
+wokring with L<Gearman::Server>.
 
 Calling this method will do nothing in a worker that is running as a child
 process of a gearman server.
@@ -625,7 +625,7 @@ Gearman workers can be run as child processes of a parent process
 which embeds L<Gearman::Server>.  When such a parent process
 fork/execs a worker, it sets the environment variable
 GEARMAN_WORKER_USE_STDIO to true before launching the worker. If this
-variable is set to true, then the jobservers function and option for
+variable is set to true, then the L<job_servers|job_servers(@servers)> function and option for
 new() are ignored and the unix socket bound to STDIN/OUT are used
 instead as the IO path to the gearman server.
 
