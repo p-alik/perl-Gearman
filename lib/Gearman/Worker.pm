@@ -163,110 +163,6 @@ sub new {
     return $self;
 } ## end sub new
 
-#
-# _get_js_sock($js, %opts)
-#
-sub _get_js_sock {
-    my ($self, $js, %opts) = @_;
-    $js || return;
-
-    my $js_str     = $self->_js_str($js);
-    my $on_connect = delete $opts{on_connect};
-
-    # Someday should warn when called with extra opts.
-
-    warn "getting job server socket: $js_str" if $self->debug;
-
-    # special case, if we're a child process of a gearman::server
-    # parent process, talking over a unix pipe...
-    return $self->{parent_pipe} if $self->{parent_pipe};
-
-    if (my $sock = $self->_sock_cache($js)) {
-        return $sock if getpeername($sock);
-
-        # delete cached sock
-        $self->_sock_cache($js, undef, 1);
-    } ## end if (my $sock = $self->...)
-
-    my $now        = time;
-    my $down_since = $self->{down_since}{$js_str};
-    if ($down_since) {
-        warn "job server down since $down_since" if $self->debug;
-
-        my $down_for = $now - $down_since;
-        my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
-        if ($self->{last_connect_fail}{$js_str} > $now - $retry_period) {
-            return;
-        }
-    } ## end if ($down_since)
-
-    warn "connecting to '$js_str'" if $self->debug;
-
-    my $sock = $self->socket($js, 1);
-    unless ($sock) {
-        $self->{down_since}{$js_str} ||= $now;
-        $self->{last_connect_fail}{$js_str} = $now;
-
-        return;
-    } ## end unless ($sock)
-
-    delete $self->{last_connect_fail}{$js_str};
-    delete $self->{down_since}{$js_str};
-
-    $sock->autoflush(1);
-    $self->sock_nodelay($sock);
-
-    $self->_sock_cache($js, $sock);
-
-    unless ($self->_on_connect($sock) && $on_connect && $on_connect->($sock)) {
-
-        # delete
-        $self->_sock_cache($js, undef, 1);
-        return;
-    } ## end unless ($self->_on_connect...)
-
-    return $sock;
-} ## end sub _get_js_sock
-
-#
-# _on_connect($sock)
-#
-# Housekeeping things to do on connection to a server. Method call
-# with one argument being the 'socket' we're going to take care of.
-# returns true on success, false on failure.
-#
-sub _on_connect {
-    my ($self, $sock) = @_;
-
-    my $cid_req = _rc("set_client_id", $self->{client_id});
-    return unless _send($sock, $cid_req);
-
-    # get this socket's state caught-up
-    foreach my $ability (keys %{ $self->{can} }) {
-        my $timeout = $self->{timeouts}->{$ability};
-        unless ($self->_set_ability($sock, $ability, $timeout)) {
-            return;
-        }
-    } ## end foreach my $ability (keys %...)
-
-    return 1;
-} ## end sub _on_connect
-
-#
-# _set_ability($sock, $ability, [$timeout])
-#
-sub _set_ability {
-    my ($self, $sock, $ability, $timeout) = @_;
-    my $req;
-    if (defined $timeout) {
-        $req = _rc("can_do_timeout", _join0($ability, $timeout));
-    }
-    else {
-        $req = _rc("can_do", $ability);
-    }
-    return _send($sock, $req);
-} ## end sub _set_ability
-
 =head2 reset_abilities
 
 tell all the jobservers that this worker can't do anything
@@ -570,35 +466,6 @@ sub unregister_function {
     delete $self->{can}{$ability};
 } ## end sub unregister_function
 
-#
-# _register_all($req)
-#
-sub _register_all {
-    my ($self, $req) = @_;
-
-    foreach my $js ($self->job_servers()) {
-        my $jss = $self->_get_js_sock($js)
-            or next;
-
-        unless (_send($jss, $req)) {
-            $self->uncache_sock($js, "write_register_func_error");
-        }
-    } ## end foreach my $js ($self->job_servers...)
-} ## end sub _register_all
-
-sub _send {
-    my ($jss, $req) = @_;
-    return Gearman::Util::send_req($jss, \$req);
-}
-
-sub _rc {
-    return Gearman::Util::pack_req_command(@_);
-}
-
-sub _join0 {
-    return join("\0", @_);
-}
-
 =head2 job_servers(@servers)
 
 override L<Gearman::Objects> method to skip job server initialization
@@ -615,6 +482,139 @@ sub job_servers {
 
     return $self->SUPER::job_servers(@_);
 } ## end sub job_servers
+
+#
+# _register_all($req)
+#
+sub _register_all {
+    my ($self, $req) = @_;
+
+    foreach my $js ($self->job_servers()) {
+        my $jss = $self->_get_js_sock($js)
+            or next;
+
+        unless (_send($jss, $req)) {
+            $self->uncache_sock($js, "write_register_func_error");
+        }
+    } ## end foreach my $js ($self->job_servers...)
+} ## end sub _register_all
+
+#
+# _get_js_sock($js, %opts)
+#
+sub _get_js_sock {
+    my ($self, $js, %opts) = @_;
+    $js || return;
+
+    my $js_str     = $self->_js_str($js);
+    my $on_connect = delete $opts{on_connect};
+
+    # Someday should warn when called with extra opts.
+
+    warn "getting job server socket: $js_str" if $self->debug;
+
+    # special case, if we're a child process of a gearman::server
+    # parent process, talking over a unix pipe...
+    return $self->{parent_pipe} if $self->{parent_pipe};
+
+    if (my $sock = $self->_sock_cache($js)) {
+        return $sock if getpeername($sock);
+
+        # delete cached sock
+        $self->_sock_cache($js, undef, 1);
+    } ## end if (my $sock = $self->...)
+
+    my $now        = time;
+    my $down_since = $self->{down_since}{$js_str};
+    if ($down_since) {
+        warn "job server down since $down_since" if $self->debug;
+
+        my $down_for = $now - $down_since;
+        my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
+        if ($self->{last_connect_fail}{$js_str} > $now - $retry_period) {
+            return;
+        }
+    } ## end if ($down_since)
+
+    warn "connecting to '$js_str'" if $self->debug;
+
+    my $sock = $self->socket($js, 1);
+    unless ($sock) {
+        $self->{down_since}{$js_str} ||= $now;
+        $self->{last_connect_fail}{$js_str} = $now;
+
+        return;
+    } ## end unless ($sock)
+
+    delete $self->{last_connect_fail}{$js_str};
+    delete $self->{down_since}{$js_str};
+
+    $sock->autoflush(1);
+    $self->sock_nodelay($sock);
+
+    $self->_sock_cache($js, $sock);
+
+    unless ($self->_on_connect($sock) && $on_connect && $on_connect->($sock)) {
+
+        # delete
+        $self->_sock_cache($js, undef, 1);
+        return;
+    } ## end unless ($self->_on_connect...)
+
+    return $sock;
+} ## end sub _get_js_sock
+
+#
+# _on_connect($sock)
+#
+# Housekeeping things to do on connection to a server. Method call
+# with one argument being the 'socket' we're going to take care of.
+# returns true on success, false on failure.
+#
+sub _on_connect {
+    my ($self, $sock) = @_;
+
+    my $cid_req = _rc("set_client_id", $self->{client_id});
+    return unless _send($sock, $cid_req);
+
+    # get this socket's state caught-up
+    foreach my $ability (keys %{ $self->{can} }) {
+        my $timeout = $self->{timeouts}->{$ability};
+        unless ($self->_set_ability($sock, $ability, $timeout)) {
+            return;
+        }
+    } ## end foreach my $ability (keys %...)
+
+    return 1;
+} ## end sub _on_connect
+
+#
+# _set_ability($sock, $ability, [$timeout])
+#
+sub _set_ability {
+    my ($self, $sock, $ability, $timeout) = @_;
+    my $req;
+    if (defined $timeout) {
+        $req = _rc("can_do_timeout", _join0($ability, $timeout));
+    }
+    else {
+        $req = _rc("can_do", $ability);
+    }
+    return _send($sock, $req);
+} ## end sub _set_ability
+
+sub _send {
+    my ($jss, $req) = @_;
+    return Gearman::Util::send_req($jss, \$req);
+}
+
+sub _rc {
+    return Gearman::Util::pack_req_command(@_);
+}
+
+sub _join0 {
+    return join("\0", @_);
+}
 
 1;
 __END__
