@@ -21,7 +21,7 @@ can_ok(
         job_servers
         register_function
         reset_abilities
-        uncache_sock
+        _uncache_sock
         unregister_function
         work
         /

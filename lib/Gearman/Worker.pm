@@ -177,7 +177,7 @@ sub reset_abilities {
             or next;
 
         unless (_send($jss, $req)) {
-            $self->uncache_sock($js, "err_write_reset_abilities");
+            $self->_uncache_sock($js, "err_write_reset_abilities");
         }
     } ## end foreach my $js (@{ $self->{...}})
 
@@ -310,6 +310,7 @@ sub work {
 
             unless ($res->{type} eq "job_assign") {
                 my $msg = "Uh, wasn't expecting a $res->{type} packet.";
+
                 #FIXME unreachable if block
                 if ($res->{type} eq "error") {
                     $msg .= " [${$res->{blobref}}]\n";
@@ -339,7 +340,7 @@ sub work {
                     = _rc("work_exception",
                     _join0($handle, Storable::nfreeze(\$err)));
                 unless (_send($jss, $exception_req)) {
-                    $self->uncache_sock($js, "write_res_error");
+                    $self->_uncache_sock($js, "write_res_error");
                     next;
                 }
             } ## end if (THROW_EXCEPTIONS &&...)
@@ -356,7 +357,7 @@ sub work {
             }
 
             unless (_send($jss, $work_req)) {
-                $self->uncache_sock($js, "write_res_error");
+                $self->_uncache_sock($js, "write_res_error");
                 next;
             }
 
@@ -496,7 +497,7 @@ sub _register_all {
             or next;
 
         unless (_send($jss, $req)) {
-            $self->uncache_sock($js, "write_register_func_error");
+            $self->_uncache_sock($js, "write_register_func_error");
         }
     } ## end foreach my $js ($self->job_servers...)
 } ## end sub _register_all
