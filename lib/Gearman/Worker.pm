@@ -270,6 +270,7 @@ sub work {
                     # gracefully.
                     exit(0);
                 } ## end if ($!{EPIPE} && $self...)
+
                 $self->uncache_sock($js, "grab_job_timeout");
                 delete $last_update_time{$js_str};
                 next;
