@@ -15,13 +15,15 @@ use_ok($mn);
 can_ok(
     $mn, qw/
         _get_js_sock
+        _job_request
         _on_connect
         _register_all
         _set_ability
+        _uncache_sock
         job_servers
         register_function
         reset_abilities
-        _uncache_sock
+        send_work_data
         unregister_function
         work
         /
