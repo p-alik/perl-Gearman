@@ -419,10 +419,10 @@ sub _fail_jshandle {
     $shandle
         or Carp::croak "_fail_jshandle() called without shandle parameter";
 
-    my $task_list = $self->{waiting}{$shandle}
-        or Carp::croak "Uhhhh:  got $type for unknown handle: $shandle";
+    my $task_list = $self->{waiting}{$shandle};
+    $task_list or Carp::croak "Uhhhh:  got $type for unknown handle: $shandle";
 
-    my $task = shift @$task_list;
+    my $task = $task_list->[0];
     (Scalar::Util::blessed($task) && $task->isa("Gearman::Task"))
         || Carp::croak
         "Uhhhh:  task_list is empty on $type for handle $shandle\n";
@@ -487,7 +487,7 @@ sub process_packet {
         },
         work_data => sub {
             my ($blob) = shift;
-            $blob =~ s/^(.+?)\0//
+            $blob =~ s/^$qr//
                 or Carp::croak "Bogus work_data from server";
             my $shandle = $1;
 
@@ -524,6 +524,9 @@ sub process_packet {
         },
         work_fail => sub {
             my ($blob) = shift;
+            if($blob =~ s/^$qr//) {
+              $blob = $1;
+            }
             $self->_fail_jshandle($blob, "work_fail");
             return 1;
         },
