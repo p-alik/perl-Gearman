@@ -71,8 +71,7 @@ sub set_status {
 =cut
 
 sub argref {
-    my $self = shift;
-    return $self->{argref};
+    return shift->{argref};
 }
 
 =head2 arg()
@@ -82,8 +81,7 @@ B<return> the scalar argument that the client sent to the job server.
 =cut
 
 sub arg {
-    my $self = shift;
-    return ${ $self->{argref} };
+    return ${ shift->{argref} };
 }
 
 =head2 handle()
@@ -93,7 +91,7 @@ B<return> handle
 =cut
 
 sub handle {
-    my $self = shift;
-    return $self->{handle};
+    return shift->{handle};
 }
 
+1;
