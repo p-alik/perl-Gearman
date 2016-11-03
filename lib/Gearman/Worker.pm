@@ -486,6 +486,27 @@ sub job_servers {
     return $self->SUPER::job_servers(@_);
 } ## end sub job_servers
 
+=head2 send_work_data($job, $v)
+
+send some data to the client for the running job
+
+=cut
+
+sub send_work_data {
+    return shift->_job_request("work_data", @_);
+} ## end sub send_work_data
+
+# _job_request($cmd, $job, $v)
+#
+# send some data to the client for the running job
+#
+sub _job_request {
+    my ($self, $cmd, $job, $v) = @_;
+    my $req = _rc($cmd, _join0($job->handle, ref $v ? $$v : $v));
+
+    return _send($job->{jss}, $req);
+} ## end sub _job_request
+
 #
 # _register_all($req)
 #
