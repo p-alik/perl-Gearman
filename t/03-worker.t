@@ -23,7 +23,11 @@ can_ok(
         job_servers
         register_function
         reset_abilities
+        send_work_complete
         send_work_data
+        send_work_exception
+        send_work_fail
+        send_work_status
         unregister_function
         work
         /
