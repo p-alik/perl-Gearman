@@ -19,19 +19,20 @@ can_ok(
         /
 );
 
-my @arg = qw/
-    foo
-    2
-    123.321.1.1:123
-    bar
-    /;
+my %arg = (
+    func   => "foo",
+    argref => \rand(10),
+    handle => "H:127.0.0.1:123",
+    js     => "127.0.0.1:4730",
+    jss    => "sock"
+);
 
-$arg[1] = \$arg[1];
-my $j = new_ok($mn, [@arg]);
-
-is($j->handle(), $arg[2]);
-is($j->argref(), $arg[1]);
-is($j->arg(),    ${ $arg[1] });
+my $j = new_ok($mn, [%arg]);
+is($j->handle(), $arg{handle});
+is($j->argref(), $arg{argref});
+is($j->arg(),    ${ $arg{argref} });
+is($j->{jss},    $arg{jss});
+is($j->{js},     $arg{js});
 
 dies_ok { $j->set_status(qw/a b/) };
 
