@@ -486,23 +486,68 @@ sub job_servers {
     return $self->SUPER::job_servers(@_);
 } ## end sub job_servers
 
-=head2 send_work_data($job, $v)
+=head2 send_work_complete($job, $v)
 
-send some data to the client for the running job
+notify the server (and listening clients) that job completed successfully
+
+=cut
+
+sub send_work_complete {
+    return shift->_job_request("work_complete", @_);
+}
+
+=head2 send_work_data($job, $data)
+
+Use this method to update the client with data from a running job.
 
 =cut
 
 sub send_work_data {
-    return shift->_job_request("work_data", @_);
-} ## end sub send_work_data
+    my ($self, $job, $data) = @_;
+    return $self->_job_request("work_data", $job, ref($data) ? ${$data} : $data);
+}
 
-# _job_request($cmd, $job, $v)
+=head2 send_work_exception($job, $exception)
+
+Use this method to notify the server (and any listening clients) that the job failed with the given C<$exception>.
+
+=cut
+
+sub send_work_exception {
+    my ($self, $job, $exc) = @_;
+    return $self->_job_request("work_exception", $job, $exc);
+}
+
+=head2 send_work_fail($job)
+
+Use this method to notify the server (and any listening clients) that the job failed.
+
+=cut
+
+sub send_work_fail {
+    my ($self, $job) = @_;
+    return $self->_job_request("work_fail", $job);
+}
+
+=head2 send_work_status($job, $numerator, $denominator)
+
+Use this method to send periodically to the server status update for long running jobs to update the percentage
+complete.
+
+=cut
+
+sub send_work_status {
+    my ($self, $job, $numerator, $denominator) = @_;
+    return $self->_job_request("work_status", $job, $numerator, $denominator);
+}
+
+# _job_request($cmd, $job, [$v])
 #
 # send some data to the client for the running job
 #
 sub _job_request {
     my ($self, $cmd, $job, $v) = @_;
-    my $req = _rc($cmd, _join0($job->handle, ref $v ? $$v : $v));
+    my $req = _rc($cmd, $v ? _join0($job->handle, $v) : $job->handle);
 
     return _send($job->{jss}, $req);
 } ## end sub _job_request
