@@ -217,9 +217,10 @@ sub wait {
 
     for my $sock ($self->{default_sock}, values %{ $self->{loaned_sock} }) {
         next unless $sock;
-        my $fd = $sock->fileno;
-        vec($rin, $fd, 1) = 1;
-        $watching{$fd} = $sock;
+        if(my $fd = $sock->fileno) {
+          vec($rin, $fd, 1) = 1;
+          $watching{$fd} = $sock;
+        }
     } ## end for my $sock ($self->{default_sock...})
 
     my $tries = 0;
@@ -227,8 +228,8 @@ sub wait {
         $tries++;
 
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
-        my $nfound = select($rout = $rin, undef, $eout = $rin, $time_left)
-            ;    # TODO drop the eout.
+        # TODO drop the eout.
+        my $nfound = select($rout = $rin, undef, $eout = $rin, $time_left);
         if ($timeout && $time_left <= 0) {
             $self->cancel;
             return;
@@ -239,7 +240,6 @@ sub wait {
             next unless vec($rout, $fd, 1);
 
             # TODO: deal with error vector
-
             my $sock   = $watching{$fd};
             my $parser = $parser{$fd}
                 ||= Gearman::ResponseParser::Taskset->new(
