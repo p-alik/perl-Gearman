@@ -11,6 +11,7 @@ use warnings;
 use POSIX qw(:errno_h);
 use Time::HiRes qw();
 use IO::Handle;
+use IO::Select;
 
 =head1 NAME
 
@@ -128,9 +129,7 @@ sub read_res_packet {
 
     IO::Handle::blocking($sock, 0);
 
-    my $fileno = fileno($sock);
-    my $rin    = '';
-    vec($rin, $fileno, 1) = 1;
+    my $is = IO::Select->new($sock);
 
     my $readlen = 12;
     my $offset  = 0;
@@ -148,12 +147,7 @@ sub read_res_packet {
             return $err->("timeout") if $time_remaining < 0;
         }
 
-        warn "  Selecting on fd $fileno\n" if DEBUG;
-        my $nfound = select((my $rout = $rin), undef, undef, $time_remaining);
-
-        warn "   Got $nfound fds back from select\n" if DEBUG;
-
-        next unless vec($rout, $fileno, 1);
+       $is->can_read($time_remaining) || next;
 
         warn "   Entering read loop\n" if DEBUG;
 
