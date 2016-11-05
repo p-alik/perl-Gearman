@@ -319,11 +319,16 @@ sub work {
                 die $msg;
             } ## end unless ($res->{type} eq "job_assign")
 
-            ${ $res->{'blobref'} } =~ s/^(.+?)\0(.+?)\0//
+            ${ $res->{blobref} } =~ s/^(.+?)\0(.+?)\0//
                 or die "Uh, regexp on job_assign failed";
             my ($handle, $ability) = ($1, $2);
-            my $job
-                = Gearman::Job->new($ability, $res->{'blobref'}, $handle, $jss);
+            my $job = Gearman::Job->new(
+                func   => $ability,
+                argref => $res->{blobref},
+                handle => $handle,
+                jss    => $jss,
+                js     => $js
+            );
 
             my $jobhandle = join("//", $js_str, $job->handle);
             $start_cb->($jobhandle) if $start_cb;
@@ -504,7 +509,8 @@ Use this method to update the client with data from a running job.
 
 sub send_work_data {
     my ($self, $job, $data) = @_;
-    return $self->_job_request("work_data", $job, ref($data) ? ${$data} : $data);
+    return $self->_job_request("work_data", $job,
+        ref($data) ? ${$data} : $data);
 }
 
 =head2 send_work_exception($job, $exception)
