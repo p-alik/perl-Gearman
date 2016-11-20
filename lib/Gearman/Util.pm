@@ -211,7 +211,7 @@ sub _read_sock {
     unless ($rv) {
         warn "   Read error: $!\n" if DEBUG;
         $! == EAGAIN && return;
-    } ## end unless ($rv)
+    }
 
     return (0, "read_error") unless defined $rv;
     return (0, "eof")        unless $rv;
@@ -271,10 +271,27 @@ sub send_req {
     my ($sock, $reqref) = @_;
     return 0 unless $sock;
 
-    my $len = length($$reqref);
-    local $SIG{PIPE} = 'IGNORE';
-    my $rv = $sock->syswrite($$reqref, $len);
-    return ($rv && $rv == $len) ? 1 : 0;
+    my $data = ${$reqref};
+    (my $total_len) = (my $len) = length($data);
+    my ($num_zero_writes, $offset) = (0, 0);
+    local $SIG{PIPE} = "IGNORE";
+
+    while ($len && ($num_zero_writes < 5)) {
+        my $written = $sock->syswrite($data, $len, $offset);
+        if (!defined $written) {
+            warn "send_req: syswrite error: $!" if DEBUG;
+            return 0;
+        }
+        elsif ($written > 0) {
+            $len -= $written;
+            $offset += $written;
+        }
+        else {
+            $num_zero_writes++;
+        }
+    } ## end while ($len && ($num_zero_writes...))
+
+    return ($total_len > 0 && $offset == $total_len);
 } ## end sub send_req
 
 =head2 wait_for_readability($fileno, $timeout)
