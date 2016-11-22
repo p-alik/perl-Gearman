@@ -7,7 +7,7 @@ use warnings;
 
 =head1 NAME
 
-Gearman::Objects - a parrent class for L<Gearman::Client> and L<Gearman::Worker>
+Gearman::Objects - a parent class for L<Gearman::Client> and L<Gearman::Worker>
 
 =head1 METHODS
 
