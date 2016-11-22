@@ -178,14 +178,12 @@ sub socket {
     }
 
     my $s = $sc->new(%opts);
-    unless ($s) {
-        $self->debug() && Carp::carp(
-            "connection failed error='$@'",
-            $self->use_ssl()
-            ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
-            : ""
-        );
-    } ## end unless ($s)
+    unless($s) {
+      $self->debug() && Carp::carp("connection failed error='$@'",
+        $self->use_ssl()
+        ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
+        : "");
+    }
 
     return $s;
 } ## end sub socket

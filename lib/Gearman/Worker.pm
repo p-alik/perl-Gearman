@@ -192,8 +192,6 @@ sub _get_js_sock {
 
     my $sock = $self->socket($ipport, 1);
     unless ($sock) {
-        $self->debug && warn "$@";
-
         $self->{down_since}{$ipport} ||= $now;
         $self->{last_connect_fail}{$ipport} = $now;
 
