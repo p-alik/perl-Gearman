@@ -178,10 +178,14 @@ sub socket {
     }
 
     my $s = $sc->new(%opts);
-    $s || Carp::carp("connection failed error='$@'",
-        $self->use_ssl()
-        ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
-        : "");
+    unless ($s) {
+        $self->debug() && Carp::carp(
+            "connection failed error='$@'",
+            $self->use_ssl()
+            ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
+            : ""
+        );
+    } ## end unless ($s)
 
     return $s;
 } ## end sub socket
@@ -191,6 +195,7 @@ sub socket {
 set TCP_NODELAY on $sock, die on failure
 
 =cut
+
 sub sock_nodelay {
     my ($self, $sock) = @_;
     setsockopt($sock, Socket::IPPROTO_TCP, Socket::TCP_NODELAY, pack("l", 1))
