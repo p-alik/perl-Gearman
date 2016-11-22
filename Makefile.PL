@@ -13,7 +13,6 @@ WriteMakefile(
         "Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
     VERSION_FROM   => "lib/Gearman/Client.pm",
     BUILD_REQUIRES => {
-        "version"         => 0,
         "File::Which"     => 0,
         "IO::Socket::IP"  => 0,
         "IO::Socket::SSL" => 0,
@@ -24,20 +23,21 @@ WriteMakefile(
         "Test::More"      => 0,
         "Test::TCP"       => "2.17",
         "Test::Timer"     => 0,
+        "version"         => 0,
     },
     PREREQ_PM => {
-        "version"         => 0,
         "Carp"            => 0,
-        "POSIX"           => 0,
-        "IO::Handle"      => 0,
+        "IO::Select"      => 0,
         "IO::Socket::IP"  => 0,
         "IO::Socket::SSL" => 0,
+        "POSIX"           => 0,
         "Scalar::Util"    => 0,
         "Socket"          => 0,
         "Storable"        => 1,
         "String::CRC32"   => 0,
         "Time::HiRes"     => 0,    # Usually core now
         "fields"          => 0,
+        "version"         => 0,
     },
     META_MERGE => {
         'meta-spec' => { version => 2 },
