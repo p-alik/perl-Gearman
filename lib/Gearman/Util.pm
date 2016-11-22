@@ -10,7 +10,6 @@ use warnings;
 # (may be the same value as EWOULDBLOCK) (POSIX.1)
 use POSIX qw(:errno_h);
 use Time::HiRes qw();
-use IO::Handle;
 use IO::Select;
 
 =head1 NAME
@@ -127,7 +126,7 @@ sub read_res_packet {
         return undef;
     };
 
-    IO::Handle::blocking($sock, 0);
+    $sock->blocking(0);
 
     my $is = IO::Select->new($sock);
 
@@ -187,7 +186,7 @@ sub read_res_packet {
         warn " Fully formed res packet, returning; type=$type->[1] len=$len\n"
             if DEBUG;
 
-        IO::Handle::blocking($sock, 1);
+        $sock->blocking(1);
 
         return {
             type    => $type->[1],
