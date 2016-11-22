@@ -34,6 +34,8 @@ BEGIN {
     $skip && plan skip_all => sprintf 'without $ENV{%s}', $skip;
 }
 
+my $debug = defined($ENV{SSL_DEBUG}) && $ENV{SSL_DEBUG};
+
 my $job_server = $ENV{SSL_GEARMAND_ADDR};
 
 my $ssl_cb = sub {
@@ -60,7 +62,7 @@ subtest "worker echo request", sub {
             use_ssl       => 1,
             ssl_socket_cb => $ssl_cb,
             job_servers   => [$job_server],
-            debug         => 0,
+            debug         => $debug,
         ]
     );
 
@@ -84,11 +86,11 @@ subtest "sum", sub {
     };
 
     my $worker = new_worker(
-        use_ssl       => 1,
-        ssl_socket_cb => $ssl_cb,
+        debug         => $debug,
+        func          => { $func, $cb },
         job_servers   => [$job_server],
-        debug         => 0,
-        func          => { $func, $cb }
+        ssl_socket_cb => $ssl_cb,
+        use_ssl       => 1,
     );
 
     my $client = _client();
@@ -116,10 +118,11 @@ sub _client {
     return new_ok(
         "Gearman::Client",
         [
+            debug => $debug,
             exceptions    => 1,
-            use_ssl       => 1,
+            job_servers   => [$job_server],
             ssl_socket_cb => $ssl_cb,
-            job_servers   => [$job_server]
+            use_ssl       => 1,
         ]
     );
 } ## end sub _client
