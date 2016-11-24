@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Differences qw(eq_or_diff);
 use IO::Socket::SSL ();
 
 my $mn = "Gearman::Objects";
@@ -20,56 +21,48 @@ can_ok(
         /
 );
 
-my @servers = qw/
-    foo:12345
-    bar:54321
-    /;
-
-my $c = new_ok(
-    'Gearman::Objects',
-    [job_servers => $servers[0]],
-    "Gearman::Objects->new(job_servers => $servers[0])"
-);
 
 subtest "job servers", sub {
+  {
+    my $host = "foo";
     my $c = new_ok(
         $mn,
-        [job_servers => $servers[0]],
-        "Gearman::Objects->new(job_servers => $servers[0])"
+        [job_servers => $host],
+        "Gearman::Objects->new(job_servers => $host)"
     );
-    is(
-        @{ $c->job_servers() }[0],
-        @{ $c->canonicalize_job_servers($servers[0]) }[0],
-        "job_servers=$servers[0]"
-    );
-    is(1, $c->{js_count}, "js_count=1");
 
-    $c = new_ok(
+    is(1, $c->{js_count}, "js_count=1");
+    ok(my @js = $c->job_servers(), "job_servers");
+    is(scalar(@js), 1, "job_servers count");
+
+    eq_or_diff(
+        $js[0],
+        @{ $c->canonicalize_job_servers($host) }[0],
+        "job_servers=$host"
+    );
+    is($js[0]->{host}, $host, "host");
+    is($js[0]->{port}, 4730, "default port");
+  }
+
+
+my @servers = (qw/
+    foo:12345
+    bar:54321
+    /, {host => "abc", "port" => 123});
+
+    my $c = new_ok(
         $mn,
         [job_servers => [@servers]],
-        sprintf("Gearman::Objects->new(job_servers => [%s])",
-            join(', ', @servers))
     );
+
     is(scalar(@servers), $c->{js_count}, "js_count=" . scalar(@servers));
-    ok(my @js = $c->job_servers);
+    ok(my @js = $c->job_servers, "job_servers");
     for (my $i = 0; $i <= $#servers; $i++) {
-        is(@{ $c->canonicalize_job_servers($servers[$i]) }[0],
+        isa_ok($js[$i], "HASH");
+
+        eq_or_diff(@{ $c->canonicalize_job_servers($servers[$i]) }[0],
             $js[$i], "canonicalize_job_servers($servers[$i])");
     }
-
-    ok($c->job_servers($servers[0]), "job_servers($servers[0])");
-    is(
-        @{ $c->job_servers() }[0],
-        @{ $c->canonicalize_job_servers($servers[0]) }[0],
-        'job_servers'
-    );
-
-    ok($c->job_servers([$servers[0]]), "job_servers([$servers[0]])");
-    is(
-        @{ $c->job_servers() }[0],
-        @{ $c->canonicalize_job_servers($servers[0]) }[0],
-        "job_servers"
-    );
 };
 
 subtest "debug", sub {

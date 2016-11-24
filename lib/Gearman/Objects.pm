@@ -97,25 +97,35 @@ sub canonicalize_job_servers {
 
     # take arrayref or array
     if (ref($_[0])) {
-        ref($_[0]) eq "ARRAY"
-            || Carp::croak
-            "canonicalize_job_servers argument is not a reference on array";
-        @in = @{ $_[0] };
+        if (ref($_[0]) eq "ARRAY") {
+            @in = @{ $_[0] };
+        }
+        elsif (ref($_[0]) eq "HASH") {
+            @in = ($_[0]);
+        }
+        else {
+            Carp::croak "unsupported argument type";
+        }
     } ## end if (ref($_[0]))
     else {
         @in = @_;
     }
 
     my $out = [];
-    foreach my $i (@in) {
-        $i
-            || Carp::croak
-            "canonicalize_job_servers argument contails an undefined parameter";
-        if ($i !~ /:/) {
-            $i .= ':' . Gearman::Objects::DEFAULT_PORT;
+    foreach (@in) {
+        my $s;
+        if (ref($_) eq "HASH") {
+            $s = $_;
         }
-        push @{$out}, $i;
-    } ## end foreach my $i (@in)
+        else {
+            my ($h, $p) = split(':', $_);
+            $s = {
+                host => $h,
+                port => $p || Gearman::Objects::DEFAULT_PORT
+            };
+        } ## end else [ if (ref($_) eq "HASH")]
+        push @{$out}, $s;
+    } ## end foreach (@in)
     return $out;
 } ## end sub canonicalize_job_servers
 
@@ -178,12 +188,14 @@ sub socket {
     }
 
     my $s = $sc->new(%opts);
-    unless($s) {
-      $self->debug() && Carp::carp("connection failed error='$@'",
-        $self->use_ssl()
-        ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
-        : "");
-    }
+    unless ($s) {
+        $self->debug() && Carp::carp(
+            "connection failed error='$@'",
+            $self->use_ssl()
+            ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
+            : ""
+        );
+    } ## end unless ($s)
 
     return $s;
 } ## end sub socket
