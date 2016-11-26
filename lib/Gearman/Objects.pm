@@ -19,6 +19,12 @@ use Carp            ();
 use IO::Socket::IP  ();
 use IO::Socket::SSL ();
 use Socket          ();
+use Ref::Util qw/
+    is_plain_arrayref
+    is_plain_hashref
+    is_plain_ref
+    is_ref
+    /;
 
 use fields qw/
     debug
@@ -32,7 +38,7 @@ use fields qw/
 sub new {
     my Gearman::Objects $self = shift;
     my (%opts) = @_;
-    unless (ref($self)) {
+    unless (is_ref($self)) {
         $self = fields::new($self);
     }
     $self->{job_servers} = [];
@@ -40,7 +46,7 @@ sub new {
 
     $opts{job_servers}
         && $self->set_job_servers(
-        ref($opts{job_servers})
+        is_ref($opts{job_servers})
         ? @{ $opts{job_servers} }
         : [$opts{job_servers}]
         );
@@ -85,7 +91,7 @@ sub set_job_servers {
 
 =head2 canonicalize_job_servers($js)
 
-C<$js> array reference or scalar
+C<$js> array reference, hash reference or scalar
 
 B<return> [canonicalized list]
 
@@ -95,18 +101,17 @@ sub canonicalize_job_servers {
     my ($self) = shift;
     my @in;
 
-    # take arrayref or array
-    if (ref($_[0])) {
-        if (ref($_[0]) eq "ARRAY") {
+    if (is_plain_ref($_[0])) {
+        if (is_plain_arrayref($_[0])) {
             @in = @{ $_[0] };
         }
-        elsif (ref($_[0]) eq "HASH") {
+        elsif (is_plain_hashref($_[0])) {
             @in = ($_[0]);
         }
         else {
             Carp::croak "unsupported argument type";
         }
-    } ## end if (ref($_[0]))
+    } ## end if (is_plain_ref($_[0]...))
     else {
         @in = @_;
     }
@@ -114,7 +119,7 @@ sub canonicalize_job_servers {
     my $out = [];
     foreach (@in) {
         my $s;
-        if (ref($_) eq "HASH") {
+        if (is_plain_hashref($_)) {
             $s = $_;
         }
         else {
@@ -123,7 +128,7 @@ sub canonicalize_job_servers {
                 host => $h,
                 port => $p || Gearman::Objects::DEFAULT_PORT
             };
-        } ## end else [ if (ref($_) eq "HASH")]
+        } ## end else [ if (is_plain_hashref($_...))]
         push @{$out}, $s;
     } ## end foreach (@in)
     return $out;
