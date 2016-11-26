@@ -32,6 +32,7 @@ WriteMakefile(
         "IO::Socket::IP"  => 0,
         "IO::Socket::SSL" => 0,
         "POSIX"           => 0,
+        "Ref::Util"       => 0,
         "Scalar::Util"    => 0,
         "Socket"          => 0,
         "Storable"        => 1,
