@@ -168,10 +168,14 @@ use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
 use Time::HiRes;
+use Ref::Util qw/
+    is_plain_scalarref
+    is_ref
+    /;
 
 sub new {
     my ($self, %opts) = @_;
-    unless (ref $self) {
+    unless (is_ref($self)) {
         $self = fields::new($self);
     }
 
@@ -348,7 +352,7 @@ sub get_job_server_clients {
 sub _get_task_from_args {
     my $self = shift;
     my $task;
-    if (ref $_[0]) {
+    if (is_ref($_[0])) {
         $task = shift;
         $task->isa("Gearman::Task")
             || Carp::croak("Argument isn't a Gearman::Task");
@@ -357,12 +361,12 @@ sub _get_task_from_args {
         my $func   = shift;
         my $arg_p  = shift;
         my $opts   = shift;
-        my $argref = ref $arg_p ? $arg_p : \$arg_p;
-        Carp::croak("Function argument must be scalar or scalarref")
-            unless ref $argref eq "SCALAR";
+        my $argref = is_ref($arg_p) ? $arg_p : \$arg_p;
+        is_plain_scalarref($argref)
+            || Carp::croak("Function argument must be scalar or scalarref");
 
         $task = Gearman::Task->new($func, $argref, $opts);
-    } ## end else [ if (ref $_[0]) ]
+    } ## end else [ if (is_ref($_[0])) ]
     return $task;
 
 } ## end sub _get_task_from_args
