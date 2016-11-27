@@ -13,7 +13,17 @@ Gearman::Client - Client for gearman distributed job system
 
     use Gearman::Client;
     my $client = Gearman::Client->new;
-    $client->job_servers('127.0.0.1', '10.0.0.1');
+    $client->job_servers(
+      '127.0.0.1',
+      {
+        ca_certs  => ...,
+        certfile  => ...,
+        host      => '10.0.0.1',
+        keyfile   => ...,
+        port      => 4733,
+        socket_cb => sub {...},
+        use_ssl   => 1,
+    );
 
     # running a single task
     my $result_ref = $client->do_task("add", "1+2");
