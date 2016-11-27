@@ -17,7 +17,6 @@ can_ok(
         set_job_servers
         sock_nodelay
         socket
-        use_ssl
         /
 );
 
@@ -84,43 +83,41 @@ subtest "prefix", sub {
     is($c->prefix($p), $p);
 };
 
-subtest "use ssl", sub {
-    my $c = new_ok($mn, [use_ssl => 1]);
-    is($c->use_ssl(),  1);
-    is($c->use_ssl(0), 0);
-    $c = new_ok($mn);
-    is($c->use_ssl(),  undef);
-    is($c->use_ssl(1), 1);
-};
-
 subtest "socket", sub {
-    my $dh  = "google.com";
-    my $dst = $ENV{GEARMAND_ADDR_SSL} || join(':', $dh, 443);
+    my $host  = "google.com";
     my $to  = int(rand(5)) + 1;
     my $c   = new_ok(
         $mn,
         [
-            job_servers   => $dst,
-            use_ssl       => 1,
-            ssl_socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; }
+            job_servers   => {
+              host => $host,
+              port => 443,
+              use_ssl       => 1,
+              socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; }
+            },
         ]
     );
 
 SKIP: {
-        my $sock = $c->socket($dst);
-        $sock || skip "failed connect to $dst or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
+        my $sock = $c->socket(($c->job_servers())[0]);
+        $sock || skip "failed connect to $host:443 or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
             2;
         isa_ok($sock, "IO::Socket::SSL");
         is($sock->timeout, $to, "ssl socket callback");
     } ## end SKIP:
 
-    $dst = $ENV{GEARMAND_ADDR} ? $ENV{GEARMAND_ADDR} : join(':', $dh, 80);
-    $c = new_ok($mn, [job_servers => $dst]);
+    my $to  = int(rand(5)) + 1;
+    $c = new_ok($mn, [job_servers => {
+          host => $host,
+          port => 80,
+          socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; }
+        }]);
 
 SKIP: {
-        my $sock = $c->socket($dst);
-        $sock || skip "failed connect: $!", 1;
+        my $sock = $c->socket(($c->job_servers())[0]);
+        $sock || skip "failed connect: $!", 2;
         isa_ok($sock, "IO::Socket::IP");
+        is($sock->timeout, $to, "ssl socket callback");
     }
 };
 
