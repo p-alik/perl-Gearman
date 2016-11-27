@@ -94,12 +94,12 @@ subtest "_get_js_sock", sub {
     is($w->_get_js_sock(), undef, "_get_js_sock() returns undef");
 
     $w->{parent_pipe} = rand(10);
-    my $hp = join ':', "127.0.0.1", empty_port();
+    my $js = {host => "127.0.0.1", port => empty_port()};
 
-    is($w->_get_js_sock($hp), $w->{parent_pipe}, "parent_pipe");
+    is($w->_get_js_sock($js), $w->{parent_pipe}, "parent_pipe");
 
     delete $w->{parent_pipe};
-    is($w->_get_js_sock($hp), undef, "_get_js_sock($hp) undef");
+    is($w->_get_js_sock($js), undef, "_get_js_sock(...) undef");
 
     my $gts = t::Server->new();
 SKIP: {
@@ -110,13 +110,13 @@ SKIP: {
 
         ok($w->job_servers($job_server));
 
-        $hp                          = $w->job_servers()->[0];
-        $w->{last_connect_fail}{$hp} = 1;
-        $w->{down_since}{$hp}        = 1;
+        $js                          = $w->job_servers()->[0];
+        $w->{last_connect_fail}{$js} = 1;
+        $w->{down_since}{$js}        = 1;
 
-        isa_ok($w->_get_js_sock($hp, on_connect => sub {1}), "IO::Socket::IP");
-        is($w->{last_connect_fail}{$hp}, undef);
-        is($w->{down_since}{$hp},        undef);
+        isa_ok($w->_get_js_sock($js, on_connect => sub {1}), "IO::Socket::IP");
+        is($w->{last_connect_fail}{$js}, undef);
+        is($w->{down_since}{$js},        undef);
     } ## end SKIP:
 };
 
