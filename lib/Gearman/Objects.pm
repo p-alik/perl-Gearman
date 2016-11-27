@@ -31,8 +31,6 @@ use fields qw/
     job_servers
     js_count
     prefix
-    use_ssl
-    ssl_socket_cb
     /;
 
 sub new {
@@ -45,17 +43,10 @@ sub new {
     $self->{js_count}    = 0;
 
     $opts{job_servers}
-        && $self->set_job_servers(
-        is_ref($opts{job_servers})
-        ? @{ $opts{job_servers} }
-        : [$opts{job_servers}]
-        );
+        && $self->set_job_servers($opts{job_servers});
 
     $self->debug($opts{debug});
     $self->prefix($opts{prefix});
-    if ($self->use_ssl($opts{use_ssl})) {
-        $self->{ssl_socket_cb} = $opts{ssl_socket_cb};
-    }
 
     return $self;
 } ## end sub new
@@ -85,7 +76,7 @@ sub set_job_servers {
     my $self = shift;
     my $list = $self->canonicalize_job_servers(@_);
 
-    $self->{js_count} = scalar @$list;
+    $self->{js_count} = scalar @{$list};
     return $self->{job_servers} = $list;
 } ## end sub set_job_servers
 
@@ -148,13 +139,9 @@ sub prefix {
     return shift->_property("prefix", @_);
 }
 
-sub use_ssl {
-    return shift->_property("use_ssl", @_);
-}
+=head2 socket($js, [$timeout])
 
-=head2 socket($host_port, [$timeout])
-
-depends on C<use_ssl> 
+depends on C<use_ssl>
 prepare L<IO::Socket::IP>
 or L<IO::Socket::SSL>
 
@@ -175,31 +162,30 @@ B<return> depends on C<use_ssl> IO::Socket::(IP|SSL) on success
 =cut
 
 sub socket {
-    my ($self, $pa, $t) = @_;
-    my ($h, $p) = ($pa =~ /^(.*):(\d+)$/);
-
+    my ($self, $js, $t) = @_;
     my %opts = (
-        PeerPort => $p,
-        PeerHost => $h,
+        PeerPort => $js->{port},
+        PeerHost => $js->{host},
         Timeout  => $t || 1
     );
-    my $sc;
-    if ($self->use_ssl()) {
+
+    my $sc = "IO::Socket::IP";
+    if ($js->{use_ssl}) {
         $sc = "IO::Socket::SSL";
-        $self->{ssl_socket_cb} && $self->{ssl_socket_cb}->(\%opts);
-    }
-    else {
-        $sc = "IO::Socket::IP";
-    }
+        for (qw/ keyfile certfile ca_certs /) {
+            $js->{$_} || next;
+            $opts{$_} = $js->{$_};
+        }
+    } ## end if ($js->{use_ssl})
+
+    $js->{socket_cb} && $js->{socket_cb}->(\%opts);
 
     my $s = $sc->new(%opts);
     unless ($s) {
-        $self->debug() && Carp::carp(
-            "connection failed error='$@'",
-            $self->use_ssl()
+        $self->debug() && Carp::carp("connection failed error='$@'",
+            $js->{use_ssl}
             ? ", ssl_error='$IO::Socket::SSL::SSL_ERROR'"
-            : ""
-        );
+            : "");
     } ## end unless ($s)
 
     return $s;
