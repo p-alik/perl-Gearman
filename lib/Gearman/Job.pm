@@ -7,6 +7,10 @@ use warnings;
 
 use Gearman::Util ();
 use Carp ();
+use Ref::Util qw/
+    is_plain_scalarref
+    is_ref
+    /;
 
 =head1 NAME
 
@@ -29,9 +33,10 @@ use fields (
 );
 
 sub new {
-    my ($class, $func, $argref, $handle, $jss) = @_;
-    my $self = $class;
-    $self = fields::new($class) unless ref $self;
+    my ($self, $func, $argref, $handle, $jss) = @_;
+    unless (is_ref($self)) {
+        $self = fields::new($self);
+    }
 
     $self->{func}   = $func;
     $self->{handle} = $handle;
