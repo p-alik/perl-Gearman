@@ -26,6 +26,12 @@ use Ref::Util qw/
     is_ref
     /;
 
+use Ref::Util qw/
+    is_plain_arrayref
+    is_plain_hashref
+    is_ref
+    /;
+
 use fields qw/
     debug
     job_servers
@@ -91,7 +97,6 @@ B<return> [canonicalized list]
 sub canonicalize_job_servers {
     my ($self) = shift;
     my @in;
-
     if (is_plain_ref($_[0])) {
         if (is_plain_arrayref($_[0])) {
             @in = @{ $_[0] };
@@ -108,20 +113,13 @@ sub canonicalize_job_servers {
     }
 
     my $out = [];
-    foreach (@in) {
-        my $s;
-        if (is_plain_hashref($_)) {
-            $s = $_;
+    foreach my $i (@in) {
+        if (!is_ref($i) && $i !~ /:/) {
+            $i .= ':' . Gearman::Objects::DEFAULT_PORT;
         }
-        else {
-            my ($h, $p) = split(':', $_);
-            $s = {
-                host => $h,
-                port => $p || Gearman::Objects::DEFAULT_PORT
-            };
-        } ## end else [ if (is_plain_hashref($_...))]
-        push @{$out}, $s;
-    } ## end foreach (@in)
+        push @{$out}, $i;
+    } ## end foreach my $i (@in)
+
     return $out;
 } ## end sub canonicalize_job_servers
 
@@ -163,6 +161,11 @@ B<return> depends on C<use_ssl> IO::Socket::(IP|SSL) on success
 
 sub socket {
     my ($self, $js, $t) = @_;
+    unless (is_ref($js)) {
+        my ($h, $p) = ($js =~ /^(.*):(\d+)$/);
+        $js = { host => $h, port => $p };
+    }
+
     my %opts = (
         PeerPort => $js->{port},
         PeerHost => $js->{host},
