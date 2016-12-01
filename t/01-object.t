@@ -20,47 +20,60 @@ can_ok(
         /
 );
 
-
 subtest "job servers", sub {
-  {
-    my $host = "foo";
-    my $c = new_ok(
-        $mn,
-        [job_servers => $host],
-        "Gearman::Objects->new(job_servers => $host)"
-    );
+    {
+        # scalar
+        my $host = "foo";
+        my $c    = new_ok(
+            $mn,
+            [job_servers => $host],
+            "Gearman::Objects->new(job_servers => $host)"
+        );
 
-    is(1, $c->{js_count}, "js_count=1");
-    ok(my @js = $c->job_servers(), "job_servers");
-    is(scalar(@js), 1, "job_servers count");
+        is(1, $c->{js_count}, "js_count=1");
+        ok(my @js = $c->job_servers(), "job_servers");
+        is(scalar(@js), 1, "job_servers count");
 
-    eq_or_diff(
-        $js[0],
-        @{ $c->canonicalize_job_servers($host) }[0],
-        "job_servers=$host"
-    );
-    is($js[0]->{host}, $host, "host");
-    is($js[0]->{port}, 4730, "default port");
-  }
+        eq_or_diff($js[0], @{ $c->canonicalize_job_servers($host) }[0],
+            "job_servers=$host");
+        is($js[0], join(':', $host, 4730), "$host:4730");
+    }
 
+    {
+        # hash reference
+        my $j = { host => "foo", port => 123 };
+        my $c = new_ok(
+            $mn,
+            [job_servers => $j],
+            "Gearman::Objects->new(job_servers => hash reference)"
+        );
 
-my @servers = (qw/
-    foo:12345
-    bar:54321
-    /, {host => "abc", "port" => 123});
+        is(1, $c->{js_count}, "js_count=1");
+        ok(my @js = $c->job_servers(), "job_servers");
+        is(scalar(@js), 1, "job_servers count");
 
-    my $c = new_ok(
-        $mn,
-        [job_servers => [@servers]],
-    );
+        eq_or_diff($js[0], @{ $c->canonicalize_job_servers($j) }[0],
+            "job_servers");
+    }
 
-    is(scalar(@servers), $c->{js_count}, "js_count=" . scalar(@servers));
-    ok(my @js = $c->job_servers, "job_servers");
-    for (my $i = 0; $i <= $#servers; $i++) {
-        isa_ok($js[$i], "HASH");
+    {
+        # mix scalar and hash reference
+        my @servers = (
+            qw/
+                foo:12345
+                bar:54321
+                /, { host => "abc", "port" => 123 }
+        );
 
-        eq_or_diff(@{ $c->canonicalize_job_servers($servers[$i]) }[0],
-            $js[$i], "canonicalize_job_servers($servers[$i])");
+        my $c = new_ok($mn, [job_servers => [@servers]],);
+
+        is(scalar(@servers), $c->{js_count}, "js_count=" . scalar(@servers));
+        ok(my @js = $c->job_servers, "job_servers");
+        isa_ok($js[$#servers], "HASH");
+        for (my $i = 0; $i <= $#servers; $i++) {
+            eq_or_diff(@{ $c->canonicalize_job_servers($servers[$i]) }[0],
+                $js[$i], "canonicalize_job_servers($servers[$i])");
+        }
     }
 };
 
@@ -84,41 +97,37 @@ subtest "prefix", sub {
 };
 
 subtest "socket", sub {
-    my $host  = "google.com";
-    my $to  = int(rand(5)) + 1;
-    my $c   = new_ok(
-        $mn,
-        [
-            job_servers   => {
-              host => $host,
-              port => 443,
-              use_ssl       => 1,
-              socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; }
-            },
-        ]
-    );
 
+    #TODO skip if can not resolve google.com
+    my $host = "google.com";
+    my $to   = int(rand(5)) + 1;
+    my $js   = {
+        use_ssl   => 1,
+        socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; },
+        host      => $host,
+        port      => 443
+    };
+
+    my $c = new_ok($mn);
 SKIP: {
-        my $sock = $c->socket(($c->job_servers())[0]);
-        $sock || skip "failed connect to $host:443 or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
+        my $sock = $c->socket($js);
+        $sock
+            || skip
+            "failed connect to $host:$js->{port} or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
             2;
         isa_ok($sock, "IO::Socket::SSL");
         is($sock->timeout, $to, "ssl socket callback");
     } ## end SKIP:
 
-    my $to  = int(rand(5)) + 1;
-    $c = new_ok($mn, [job_servers => {
-          host => $host,
-          port => 80,
-          socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; }
-        }]);
+    $to = int(rand(5)) + 1;
+    $js->{port} = 80;
 
 SKIP: {
-        my $sock = $c->socket(($c->job_servers())[0]);
-        $sock || skip "failed connect: $!", 2;
+        my $sock = $c->socket($js);
+        $sock || skip "failed connect to $js: $!", 2;
         isa_ok($sock, "IO::Socket::IP");
         is($sock->timeout, $to, "ssl socket callback");
-    }
+    } ## end SKIP:
 };
 
 done_testing();
