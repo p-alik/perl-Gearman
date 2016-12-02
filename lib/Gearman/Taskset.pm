@@ -154,6 +154,8 @@ sub client {
 
 =head2 cancel()
 
+Close sockets, cleanup internals.
+
 =cut
 
 sub cancel {
@@ -175,20 +177,22 @@ sub cancel {
     $self->{client}      = undef;
 } ## end sub cancel
 
-#=head2 _get_loaned_sock($hostport)
 #
-#=cut
+# _get_loaned_sock($js)
+#
 
 sub _get_loaned_sock {
-    my ($self, $hostport) = @_;
+    my ($self, $js) = @_;
+    my $js_str = $self->client()->_js_str($js);
 
-    if (my $sock = $self->{loaned_sock}{$hostport}) {
+    if (my $sock = $self->{loaned_sock}{$js_str}) {
         return $sock if $sock->connected;
-        delete $self->{loaned_sock}{$hostport};
+        delete $self->{loaned_sock}{$js_str};
     }
 
-    my $sock = $self->{client}->_get_js_sock($hostport);
-    return $self->{loaned_sock}{$hostport} = $sock;
+    my $sock = $self->client()->_get_js_sock($js);
+
+    return $self->{loaned_sock}{$js_str} = $sock;
 } ## end sub _get_loaned_sock
 
 =head2 wait(%opts)
@@ -223,10 +227,7 @@ sub wait {
         }
     } ## end for my $sock ($self->{default_sock...})
 
-    my $tries = 0;
     while (!$self->{cancelled} && keys %{ $self->{waiting} }) {
-        $tries++;
-
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
 
         # TODO drop the eout.
@@ -256,7 +257,6 @@ sub wait {
                 Carp::croak("Job server failure: $@");
             } ## end if ($@)
         } ## end foreach my $fd (keys %watching)
-
     } ## end while (!$self->{cancelled...})
 } ## end sub wait
 
@@ -316,17 +316,19 @@ sub _get_default_sock {
     return $self->{default_sock} if $self->{default_sock};
 
     my $getter = sub {
-        my $hostport = shift;
-        return $self->{loaned_sock}{$hostport}
-            || $self->{client}->_get_js_sock($hostport);
+        my $js = shift;
+        return $self->{loaned_sock}{$js}
+            || $self->{client}->_get_js_sock($js);
     };
 
-    my ($jst, $jss) = $self->{client}->_get_random_js_sock($getter);
+    my ($js, $jss) = $self->client()->_get_random_js_sock($getter);
     return unless $jss;
-    $self->{loaned_sock}{$jst} ||= $jss;
+
+    my $js_str = $self->client()->_js_str($js);
+    $self->{loaned_sock}{$js_str} ||= $jss;
 
     $self->{default_sock}     = $jss;
-    $self->{default_sockaddr} = $jst;
+    $self->{default_sockaddr} = $js_str;
 
     return $jss;
 } ## end sub _get_default_sock
@@ -340,12 +342,12 @@ sub _get_default_sock {
 sub _get_hashed_sock {
     my $self = shift;
     my $hv   = shift;
-
-    my $cl = $self->client;
+    my ($js_count, @job_servers)
+        = ($self->client()->{js_count}, $self->client()->job_servers());
     my $sock;
-    for (my $off = 0; $off < $cl->{js_count}; $off++) {
-        my $idx = ($hv + $off) % ($cl->{js_count});
-        $sock = $self->_get_loaned_sock($cl->{job_servers}[$idx]);
+    for (my $off = 0; $off < $js_count; $off++) {
+        my $idx = ($hv + $off) % ($js_count);
+        $sock = $self->_get_loaned_sock($job_servers[$idx]);
         last;
     }
 
