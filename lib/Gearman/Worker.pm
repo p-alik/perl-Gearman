@@ -94,7 +94,6 @@ use Gearman::Job;
 use Carp ();
 
 use fields (
-    'sock_cache',           # host:port -> IO::Socket::IP
     'last_connect_fail',    # host:port -> unixtime
     'down_since',           # host:port -> unixtime
     'connecting',           # host:port -> unixtime connect started at
@@ -139,12 +138,11 @@ sub new {
                 'ignores job_servers if $ENV{GEARMAN_WORKER_USE_STDIO} is set';
 
             delete($opts{job_servers});
-        }
+        } ## end if ($opts{job_servers})
     } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
 
     $self->SUPER::new(%opts);
 
-    $self->{sock_cache}        = {};
     $self->{last_connect_fail} = {};
     $self->{down_since}        = {};
     $self->{can}               = {};
@@ -155,61 +153,66 @@ sub new {
 } ## end sub new
 
 #
-# _get_js_sock($ipport, %opts)
+# _get_js_sock($js, %opts)
 #
 sub _get_js_sock {
-    my ($self, $ipport, %opts)  = @_;
-    $ipport || return;
+    my ($self, $js, %opts) = @_;
+    $js || return;
 
+    my $js_str     = $self->_js_str($js);
     my $on_connect = delete $opts{on_connect};
 
     # Someday should warn when called with extra opts.
 
-    warn "getting job server socket: $ipport" if $self->debug;
+    warn "getting job server socket: $js_str" if $self->debug;
 
     # special case, if we're a child process of a gearman::server
     # parent process, talking over a unix pipe...
     return $self->{parent_pipe} if $self->{parent_pipe};
 
-    if (my $sock = $self->{sock_cache}{$ipport}) {
+    if (my $sock = $self->_sock_cache($js)) {
         return $sock if getpeername($sock);
-        delete $self->{sock_cache}{$ipport};
-    }
+
+        # delete cached sock
+        $self->_sock_cache($js, undef, 1);
+    } ## end if (my $sock = $self->...)
 
     my $now        = time;
-    my $down_since = $self->{down_since}{$ipport};
+    my $down_since = $self->{down_since}{$js_str};
     if ($down_since) {
         warn "job server down since $down_since" if $self->debug;
 
         my $down_for = $now - $down_since;
         my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
-        if ($self->{last_connect_fail}{$ipport} > $now - $retry_period) {
-            return undef;
+        if ($self->{last_connect_fail}{$js_str} > $now - $retry_period) {
+            return;
         }
     } ## end if ($down_since)
 
-    warn "connecting to '$ipport'" if $self->debug;
+    warn "connecting to '$js_str'" if $self->debug;
 
-    my $sock = $self->socket($ipport, 1);
+    my $sock = $self->socket($js, 1);
     unless ($sock) {
-        $self->{down_since}{$ipport} ||= $now;
-        $self->{last_connect_fail}{$ipport} = $now;
+        $self->{down_since}{$js_str} ||= $now;
+        $self->{last_connect_fail}{$js_str} = $now;
 
         return;
     } ## end unless ($sock)
 
-    delete $self->{last_connect_fail}{$ipport};
-    delete $self->{down_since}{$ipport};
+    delete $self->{last_connect_fail}{$js_str};
+    delete $self->{down_since}{$js_str};
 
     $sock->autoflush(1);
     $self->sock_nodelay($sock);
 
-    $self->{sock_cache}{$ipport} = $sock;
+    $self->_sock_cache($js, $sock);
 
     unless ($self->_on_connect($sock) && $on_connect && $on_connect->($sock)) {
-        delete $self->{sock_cache}{$ipport};
+
+        # delete
+        $self->_sock_cache($js, undef, 1);
         return;
-    }
+    } ## end unless ($self->_on_connect...)
 
     return $sock;
 } ## end sub _get_js_sock
@@ -232,7 +235,7 @@ sub _on_connect {
     foreach my $ability (keys %{ $self->{can} }) {
         my $timeout = $self->{timeouts}->{$ability};
         unless ($self->_set_ability($sock, $ability, $timeout)) {
-            return undef;
+            return;
         }
     } ## end foreach my $ability (keys %...)
 
@@ -292,7 +295,8 @@ sub uncache_sock {
         if $self->{parent_pipe};
 
     # normal case, we just close this TCP connection and we'll reconnect later.
-    delete $self->{sock_cache}{$ipport};
+    # delete cached sock
+    $self->_sock_cache($ipport, undef, 1);
 } ## end sub uncache_sock
 
 =head2 work(%opts)
@@ -319,10 +323,12 @@ sub work {
         return Gearman::Util::send_req($_[0], \$presleep_req);
     };
 
+    my %js_map = map { $self->_js_str($_) => $_ } $self->job_servers;
+
     # "Active" job servers are servers that have woken us up and should be
     # queried to see if they have jobs for us to handle. On our first pass
     # in the loop we contact all servers.
-    my %active_js = map { $_ => 1 } @{ $self->{job_servers} };
+    my %active_js = map { $_ => 1 } keys(%js_map);
 
     # ( js => last_update_time, ... )
     my %last_update_time;
@@ -342,7 +348,8 @@ sub work {
 
         for (my $i = 0; $i < $js_count; $i++) {
             my $js_index = ($i + $js_offset) % $js_count;
-            my $js       = $jobby_js[$js_index];
+            my $js_str   = $jobby_js[$js_index];
+            my $js       = $js_map{$js_str};
             my $jss      = $self->_get_js_sock($js, on_connect => $on_connect)
                 or next;
 
@@ -359,7 +366,7 @@ sub work {
                     exit(0);
                 } ## end if ($!{EPIPE} && $self...)
                 $self->uncache_sock($js, "grab_job_timeout");
-                delete $last_update_time{$js};
+                delete $last_update_time{$js_str};
                 next;
             } ## end unless (Gearman::Util::send_req...)
 
@@ -371,7 +378,7 @@ sub work {
             unless (Gearman::Util::wait_for_readability($jss->fileno, $timeout))
             {
                 $self->uncache_sock($js, "grab_job_timeout");
-                delete $last_update_time{$js};
+                delete $last_update_time{$js_str};
                 next;
             } ## end unless (Gearman::Util::wait_for_readability...)
 
@@ -381,14 +388,14 @@ sub work {
                 $res = Gearman::Util::read_res_packet($jss, \$err);
                 unless ($res) {
                     $self->uncache_sock($js, "read_res_error");
-                    delete $last_update_time{$js};
+                    delete $last_update_time{$js_str};
                     next;
                 }
             } while ($res->{type} eq "noop");
 
             if ($res->{type} eq "no_job") {
                 unless (Gearman::Util::send_req($jss, \$presleep_req)) {
-                    delete $last_update_time{$js};
+                    delete $last_update_time{$js_str};
                     $self->uncache_sock($js, "write_presleep_error");
                 }
                 $last_update_time{$js} = time;
@@ -410,7 +417,7 @@ sub work {
             my $job
                 = Gearman::Job->new($ability, $res->{'blobref'}, $handle, $jss);
 
-            my $jobhandle = "$js//" . $job->handle;
+            my $jobhandle = join("//", $js_str, $job->handle);
             $start_cb->($jobhandle) if $start_cb;
 
             my $handler = $self->{can}{$ability};
@@ -418,7 +425,7 @@ sub work {
             my $err     = $@;
             warn "Job '$ability' died: $err" if $err;
 
-            $last_update_time{$js} = $last_job_time = time();
+            $last_update_time{$js_str} = $last_job_time = time();
 
             if (THROW_EXCEPTIONS && $err) {
                 my $exception_req
@@ -448,36 +455,38 @@ sub work {
                 next;
             }
 
-            $active_js{$js} = 1;
+            $active_js{$js_str} = 1;
         } ## end for (my $i = 0; $i < $js_count...)
 
         my @jss;
 
-        foreach my $js (@{ $self->{job_servers} }) {
-            my $jss = $self->_get_js_sock($js, on_connect => $on_connect)
+        foreach my $js_str (keys(%js_map)) {
+            my $jss
+                = $self->_get_js_sock($js_map{$js_str},
+                on_connect => $on_connect)
                 or next;
-            push @jss, [$js, $jss];
-        }
+            push @jss, [$js_str, $jss];
+        } ## end foreach my $js_str (keys(%js_map...))
 
         $is_idle = 1;
         my $wake_vec = '';
 
         foreach my $j (@jss) {
-            my ($js, $jss) = @$j;
+            my (undef, my $jss) = @{$j};
             my $fd = $jss->fileno;
             vec($wake_vec, $fd, 1) = 1;
         }
 
-        my $timeout = keys %active_js ? 0 : (10 + rand(2));
+        my $timeout = keys(%active_js) ? 0 : (10 + rand(2));
 
         # chill for some arbitrary time until we're woken up again
         my $nready = select(my $wout = $wake_vec, undef, undef, $timeout);
 
         if ($nready) {
             foreach my $j (@jss) {
-                my ($js, $jss) = @$j;
+                my ($js_str, $jss) = @{$j};
                 my $fd = $jss->fileno;
-                $active_js{$js} = 1
+                $active_js{$js_str} = 1
                     if vec($wout, $fd, 1);
             } ## end foreach my $j (@jss)
         } ## end if ($nready)
@@ -488,8 +497,8 @@ sub work {
 
         my $update_since = time - (15 + rand 60);
 
-        while (my ($js, $last_update) = each %last_update_time) {
-            $active_js{$js} = 1 if $last_update < $update_since;
+        while (my ($js_str, $last_update) = each %last_update_time) {
+            $active_js{$js_str} = 1 if $last_update < $update_since;
         }
     } ## end while (1)
 
@@ -524,7 +533,7 @@ sub register_function {
     my $subref  = shift;
 
     my $prefix = $self->prefix;
-    my $ability = defined($prefix) ? "$prefix\t$func" : "$func";
+    my $ability = defined($prefix) ? join("\t", $prefix, $func) : $func;
 
     my $req;
     if (defined $timeout) {
@@ -547,7 +556,7 @@ sub register_function {
 sub unregister_function {
     my ($self, $func) = @_;
     my $prefix = $self->prefix;
-    my $ability = defined($prefix) ? "$prefix\t$func" : "$func";
+    my $ability = defined($prefix) ? join("\t", $prefix, $func) : $func;
 
     my $req = Gearman::Util::pack_req_command("cant_do", $ability);
 
@@ -561,14 +570,14 @@ sub unregister_function {
 sub _register_all {
     my ($self, $req) = @_;
 
-    foreach my $js (@{ $self->{job_servers} }) {
+    foreach my $js ($self->job_servers()) {
         my $jss = $self->_get_js_sock($js)
             or next;
 
         unless (Gearman::Util::send_req($jss, \$req)) {
             $self->uncache_sock($js, "write_register_func_error");
         }
-    } ## end foreach my $js (@{ $self->{...}})
+    } ## end foreach my $js ($self->job_servers...)
 } ## end sub _register_all
 
 =head2 job_servers(@servers)
