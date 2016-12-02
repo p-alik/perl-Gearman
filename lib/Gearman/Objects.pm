@@ -1,6 +1,6 @@
 package Gearman::Objects;
 use version;
-$Gearman::Objects::VERSION = qv("2.001.001");    # TRIAL
+$Gearman::Objects::VERSION = qv("2.001.001"); # TRIAL
 
 use strict;
 use warnings;
@@ -102,7 +102,7 @@ sub canonicalize_job_servers {
             @in = ($_[0]);
         }
         else {
-            Carp::croak "unsupported argument type";
+            Carp::croak "unsupported argument type ", ref($_[0]);
         }
     } ## end if (is_plain_ref($_[0]...))
     else {
@@ -111,7 +111,10 @@ sub canonicalize_job_servers {
 
     my $out = [];
     foreach my $i (@in) {
-        if (!is_ref($i) && $i !~ /:/) {
+        if (is_ref($i)) {
+            $i->{port} ||= Gearman::Objects::DEFAULT_PORT;
+        }
+        elsif ($i !~ /:/) {
             $i .= ':' . Gearman::Objects::DEFAULT_PORT;
         }
         push @{$out}, $i;
@@ -210,7 +213,7 @@ sub sock_nodelay {
 
 sub _sock_cache {
     my ($self, $js, $sock, $delete) = @_;
-    my $hp = is_plain_hashref($js) ? join(':', @{$js}{qw/host port/}) : $js;
+    my $hp = $self->_js_str($js);
     if ($sock) {
         $self->{sock_cache}->{$hp} = $sock;
     }
@@ -233,5 +236,14 @@ sub _property {
 
     return $self->{$name};
 } ## end sub _property
+
+#
+#_js_str($js)
+#
+# return host:port
+sub _js_str {
+    my ($self, $js) = @_;
+    return is_plain_hashref($js) ? join(':', @{$js}{qw/host port/}) : $js;
+}
 
 1;

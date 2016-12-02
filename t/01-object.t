@@ -9,6 +9,7 @@ use_ok($mn);
 
 can_ok(
     $mn, qw/
+        _js_str
         _property
         _sock_cache
         canonicalize_job_servers
@@ -151,6 +152,14 @@ subtest "sock cache", sub {
     $k = { host => $k, port => 123 };
     is($c->_sock_cache($k, $v), $v);
     is(keys(%{ $c->{sock_cache} }), 1);
+};
+
+subtest "js stringify", sub {
+    my $c = new_ok($mn);
+    my ($h, $p) = ("foo", int(rand(10) + 1000));
+    my ($js) = join(':', $h, $p);
+    is($c->_js_str($js), $js);
+    is($c->_js_str({ host => $h, port => $p }), $js);
 };
 
 done_testing();
