@@ -104,7 +104,12 @@ subtest "sum", sub {
     my $client = _client();
     my @a      = map { int(rand(100)) } (0 .. int(rand(10) + 1));
     my $sum    = sum(@a);
-    my $out    = $client->do_task(sum => freeze([@a]));
+    my $out    = $client->do_task(
+        sum => freeze([@a]),
+        {
+            on_fail => sub { fail(explain(@_)) },
+        }
+    );
     is($$out, $sum, "do_task returned $sum for sum");
 };
 

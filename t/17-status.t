@@ -46,7 +46,12 @@ subtest "job server status", sub {
 subtest "job server jobs", sub {
     plan skip_all => "'jobs' command supported only by Gearman::Server";
     my $tasks = $client->new_task_set;
-    $tasks->add_task($func, 1);
+    $tasks->add_task(
+        $func, 1,
+        {
+            on_fail => sub { fail(explain(@_)) },
+        }
+    );
     my $js_jobs = $client->get_job_server_jobs();
     is(scalar keys %$js_jobs, 1, "Correct number of running jobs");
     my $host = (keys %$js_jobs)[0];
@@ -61,7 +66,12 @@ subtest "job server jobs", sub {
 subtest "job server clients", sub {
     plan skip_all => "'clients' command supported only by Gearman::Server";
     my $tasks = $client->new_task_set;
-    $tasks->add_task($func, 1);
+    $tasks->add_task(
+        $func, 1,
+        {
+            on_fail => sub { fail(explain(@_)) },
+        }
+    );
     my $js_clients = $client->get_job_server_clients();
     foreach my $js (keys %$js_clients) {
         foreach my $client (keys %{ $js_clients->{$js} }) {

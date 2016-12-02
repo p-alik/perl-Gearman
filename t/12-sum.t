@@ -33,8 +33,7 @@ my $cb   = sub {
 };
 
 my @workers
-    = map(
-    new_worker(job_servers => [@job_servers], func => { $func, $cb }),
+    = map(new_worker(job_servers => [@job_servers], func => { $func, $cb }),
     (0 .. int(rand(1) + 1)));
 
 subtest "taskset 1", sub {
@@ -44,7 +43,13 @@ subtest "taskset 1", sub {
 
     my @a   = _rl();
     my $sum = sum(@a);
-    my $out = $client->do_task(sum => freeze([@a]));
+    my $out = $client->do_task(
+        sum => freeze([@a]),
+        {
+            on_fail => sub { fail(explain(@_)) }
+        }
+    );
+
     is($$out, $sum, "do_task returned $sum for sum");
 
     undef($out);
@@ -82,7 +87,10 @@ subtest "taskset 2", sub {
     my $sb = sum(@b);
     $ts->add_task(
         sum => freeze([@b]),
-        { on_complete => sub { $sums[1] = ${ $_[0] } }, }
+        {
+            on_complete => sub { $sums[1] = ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) }
+        }
     );
     note "wait";
     $ts->wait;

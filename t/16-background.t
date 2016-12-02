@@ -38,7 +38,10 @@ my $worker = new_worker(
 subtest "dispatch background", sub {
     my $handle = $client->dispatch_background(
         $func => undef,
-        { on_complete => sub { note "complete", ${ $_[0] } }, }
+        {
+            on_complete => sub { note "complete", ${ $_[0] } },
+            on_fail     => sub { fail(explain(@_)) },
+        }
     );
 
     # wait for job to start being processed:

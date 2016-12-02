@@ -30,7 +30,8 @@ my %cb = (
     ],
 );
 
-my @workers = map(new_worker(job_servers => [$job_server], func => {%cb}), (0 .. int(rand(1) + 1)));
+my @workers = map(new_worker(job_servers => [$job_server], func => {%cb}),
+    (0 .. int(rand(1) + 1)));
 
 use_ok("Gearman::Client");
 
@@ -39,12 +40,16 @@ my $client = new_ok("Gearman::Client",
 
 ## Test sleeping less than the timeout
 subtest "sleep tree", sub {
-    is(${ $client->do_task("sleep_three", "1:less") },
+    my $opt = {
+        on_fail => sub { fail(explain(@_)) }
+    };
+
+    is(${ $client->do_task("sleep_three", "1:less", $opt) },
         "less", "We took less time than the worker timeout");
 
     # Do it three more times to check that "uniq" (implied "-")
     # works okay. 3 more because we need to go past the timeout.
-    is(${ $client->do_task("sleep_three", "1:one") },
+    is(${ $client->do_task("sleep_three", "1:one", $opt) },
         "one", "We took less time than the worker timeout, again");
 
     is(${ $client->do_task("sleep_three", "1:two") },

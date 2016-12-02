@@ -34,8 +34,16 @@ subtest "wokrker process fails", sub {
             }
         ),
         (0 .. int(rand(1) + 1)));
-    is($client->do_task($func),
-        undef, "Job that failed naturally returned undef");
+    is(
+        $client->do_task(
+            $func, undef,
+            {
+                on_fail => sub { fail(explain(@_)) },
+            }
+        ),
+        undef,
+        "Job that failed naturally returned undef"
+    );
 
     ## Test retry_count.
     my $retried = 0;
@@ -44,6 +52,7 @@ subtest "wokrker process fails", sub {
             $func => '',
             {
                 on_retry    => sub { $retried++ },
+                on_fail     => sub { fail(explain(@_)) },
                 retry_count => 3,
             }
         ),
@@ -80,7 +89,13 @@ subtest "worker process dies", sub {
     # the die message is available in the on_fail sub
     my $msg   = undef;
     my $tasks = $client->new_task_set;
-    $tasks->add_task($func, undef, { on_exception => sub { $msg = shift }, });
+    $tasks->add_task(
+        $func, undef,
+        {
+            on_exception => sub { $msg = shift },
+            on_fail => sub { fail(explain(@_)) },
+        }
+    );
     $tasks->wait;
     like(
         $msg,

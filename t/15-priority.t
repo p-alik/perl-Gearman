@@ -32,14 +32,16 @@ subtest "hight priority", sub {
     $tasks->add_task(
         echo_ws => 1,
         {
-            on_complete => sub { $out .= ${ $_[0] } }
+            on_complete => sub { $out .= ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) },
         }
     );
 
     $tasks->add_task(
         echo_ws => 2,
         {
-            on_complete => sub { $out .= ${ $_[0] } }
+            on_complete => sub { $out .= ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) },
         }
     );
 
@@ -63,28 +65,32 @@ subtest "hight priority", sub {
     $tasks->add_task(
         echo_ws => 3,
         {
-            on_complete => sub { $out .= ${ $_[0] } }
+            on_complete => sub { $out .= ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) },
         }
     );
 
     $tasks->add_task(
         echo_ws => 4,
         {
-            on_complete => sub { $out .= ${ $_[0] } }
+            on_complete => sub { $out .= ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) },
         }
     );
 
     $tasks->add_task(
         echo_ws => 5,
         {
-            on_complete => sub { $out .= ${ $_[0] } }
+            on_complete => sub { $out .= ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) },
         }
     );
 
     $tasks->add_task(
         echo_ws => 6,
         {
-            on_complete => sub { $out .= ${ $_[0] } }
+            on_complete => sub { $out .= ${ $_[0] } },
+            on_fail => sub { fail(explain(@_)) },
         }
     );
 
