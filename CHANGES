@@ -1,3 +1,7 @@
+2.002.001 2016-12-02 22:01:00 Europe/Berlin (TRIAL RELEASE)
+     -- job_servers entries could be a hash references or string
+     -- bug fixing Gearman::Util::send_req() SSL frame limitation (esabol)
+
 2.001.001 2016-10-13 10:45:00 Europe/Berlin (TRIAL RELEASE)
      -- support for SSL connection to gearmand
      -- support IPv6
