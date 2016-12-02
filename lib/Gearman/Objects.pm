@@ -19,6 +19,9 @@ use Carp            ();
 use IO::Socket::IP  ();
 use IO::Socket::SSL ();
 use Socket          ();
+use List::MoreUtils qw/
+    first_index
+    /;
 use Ref::Util qw/
     is_plain_arrayref
     is_plain_hashref
@@ -250,5 +253,17 @@ sub _js_str {
     my ($self, $js) = @_;
     return is_plain_hashref($js) ? join(':', @{$js}{qw/host port/}) : $js;
 }
+
+#
+# _js($js_str)
+#
+# return job_servers item || undef
+#
+sub _js {
+    my ($self, $js_str) = @_;
+    my @s = $self->job_servers();
+    my $i = first_index { $js_str eq $self->_js_str($_) } @s;
+    return ($i == -1 || $i > $#s) ? undef : $s[$i];
+} ## end sub _js
 
 1;

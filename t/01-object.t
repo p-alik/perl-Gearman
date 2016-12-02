@@ -9,6 +9,7 @@ use_ok($mn);
 
 can_ok(
     $mn, qw/
+        _js
         _js_str
         _property
         _sock_cache
@@ -157,9 +158,13 @@ subtest "sock cache", sub {
 subtest "js stringify", sub {
     my $c = new_ok($mn);
     my ($h, $p) = ("foo", int(rand(10) + 1000));
-    my ($js) = join(':', $h, $p);
-    is($c->_js_str($js), $js);
-    is($c->_js_str({ host => $h, port => $p }), $js);
+    my ($js_str, $js) = (join(':', $h, $p), { host => $h, port => $p });
+
+    is($c->_js_str($js),     $js_str);
+    is($c->_js_str($js_str), $js_str);
+
+    ok($c->job_servers($js));
+    is($c->_js($js_str), $js);
 };
 
 done_testing();
