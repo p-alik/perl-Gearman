@@ -1,6 +1,6 @@
 package Gearman::Objects;
 use version;
-$Gearman::Objects::VERSION = qv("2.001.001"); # TRIAL
+$Gearman::Objects::VERSION = qv("2.001.001");    # TRIAL
 
 use strict;
 use warnings;
@@ -26,17 +26,12 @@ use Ref::Util qw/
     is_ref
     /;
 
-use Ref::Util qw/
-    is_plain_arrayref
-    is_plain_hashref
-    is_ref
-    /;
-
 use fields qw/
     debug
     job_servers
     js_count
     prefix
+    sock_cache
     /;
 
 sub new {
@@ -53,6 +48,8 @@ sub new {
 
     $self->debug($opts{debug});
     $self->prefix($opts{prefix});
+
+    $self->{sock_cache} = {};
 
     return $self;
 } ## end sub new
@@ -205,6 +202,23 @@ sub sock_nodelay {
     setsockopt($sock, Socket::IPPROTO_TCP, Socket::TCP_NODELAY, pack("l", 1))
         or Carp::croak "setsockopt: $!";
 }
+
+# _sock_cache($js, [$sock, $delete])
+#
+# B<return> $sock || undef
+#
+
+sub _sock_cache {
+    my ($self, $js, $sock, $delete) = @_;
+    my $hp = is_plain_hashref($js) ? join(':', @{$js}{qw/host port/}) : $js;
+    if ($sock) {
+        $self->{sock_cache}->{$hp} = $sock;
+    }
+
+    return $delete
+        ? delete($self->{sock_cache}->{$hp})
+        : $self->{sock_cache}->{$hp};
+} ## end sub _sock_cache
 
 #
 # _property($name, [$value])

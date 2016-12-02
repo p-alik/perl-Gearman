@@ -10,6 +10,7 @@ use_ok($mn);
 can_ok(
     $mn, qw/
         _property
+        _sock_cache
         canonicalize_job_servers
         debug
         job_servers
@@ -128,6 +129,28 @@ SKIP: {
         isa_ok($sock, "IO::Socket::IP");
         is($sock->timeout, $to, "ssl socket callback");
     } ## end SKIP:
+};
+
+subtest "sock cache", sub {
+    my $c = new_ok($mn);
+    isa_ok($c->{sock_cache}, "HASH");
+    is(keys(%{ $c->{sock_cache} }), 0);
+    my ($k, $v) = qw/x y/;
+
+    # nothing in cache
+    is($c->_sock_cache($k), undef);
+
+    # set cache x = y
+    is($c->_sock_cache($k, $v), $v);
+    is(keys(%{ $c->{sock_cache} }), 1);
+
+    # delete x
+    is($c->_sock_cache($k, $v, 1), $v);
+    is(keys(%{ $c->{sock_cache} }), 0);
+
+    $k = { host => $k, port => 123 };
+    is($c->_sock_cache($k, $v), $v);
+    is(keys(%{ $c->{sock_cache} }), 1);
 };
 
 done_testing();
