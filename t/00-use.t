@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use version;
+use version ();
 use Test::More;
 
 my @mn = qw/
@@ -15,7 +15,7 @@ my @mn = qw/
     Gearman::Worker
     /;
 
-my $v = qv("2.001.001");
+my $v = version->declare("2.002.001");
 
 foreach my $n (@mn) {
     use_ok($n);
