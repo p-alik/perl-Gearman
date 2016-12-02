@@ -17,12 +17,13 @@ Gearman::Client - Client for gearman distributed job system
       '127.0.0.1',
       {
         ca_certs  => ...,
-        certfile  => ...,
+        cert_file  => ...,
         host      => '10.0.0.1',
-        keyfile   => ...,
+        key_file   => ...,
         port      => 4733,
         socket_cb => sub {...},
         use_ssl   => 1,
+      }
     );
 
     # running a single task

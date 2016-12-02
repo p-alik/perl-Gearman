@@ -15,7 +15,18 @@ Gearman::Worker - Worker for gearman distributed job system
 
     use Gearman::Worker;
     my $worker = Gearman::Worker->new;
-    $worker->job_servers('127.0.0.1');
+    $worker->job_servers(
+      '127.0.0.1',
+      {
+        ca_certs  => ...,
+        cert_file  => ...,
+        host      => '10.0.0.1',
+        key_file   => ...,
+        port      => 4733,
+        socket_cb => sub {...},
+        use_ssl   => 1,
+      }
+    );
     $worker->register_function($funcname => $subref);
     $worker->work while 1;
 
