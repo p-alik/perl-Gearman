@@ -40,7 +40,7 @@ use fields qw/
     /;
 
 sub new {
-    my Gearman::Objects $self = shift;
+    my $self = shift;
     my (%opts) = @_;
     unless (is_ref($self)) {
         $self = fields::new($self);
