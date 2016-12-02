@@ -120,6 +120,8 @@ sub read_res_packet {
     my $timeout    = shift;
     my $time_start = Time::HiRes::time();
 
+    #TODO improvement for SSL socket
+    # http://search.cpan.org/~sullr/IO-Socket-SSL/lib/IO/Socket/SSL.pod#Using_Non-Blocking_Sockets
     my $err = sub {
         my $code = shift;
         $sock->close() if $sock->connected;
