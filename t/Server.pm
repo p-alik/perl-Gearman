@@ -83,7 +83,7 @@ sub job_servers {
         my $s = $self->_start_server;
         $s || die $ERROR;
         push @{ $self->{_servers} }, $s;
-        push @r, join(':', $self->host, $s->port);
+        push @r, { host => $self->host, port => $s->port };
     } ## end while ($count--)
 
     return wantarray ? @r : $r[0];
