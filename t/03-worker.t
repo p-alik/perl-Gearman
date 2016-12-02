@@ -33,7 +33,6 @@ subtest "new", sub {
     isa_ok($w, 'Gearman::Objects');
 
     is(ref($w->{$_}), "HASH", "$_ is a hash ref") for qw/
-        sock_cache
         last_connect_fail
         down_since
         can
@@ -94,7 +93,7 @@ subtest "_get_js_sock", sub {
     is($w->_get_js_sock(), undef, "_get_js_sock() returns undef");
 
     $w->{parent_pipe} = rand(10);
-    my $js = {host => "127.0.0.1", port => empty_port()};
+    my $js = { host => "127.0.0.1", port => empty_port() };
 
     is($w->_get_js_sock($js), $w->{parent_pipe}, "parent_pipe");
 
@@ -110,13 +109,14 @@ SKIP: {
 
         ok($w->job_servers($job_server));
 
-        $js                          = $w->job_servers()->[0];
-        $w->{last_connect_fail}{$js} = 1;
-        $w->{down_since}{$js}        = 1;
+        $js = $w->job_servers()->[0];
+        my $js_str = $w->_js_str($js);
+        $w->{last_connect_fail}{$js_str} = 1;
+        $w->{down_since}{$js_str}        = 1;
 
         isa_ok($w->_get_js_sock($js, on_connect => sub {1}), "IO::Socket::IP");
-        is($w->{last_connect_fail}{$js}, undef);
-        is($w->{down_since}{$js},        undef);
+        is($w->{last_connect_fail}{$js_str}, undef);
+        is($w->{down_since}{$js_str},        undef);
     } ## end SKIP:
 };
 
