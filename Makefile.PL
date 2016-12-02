@@ -31,6 +31,7 @@ WriteMakefile(
         "IO::Select"      => 0,
         "IO::Socket::IP"  => 0,
         "IO::Socket::SSL" => 0,
+        "List::MoreUtils" => 0,
         "POSIX"           => 0,
         "Ref::Util"       => 0,
         "Scalar::Util"    => 0,
