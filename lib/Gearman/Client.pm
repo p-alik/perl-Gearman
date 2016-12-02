@@ -153,9 +153,8 @@ function.
 use base 'Gearman::Objects';
 
 use fields (
-    'sock_cache',    # hostport -> socket
-    'sock_info',     # hostport -> hashref
-    'hooks',         # hookname -> coderef
+    'sock_info',    # hostport -> hashref
+    'hooks',        # hookname -> coderef
     'exceptions',
     'backoff_max',
 
@@ -181,7 +180,6 @@ sub new {
 
     $self->SUPER::new(%opts);
 
-    $self->{sock_cache}      = {};
     $self->{hooks}           = {};
     $self->{exceptions}      = 0;
     $self->{backoff_max}     = 90;
@@ -246,7 +244,7 @@ sub _job_server_status_command {
             $each_line_sub->($hostport, $l);
         }
 
-        $self->_put_js_sock($hostport, $sock);
+        $self->_sock_cache($hostport, $sock);
     } ## end foreach my $hostport (@$list)
 } ## end sub _job_server_status_command
 
@@ -505,7 +503,7 @@ sub get_status {
     $args[0] || return;
 
     shift @args;
-    $self->_put_js_sock($hostport, $sock);
+    $self->_sock_cache($hostport, $sock);
 
     return Gearman::JobStatus->new(@args);
 } ## end sub get_status
@@ -537,12 +535,13 @@ sub _option_request {
 # _get_js_sock($hostport)
 #
 # returns a socket from the cache. it should be returned to the
-# cache with _put_js_sock. the hostport isn't verified. the caller
+# cache with _sock_cache($hostport, $sock).
+# The hostport isn't verified. the caller
 # should verify that $hostport is in the set of jobservers.
 sub _get_js_sock {
     my ($self, $hostport) = @_;
 
-    if (my $sock = delete $self->{sock_cache}{$hostport}) {
+    if (my $sock = $self->_sock_cache($hostport, undef, 1)) {
         return $sock if $sock->connected;
     }
 
@@ -575,18 +574,6 @@ sub _get_js_sock {
 
     return $sock;
 } ## end sub _get_js_sock
-
-#
-# _put_js_sock($hostport, $sock)
-#
-# way for a caller to give back a socket it previously requested.
-# the $hostport isn't verified, so the caller should verify the
-# $hostport is still in the set of jobservers.
-sub _put_js_sock {
-    my ($self, $hostport, $sock) = @_;
-
-    $self->{sock_cache}{$hostport} ||= $sock;
-}
 
 sub _get_random_js_sock {
     my ($self, $getter) = @_;

@@ -18,7 +18,6 @@ can_ok(
         _get_task_from_args
         _job_server_status_command
         _option_request
-        _put_js_sock
         add_hook
         dispatch_background
         do_task

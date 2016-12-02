@@ -62,7 +62,7 @@ use Gearman::ResponseParser::Taskset;
 # i thought about weakening taskset's client, but might be too weak.
 use Scalar::Util ();
 use Socket       ();
-use Time::HiRes ();
+use Time::HiRes  ();
 
 =head2 new($client)
 
@@ -95,12 +95,12 @@ sub DESTROY {
     return unless $self->{client};
 
     if ($self->{default_sock}) {
-        $self->{client}
-            ->_put_js_sock($self->{default_sockaddr}, $self->{default_sock});
+        $self->client->_sock_cache($self->{default_sockaddr},
+            $self->{default_sock});
     }
 
     while (my ($hp, $sock) = each %{ $self->{loaned_sock} }) {
-        $self->{client}->_put_js_sock($hp, $sock);
+        $self->client->_sock_cache($hp, $sock);
     }
 } ## end sub DESTROY
 
@@ -217,9 +217,9 @@ sub wait {
 
     for my $sock ($self->{default_sock}, values %{ $self->{loaned_sock} }) {
         next unless $sock;
-        if(my $fd = $sock->fileno) {
-          vec($rin, $fd, 1) = 1;
-          $watching{$fd} = $sock;
+        if (my $fd = $sock->fileno) {
+            vec($rin, $fd, 1) = 1;
+            $watching{$fd} = $sock;
         }
     } ## end for my $sock ($self->{default_sock...})
 
@@ -228,6 +228,7 @@ sub wait {
         $tries++;
 
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
+
         # TODO drop the eout.
         my $nfound = select($rout = $rin, undef, $eout = $rin, $time_left);
         if ($timeout && $time_left <= 0) {
@@ -291,6 +292,7 @@ sub add_task {
             = $self->_wait_for_packet($jssock,
             $self->{client}->{command_timeout});
         if (!$rv) {
+
             # ditch it, it failed.
             # this will resubmit it if it failed.
             shift @{ $self->{need_handle} };
