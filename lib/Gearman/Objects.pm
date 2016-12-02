@@ -85,7 +85,12 @@ sub set_job_servers {
 
 =head2 canonicalize_job_servers($js)
 
-C<$js> array reference, hash reference or scalar
+C<$js> a string, hash reference or array reference of aforementioned.
+
+Hash reference should contain at least host key.
+
+All keys: host, port (4730 on default), use_ssl, key_file, cert_file,
+ca_certs, socket_cb
 
 B<return> [canonicalized list]
 
@@ -175,9 +180,9 @@ sub socket {
     my $sc = "IO::Socket::IP";
     if ($js->{use_ssl}) {
         $sc = "IO::Socket::SSL";
-        for (qw/ keyfile certfile ca_certs /) {
+        for (qw/ key_file cert_file ca_certs /) {
             $js->{$_} || next;
-            $opts{$_} = $js->{$_};
+            $opts{ join('_', "SSL", $_) } = $js->{$_};
         }
     } ## end if ($js->{use_ssl})
 
