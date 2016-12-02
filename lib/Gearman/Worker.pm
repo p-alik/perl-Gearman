@@ -483,8 +483,8 @@ sub work {
         my $wake_vec = '';
 
         foreach my $j (@jss) {
-            my (undef, my $jss) = @{$j};
-            my $fd = $jss->fileno;
+            (undef, my $_jss) = @{$j};
+            my $fd = $_jss->fileno;
             vec($wake_vec, $fd, 1) = 1;
         }
 
