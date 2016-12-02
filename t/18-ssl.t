@@ -19,7 +19,8 @@ BEGIN {
 {
     my @env = qw/
         AUTHOR_TESTING
-        SSL_GEARMAND_ADDR
+        SSL_GEARMAND_HOST
+        SSL_GEARMAND_PORT
         SSL_VERIFY_MODE
         SSL_CERT_FILE
         SSL_KEY_FILE
@@ -36,15 +37,25 @@ BEGIN {
 
 my $debug = defined($ENV{SSL_DEBUG}) && $ENV{SSL_DEBUG};
 
-my $job_server = $ENV{SSL_GEARMAND_ADDR};
+my $job_server = {
+    use_ssl   => 1,
+    host      => $ENV{SSL_GEARMAND_HOST},
+    port      => $ENV{SSL_GEARMAND_PORT},
+    ca_file   => $ENV{SSL_CA_FILE},
+    cert_file => $ENV{SSL_CERT_FILE},
+    key_file  => $ENV{SSL_KEY_FILE},
+    socket_cb => sub {
+        my ($hr) = @_;
+        warn "!!!!";
+        if (defined($ENV{SSL_VERIFY_MODE})) {
+            $hr->{SSL_verify_mode} = eval "$ENV{SSL_VERIFY_MODE}";
+        }
 
-my $ssl_cb = sub {
-    my ($hr) = @_;
-    $hr->{SSL_verify_mode} = eval "$ENV{SSL_VERIFY_MODE}";
-    $hr->{SSL_ca_file}     = $ENV{SSL_CA_FILE};
-    $hr->{SSL_cert_file}   = $ENV{SSL_CERT_FILE};
-    $hr->{SSL_key_file}    = $ENV{SSL_KEY_FILE};
-    return $hr;
+        # $hr->{SSL_ca_file}     = $ENV{SSL_CA_FILE};
+        # $hr->{SSL_cert_file}   = $ENV{SSL_CERT_FILE};
+        # $hr->{SSL_key_file}    = $ENV{SSL_KEY_FILE};
+        return $hr;
+        }
 };
 
 use_ok("Gearman::Client");
@@ -60,10 +71,8 @@ subtest "worker echo request", sub {
     my $worker = new_ok(
         "Gearman::Worker",
         [
-            use_ssl       => 1,
-            ssl_socket_cb => $ssl_cb,
-            job_servers   => [$job_server],
-            debug         => $debug,
+            job_servers => [$job_server],
+            debug       => $debug,
         ]
     );
 
@@ -87,11 +96,9 @@ subtest "sum", sub {
     };
 
     my $worker = new_worker(
-        debug         => $debug,
-        func          => { $func, $cb },
-        job_servers   => [$job_server],
-        ssl_socket_cb => $ssl_cb,
-        use_ssl       => 1,
+        debug       => $debug,
+        func        => { $func, $cb },
+        job_servers => [$job_server],
     );
 
     my $client = _client();
@@ -119,11 +126,9 @@ sub _client {
     return new_ok(
         "Gearman::Client",
         [
-            debug => $debug,
-            exceptions    => 1,
-            job_servers   => [$job_server],
-            ssl_socket_cb => $ssl_cb,
-            use_ssl       => 1,
+            debug       => $debug,
+            exceptions  => 1,
+            job_servers => [$job_server],
         ]
     );
 } ## end sub _client
