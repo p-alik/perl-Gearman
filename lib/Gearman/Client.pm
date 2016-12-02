@@ -221,13 +221,16 @@ sub new_task_set {
 sub _job_server_status_command {
     my ($self, $command, $each_line_sub) = (shift, shift, shift);
 
-    my $list = $self->canonicalize_job_servers(@_);
-    $list = $self->{job_servers} unless @$list;
+    my $list
+        = scalar(@_)
+        ? $self->canonicalize_job_servers(@_)
+        : $self->job_servers();
+    my %js_map = map { $self->_js_str($_) => 1 } $self->job_servers();
 
-    foreach my $hostport (@$list) {
-        next unless grep { $_ eq $hostport } @{ $self->{job_servers} };
+    foreach my $js (@{$list}) {
+        defined($js_map{ $self->_js_str($js) }) || next;
 
-        my $sock = $self->_get_js_sock($hostport)
+        my $sock = $self->_get_js_sock($js)
             or next;
 
         my $rv = $sock->write($command);
@@ -241,11 +244,11 @@ sub _job_server_status_command {
         }
 
         foreach my $l (@lines) {
-            $each_line_sub->($hostport, $l);
+            $each_line_sub->($js, $l);
         }
 
-        $self->_sock_cache($hostport, $sock);
-    } ## end foreach my $hostport (@$list)
+        $self->_sock_cache($js, $sock);
+    } ## end foreach my $js (@{$list})
 } ## end sub _job_server_status_command
 
 =head2 get_job_server_status()
@@ -471,18 +474,20 @@ sub get_status {
     my ($self, $handle) = @_;
     $handle || return;
 
-    my ($hostport, $shandle) = split(m!//!, $handle);
+    my ($js_str, $shandle) = split(m!//!, $handle);
 
-    #TODO simple check for $hostport in job_server doesn't work if
-    # $hostport is not contained in job_servers
+    #TODO simple check for $js_str in job_server doesn't work if
+    # $js_str is not contained in job_servers
     # job_servers = ["localhost:4730"]
     # handle = 127.0.0.1:4730//H:...
     #
     # hopefully commit 58e2aa5 solves this TODO
-    return undef unless grep { $hostport eq $_ } @{ $self->{job_servers} };
 
-    my $sock = $self->_get_js_sock($hostport)
-        or return undef;
+    my $js = $self->_js($js_str);
+    $js || return;
+
+    my $sock = $self->_get_js_sock($js);
+    $sock || return;
 
     my $req = Gearman::Util::pack_req_command("get_status", $shandle);
     my $len = length($req);
@@ -503,7 +508,7 @@ sub get_status {
     $args[0] || return;
 
     shift @args;
-    $self->_sock_cache($hostport, $sock);
+    $self->_sock_cache($js_str, $sock);
 
     return Gearman::JobStatus->new(@args);
 } ## end sub get_status
@@ -532,24 +537,23 @@ sub _option_request {
 } ## end sub _option_request
 
 #
-# _get_js_sock($hostport)
+# _get_js_sock($js)
 #
 # returns a socket from the cache. it should be returned to the
-# cache with _sock_cache($hostport, $sock).
+# cache with _sock_cache($js, $sock).
 # The hostport isn't verified. the caller
-# should verify that $hostport is in the set of jobservers.
+# should verify that $js is in the set of jobservers.
 sub _get_js_sock {
-    my ($self, $hostport) = @_;
-
-    if (my $sock = $self->_sock_cache($hostport, undef, 1)) {
+    my ($self, $js) = @_;
+    if (my $sock = $self->_sock_cache($js, undef, 1)) {
         return $sock if $sock->connected;
     }
 
-    my $sockinfo = $self->{sock_info}{$hostport} ||= {};
+    my $sockinfo = $self->{sock_info}{ $self->_js_str($js) } ||= {};
     my $disabled_until = $sockinfo->{disabled_until};
     return if defined $disabled_until && $disabled_until > Time::HiRes::time();
 
-    my $sock = $self->socket($hostport, 1);
+    my $sock = $self->socket($js, 1);
     unless ($sock) {
         my $count       = ++$sockinfo->{failed_connects};
         my $disable_for = $count**2;
@@ -581,16 +585,16 @@ sub _get_random_js_sock {
     $self->{js_count} || return;
 
     $getter ||= sub {
-        my $hostport = shift;
-        return $self->_get_js_sock($hostport);
+        my $js = shift;
+        return $self->_get_js_sock($js);
     };
 
     my $ridx = int(rand($self->{js_count}));
     for (my $try = 0; $try < $self->{js_count}; $try++) {
-        my $aidx     = ($ridx + $try) % $self->{js_count};
-        my $hostport = $self->{job_servers}[$aidx];
-        my $sock     = $getter->($hostport) or next;
-        return ($hostport, $sock);
+        my $aidx = ($ridx + $try) % $self->{js_count};
+        my $js   = $self->{job_servers}[$aidx];
+        my $sock = $getter->($js) or next;
+        return ($js, $sock);
     } ## end for (my $try = 0; $try ...)
     return ();
 } ## end sub _get_random_js_sock
