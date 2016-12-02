@@ -272,7 +272,7 @@ sub reset_abilities {
             or next;
 
         unless (Gearman::Util::send_req($jss, \$req)) {
-            $self->uncache_sock("js", "err_write_reset_abilities");
+            $self->uncache_sock($js, "err_write_reset_abilities");
         }
     } ## end foreach my $js (@{ $self->{...}})
 
