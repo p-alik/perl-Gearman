@@ -1,3 +1,6 @@
+2.002.002 2016-12-03 12:10:00 Europe/Berlin (TRIAL RELEASE)
+     -- skip worker stop_if test if no gearmand
+
 2.002.001 2016-12-02 22:01:00 Europe/Berlin (TRIAL RELEASE)
      -- job_servers entries could be a hash references or string
      -- bug fixing Gearman::Util::send_req() SSL frame limitation (esabol)
