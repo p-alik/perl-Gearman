@@ -3,7 +3,6 @@ use warnings;
 
 # OK gearmand v1.0.6
 
-use File::Which qw/ which /;
 use Net::EmptyPort qw/ empty_port /;
 use Test::More;
 use Test::Timer;
@@ -29,6 +28,8 @@ can_ok(
 );
 
 subtest "new", sub {
+    plan tests => 8;
+
     my $w = new_ok($mn);
     isa_ok($w, 'Gearman::Objects');
 
@@ -49,6 +50,7 @@ subtest "new", sub {
 };
 
 subtest "register_function", sub {
+    plan tests => 3;
     my $w = new_ok($mn);
     my ($tn, $to) = qw/foo 2/;
     my $cb = sub {1};
@@ -65,6 +67,8 @@ subtest "register_function", sub {
 };
 
 subtest "reset_abilities", sub {
+    plan tests => 4;
+
     my $w = new_ok($mn);
     $w->{can}->{x}      = 1;
     $w->{timeouts}->{x} = 1;
@@ -76,18 +80,24 @@ subtest "reset_abilities", sub {
 };
 
 subtest "work", sub {
-    my $w = new_ok($mn);
-
-    time_ok(
-        sub {
-            $w->work(stop_if => sub { pass "work stop if"; });
-        },
-        12,
-        "stop if timeout"
-    );
+    plan tests => 2;
+    my $gts = t::Server->new();
+SKIP: {
+        $gts || skip $t::Server::ERROR, 2;
+        my $w = new_ok($mn);
+        time_ok(
+            sub {
+                $w->work(stop_if => sub { pass "work stop if"; });
+            },
+            12,
+            "stop if timeout"
+        );
+    } ## end SKIP:
 };
 
 subtest "_get_js_sock", sub {
+    plan tests => 8;
+
     my $w = new_ok($mn);
 
     is($w->_get_js_sock(), undef, "_get_js_sock() returns undef");
