@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 
-use File::Which ();
 use IO::Socket::IP;
 use Test::More;
 use Test::Exception;

@@ -80,10 +80,10 @@ subtest "reset_abilities", sub {
 };
 
 subtest "work", sub {
-    plan tests => 2;
+    plan tests => 3;
     my $gts = t::Server->new();
 SKIP: {
-        $gts || skip $t::Server::ERROR, 2;
+        $gts || skip $t::Server::ERROR, 3;
         my $w = new_ok($mn);
         time_ok(
             sub {
