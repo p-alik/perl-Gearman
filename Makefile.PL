@@ -7,8 +7,9 @@ use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
-    NAME   => "Gearman::Client",
-    AUTHOR => 'Brad Fitzpatrick <brad@danga.com>',
+    NAME     => "Gearman::Client",
+    DISTNAME => "Gearman",
+    AUTHOR   => 'Brad Fitzpatrick <brad@danga.com>',
     ABSTRACT =>
         "Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
     VERSION_FROM   => "lib/Gearman/Client.pm",
