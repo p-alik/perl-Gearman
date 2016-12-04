@@ -1,3 +1,6 @@
+2.002.003 2016-12-04 22:13:00 Europe/Berlin (TRIAL RELEASE)
+     -- add DISTNAME into Makefile.PL to get back to the old distribution name
+
 2.002.002 2016-12-03 12:10:00 Europe/Berlin (TRIAL RELEASE)
      -- skip worker stop_if test if no gearmand
 
