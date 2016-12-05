@@ -42,7 +42,7 @@ subtest "new", sub {
     ok($w->{client_id} =~ /^\p{Lowercase}+$/, "client_id");
 
     throws_ok {
-        local $ENV{GEARMAN_WORKER_USE_STDIO} = 1;
+        $ENV{GEARMAN_WORKER_USE_STDIO} = 1;
         $mn->new();
     }
     qr/Unable to initialize connection to gearmand/,
