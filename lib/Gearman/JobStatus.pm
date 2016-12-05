@@ -1,6 +1,6 @@
 package Gearman::JobStatus;
 use version ();
-$Gearman::JobStatus::VERSION = version->declare("2.002.003");
+$Gearman::JobStatus::VERSION = version->declare("2.002.004");
 
 
 use strict;

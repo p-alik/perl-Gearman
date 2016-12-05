@@ -1,7 +1,14 @@
-2.002.003 2016-12-04 22:13:00 Europe/Berlin (TRIAL RELEASE)
+2.002.004 2016-12-05 09:02:16 Europe/Berlin
+     -- requires Ref::Util >= 0.020; see cpan tester report 848fbc3e-b94f-11e6-8baf-a6caeafb6ca6
+     -- Makefile.PL updates
+        LICENSE: perl
+        min perl version 5.8.1
+     -- fixing worker GEARMAN_WORKER_USE_STDIO env test
+
+2.002.003 2016-12-04 22:13:00 Europe/Berlin
      -- add DISTNAME into Makefile.PL to get back to the old distribution name
 
-2.002.002 2016-12-03 12:10:00 Europe/Berlin (TRIAL RELEASE)
+2.002.002 2016-12-03 12:10:00 Europe/Berlin
      -- skip worker stop_if test if no gearmand
 
 2.002.001 2016-12-02 22:01:00 Europe/Berlin (TRIAL RELEASE)

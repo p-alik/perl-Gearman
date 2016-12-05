@@ -1,6 +1,6 @@
 package Gearman::Worker;
 use version;
-$Gearman::Worker::VERSION = version->declare("2.002.003");
+$Gearman::Worker::VERSION = version->declare("2.002.004");
 
 use strict;
 use warnings;
