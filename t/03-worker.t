@@ -41,12 +41,13 @@ subtest "new", sub {
         /;
     ok($w->{client_id} =~ /^\p{Lowercase}+$/, "client_id");
 
-    throws_ok {
+    {
         $ENV{GEARMAN_WORKER_USE_STDIO} = 1;
-        $mn->new();
+        throws_ok { $mn->new(); }
+        qr/Unable to initialize connection to gearmand/,
+            "GEARMAN_WORKER_USE_STDIO env";
+        undef($ENV{GEARMAN_WORKER_USE_STDIO});
     }
-    qr/Unable to initialize connection to gearmand/,
-        "GEARMAN_WORKER_USE_STDIO env";
 };
 
 subtest "register_function", sub {
