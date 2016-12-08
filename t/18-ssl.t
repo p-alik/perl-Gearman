@@ -46,7 +46,6 @@ my $job_server = {
     key_file  => $ENV{SSL_KEY_FILE},
     socket_cb => sub {
         my ($hr) = @_;
-        warn "!!!!";
         if (defined($ENV{SSL_VERIFY_MODE})) {
             $hr->{SSL_verify_mode} = eval "$ENV{SSL_VERIFY_MODE}";
         }
