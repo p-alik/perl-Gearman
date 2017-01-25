@@ -213,7 +213,7 @@ You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%
 
 sub work {
     my ($self, %opts) = @_;
-    my $stop_if     = delete $opts{'stop_if'} || sub {0};
+    my $stop_if     = delete($opts{stop_if}) || sub {0};
     my $complete_cb = delete $opts{on_complete};
     my $fail_cb     = delete $opts{on_fail};
     my $start_cb    = delete $opts{on_start};
@@ -678,6 +678,11 @@ sub _set_ability {
     return _send($sock, $req);
 } ## end sub _set_ability
 
+#
+# _send($jss, $req)
+#
+# send C<$req> to C<$jss>
+#
 sub _send {
     my ($jss, $req) = @_;
     return Gearman::Util::send_req($jss, \$req);
