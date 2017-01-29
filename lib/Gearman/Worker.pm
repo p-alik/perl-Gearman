@@ -103,6 +103,9 @@ I<sum> job.
 use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;
+use Ref::Util qw/
+    is_ref
+    /;
 
 use fields (
     'last_connect_fail',    # host:port -> unixtime
@@ -350,18 +353,18 @@ sub work {
                 }
             } ## end if (THROW_EXCEPTIONS &&...)
 
-            my $work_req;
+            my $sent;
             if (defined $ret) {
-                my $rv = ref $ret ? $$ret : $ret;
-                $work_req = _rc("work_complete", _join0($handle, $rv));
+                $sent = $self->send_work_complete($job,
+                    is_ref($ret) ? $$ret : $ret);
                 $complete_cb->($jobhandle, $ret) if $complete_cb;
             }
             else {
-                $work_req = _rc("work_fail", $handle);
+                $sent = $self->send_work_fail($job);
                 $fail_cb->($jobhandle, $err) if $fail_cb;
             }
 
-            unless (_send($jss, $work_req)) {
+            unless ($sent) {
                 $self->_uncache_sock($js, "write_res_error");
                 next;
             }
