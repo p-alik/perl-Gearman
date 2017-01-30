@@ -516,9 +516,20 @@ sub send_work_data {
         ref($data) ? ${$data} : $data);
 }
 
+=head2 send_work_warning($job, $message)
+
+Use this method to send a warning C<$message> to the server (and any listening clients) with regard to the running C<job>.
+
+=cut
+
+sub send_work_warning {
+    my ($self, $job, $msg) = @_;
+    return $self->_job_request("work_warning", $job, $msg);
+}
+
 =head2 send_work_exception($job, $exception)
 
-Use this method to notify the server (and any listening clients) that the job failed with the given C<$exception>.
+Use this method to notify the server (and any listening clients) that the C<job> failed with the given C<$exception>.
 
 =cut
 
