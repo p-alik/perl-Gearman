@@ -502,6 +502,23 @@ sub process_packet {
 
             return 1;
         },
+        work_warning => sub {
+            my ($blob) = shift;
+            $blob =~ s/^(.+?)\0//
+                or Carp::croak "Bogus work_warning from server";
+            my $shandle = $1;
+
+            my $task_list = $self->{waiting}{$shandle};
+            my $task      = $task_list->[0];
+            $assert{task}->(
+                $task,
+                "Uhhhh:  task_list is empty on work_warning for handle $shandle"
+            );
+
+            $task->warning(\$blob);
+
+            return 1;
+        },
         work_exception => sub {
             my ($blob) = shift;
             ($blob =~ /^$qr/)
