@@ -60,6 +60,7 @@ our %cmd = (
     26 => ['I', "option_req"],         # C->J: [OPT]
     27 => ['O', "option_res"],         # J->C: [OPT]
     28 => ['IO', "work_data"],        # W->J/C: HANDLE[0]RES
+    29 => ['IO', "work_warning"],        # W->J/C: HANDLE[0]RES
     32 => ['I', "submit_job_high_bg"], # C->J  FUNC[0]UNIQ[0]ARGS
 );
 
