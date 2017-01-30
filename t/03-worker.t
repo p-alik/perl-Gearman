@@ -27,6 +27,7 @@ can_ok(
         send_work_exception
         send_work_fail
         send_work_status
+        send_work_warning
         uncache_sock
         unregister_function
         work
