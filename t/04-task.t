@@ -15,6 +15,7 @@ can_ok(
     $mn, qw/
         add_hook
         complete
+        data
         exception
         fail
         final_fail
@@ -29,6 +30,7 @@ can_ok(
         status
         taskset
         timeout
+        warning
         wipe
         /
 );
@@ -170,6 +172,12 @@ subtest "data", sub {
     $t->{is_finished} = undef;
     $t->{on_data} = sub { is(shift, $f) };
     $t->data($f);
+};
+
+subtest "warning", sub {
+    $t->{is_finished} = undef;
+    $t->{on_warning} = sub { is(shift, $f) };
+    $t->warning($f);
 };
 
 subtest "handle", sub {
