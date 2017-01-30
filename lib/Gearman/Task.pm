@@ -78,6 +78,12 @@ A subroutine reference to be invoked if the task emits status updates.
 Arguments passed to the subref are ($numerator, $denominator), where those
 are left up to the client and job to determine.
 
+=item * on_warning
+
+A subroutine reference to be invoked if the task emits status updates.
+Arguments passed to the subref are ($numerator, $denominator), where those
+are left up to the client and job to determine.
+
 =item * retry_count
 
 Number of times job will be retried if there are failures.  Defaults to 0.
@@ -124,6 +130,7 @@ use fields (
     'on_data',
     'on_fail',
     'on_exception',
+    'on_warning',
     'on_retry',
     'on_status',
     'on_post_hooks',
@@ -180,6 +187,7 @@ sub new {
         on_fail
         on_retry
         on_status
+        on_warning
         retry_count
         timeout
         try_timeout
@@ -422,14 +430,32 @@ sub status {
 
 =head2 data()
 
+invokes C<on_data> callback if worker sends work_data notification.
+
 =cut
 
 sub data {
-    my Gearman::Task $task = shift;
-    return if $task->{is_finished};
+    my $self = shift;
+    return if $self->{is_finished};
     my $result_ref = shift;
 
-    $task->{on_data}->($result_ref) if $task->{on_data};
+    $self->{on_data}->($result_ref) if $self->{on_data};
+} ## end sub data
+
+=head2 warning($message)
+
+invokes C<on_warning> callback if worker sends work_warning notification.
+
+=cut
+
+sub warning {
+    my $self = shift;
+    $self->{is_finished} && return;
+    $self->{on_warning} || return;
+
+    my $msg = shift;
+
+    $self->{on_warning}->($msg );
 } ## end sub data
 
 =head2 handle()
