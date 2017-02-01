@@ -327,6 +327,8 @@ sub work {
 
             $last_update_time{$js_str} = $last_job_time = time();
             if ($err) {
+                #TODO should be work_exception replaced by work_fail?
+                # see 75b65e1
                 my $exception_req
                     = _rc("work_exception",
                     _join0($handle, Storable::nfreeze(\$err)));
