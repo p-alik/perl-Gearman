@@ -28,7 +28,8 @@ foreach my $method (qw/data warning/) {
     subtest $str, sub {
         plan tests => 3;
 
-        my $client = new_ok("Gearman::Client", [job_servers => [@job_servers]]);
+        my $client = new_ok("Gearman::Client",
+            [exceptions => 1, job_servers => [@job_servers]]);
         my $worker
             = worker(join('_', "send", $str), job_servers => [@job_servers]);
 
@@ -40,8 +41,9 @@ foreach my $method (qw/data warning/) {
                     my ($ref) = @_;
                     $r += $a[$i];
                     $i++;
-                }
-            }
+                },
+                on_exception => sub { fail("exception") }
+            },
         );
         is(scalar(@a), $i);
         is(${$res},    $r);
