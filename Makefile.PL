@@ -38,7 +38,7 @@ WriteMakefile(
         "Ref::Util"       => "0.020",
         "Scalar::Util"    => 0,
         "Socket"          => 0,
-        "Storable"        => 1,
+        "Storable"        => 0,
         "String::CRC32"   => 0,
         "Time::HiRes"     => 0,
         "fields"          => 0,

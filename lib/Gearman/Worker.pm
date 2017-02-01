@@ -103,9 +103,8 @@ I<sum> job.
 use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;
-use Ref::Util qw/
-    is_ref
-    /;
+use Ref::Util qw/ is_ref /;
+use Storable ();
 
 use fields (
     'last_connect_fail',    # host:port -> unixtime
@@ -118,21 +117,6 @@ use fields (
                     #   this is socket to our parent process.  also means parent
                     #   sock can never disconnect or timeout, etc..
 );
-
-BEGIN {
-    my $storable = eval { require Storable; 1 }
-        if !defined &THROW_EXCEPTIONS || THROW_EXCEPTIONS();
-
-    $storable ||= 0;
-
-    if (defined &THROW_EXCEPTIONS) {
-        die "Exceptions support requires Storable: $@";
-    }
-    else {
-        eval "sub THROW_EXCEPTIONS () { $storable }";
-        die "Couldn't define THROW_EXCEPTIONS: $@\n" if $@;
-    }
-} ## end BEGIN
 
 sub new {
     my ($class, %opts) = @_;
@@ -342,8 +326,7 @@ sub work {
             warn "Job '$ability' died: $err" if $err;
 
             $last_update_time{$js_str} = $last_job_time = time();
-
-            if (THROW_EXCEPTIONS && $err) {
+            if ($err) {
                 my $exception_req
                     = _rc("work_exception",
                     _join0($handle, Storable::nfreeze(\$err)));
@@ -351,7 +334,7 @@ sub work {
                     $self->_uncache_sock($js, "write_res_error");
                     next;
                 }
-            } ## end if (THROW_EXCEPTIONS &&...)
+            }
 
             my $sent;
             if (defined $ret) {
