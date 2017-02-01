@@ -19,6 +19,7 @@ can_ok(
         _on_connect
         _register_all
         _set_ability
+        _uncache_sock
         job_servers
         register_function
         reset_abilities
@@ -27,7 +28,6 @@ can_ok(
         send_work_fail
         send_work_status
         send_work_warning
-        uncache_sock
         unregister_function
         work
         /

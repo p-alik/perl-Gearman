@@ -188,13 +188,13 @@ sub reset_abilities {
     $self->{timeouts} = {};
 } ## end sub reset_abilities
 
-=head2 uncache_sock($ipport, $reason)
+=head2 _uncache_sock($ipport, $reason)
 
 close TCP connection
 
 =cut
 
-sub uncache_sock {
+sub _uncache_sock {
     my ($self, $ipport, $reason) = @_;
 
     # we can't reconnect as a child process, so all we can do is die and hope our
@@ -205,7 +205,7 @@ sub uncache_sock {
     # normal case, we just close this TCP connection and we'll reconnect later.
     # delete cached sock
     $self->_sock_cache($ipport, undef, 1);
-} ## end sub uncache_sock
+} ## end sub _uncache_sock
 
 =head2 work(%opts)
 
@@ -274,7 +274,7 @@ sub work {
                     exit(0);
                 } ## end if ($!{EPIPE} && $self...)
 
-                $self->uncache_sock($js, "grab_job_timeout");
+                $self->_uncache_sock($js, "grab_job_timeout");
                 delete $last_update_time{$js_str};
                 next;
             } ## end unless (_send($jss, $grab_req...))
@@ -286,7 +286,7 @@ sub work {
             my $timeout = $self->{parent_pipe} ? 5 : 0.50;
             unless (Gearman::Util::wait_for_readability($jss->fileno, $timeout))
             {
-                $self->uncache_sock($js, "grab_job_timeout");
+                $self->_uncache_sock($js, "grab_job_timeout");
                 delete $last_update_time{$js_str};
                 next;
             } ## end unless (Gearman::Util::wait_for_readability...)
@@ -296,7 +296,7 @@ sub work {
                 my $err;
                 $res = Gearman::Util::read_res_packet($jss, \$err);
                 unless ($res) {
-                    $self->uncache_sock($js, "read_res_error");
+                    $self->_uncache_sock($js, "read_res_error");
                     delete $last_update_time{$js_str};
                     next;
                 }
@@ -305,7 +305,7 @@ sub work {
             if ($res->{type} eq "no_job") {
                 unless (_send($jss, $presleep_req)) {
                     delete $last_update_time{$js_str};
-                    $self->uncache_sock($js, "write_presleep_error");
+                    $self->_uncache_sock($js, "write_presleep_error");
                 }
                 $last_update_time{$js_str} = time;
                 next;
