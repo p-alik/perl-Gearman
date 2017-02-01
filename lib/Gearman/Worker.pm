@@ -464,6 +464,8 @@ sub register_function {
 
 =head2 unregister_function($funcname)
 
+send cant_do C<$funcname> request to L<job_servers>
+
 =cut
 
 sub unregister_function {
