@@ -45,8 +45,8 @@ foreach my $method (qw/data warning/) {
                 on_exception => sub { fail("exception") }
             },
         );
-        is(scalar(@a), $i);
-        is(${$res},    $r);
+        is(scalar(@a), $i, "on_$method count");
+        is(${$res},    $r, "$func result");
     };
 } ## end foreach my $method (qw/data warning/)
 
