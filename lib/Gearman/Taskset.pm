@@ -410,15 +410,15 @@ sub _ip_port {
 } ## end sub _ip_port
 
 #
-# _fail_jshandle($shandle, $type)
+# _fail_jshandle($shandle, $type, [$message])
 #
 # note the failure of a task given by its jobserver-specific handle
 #
 sub _fail_jshandle {
-    my ($self, $shandle, $type) = @_;
+    my ($self, $shandle, $type, $msg) = @_;
     $shandle
         or Carp::croak "_fail_jshandle() called without shandle parameter";
-
+warn join ";", $shandle, $type, $msg || '', '';
     my $task_list = $self->{waiting}{$shandle}
         or Carp::croak "Uhhhh:  got $type for unknown handle: $shandle";
 
@@ -427,7 +427,8 @@ sub _fail_jshandle {
         || Carp::croak
         "Uhhhh:  task_list is empty on $type for handle $shandle\n";
 
-    $task->fail("jshandle fail");
+    $task->fail($msg || "jshandle fail");
+
     delete $self->{waiting}{$shandle} unless @$task_list;
 } ## end sub _fail_jshandle
 
@@ -541,7 +542,9 @@ sub process_packet {
         },
         work_fail => sub {
             my ($blob) = shift;
-            $self->_fail_jshandle($blob, "work_fail");
+            my ($shandle, $msg) = split(/\0/, $blob);
+            $shandle ||=$blob;
+            $self->_fail_jshandle($shandle, "work_fail", $msg);
             return 1;
         },
         work_status => sub {
