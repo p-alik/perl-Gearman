@@ -197,7 +197,7 @@ Endless loop takes a job and wait for the next one.
 You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
 
 =cut
-
+my %job_done;
 sub work {
     my ($self, %opts) = @_;
     my $stop_if     = delete($opts{stop_if}) || sub {0};
@@ -338,18 +338,23 @@ sub work {
                 }
             }
 
-            my $sent;
-            if (defined $ret) {
-                $sent = $self->send_work_complete($job,
-                    is_ref($ret) ? $$ret : $ret);
-                $complete_cb->($jobhandle, $ret) if $complete_cb;
+            if(!defined $job_done{$job->handle}) {
+                if (defined $ret) {
+                    $self->send_work_complete($job, $ret);
+                }
+                else {
+                    $self->send_work_fail($job);
+                }
             }
-            else {
-                $sent = $self->send_work_fail($job);
+
+            my $done = delete $job_done{$job->handle};
+            if($done->{command} eq "work_complete") {
+                $complete_cb->($jobhandle, $ret) if $complete_cb;
+            } else {
                 $fail_cb->($jobhandle, $err) if $fail_cb;
             }
 
-            unless ($sent) {
+            unless ($done->{result}) {
                 $self->_uncache_sock($js, "write_res_error");
                 next;
             }
@@ -488,7 +493,7 @@ notify the server (and listening clients) that job completed successfully
 =cut
 
 sub send_work_complete {
-    return shift->_job_request("work_complete", @_);
+  return shift->_finish_job_request("work_complete", @_);
 }
 
 =head2 send_work_data($job, $data)
@@ -525,15 +530,15 @@ sub send_work_warning {
 #     return $self->_job_request("work_exception", $job, $exc);
 # }
 
-=head2 send_work_fail($job)
+=head2 send_work_fail($job, [$message])
 
 Use this method to notify the server (and any listening clients) that the job failed.
 
 =cut
 
 sub send_work_fail {
-    my ($self, $job) = @_;
-    return $self->_job_request("work_fail", $job);
+    my ($self) = shift;
+    return $self->_finish_job_request("work_fail", @_);
 }
 
 =head2 send_work_status($job, $numerator, $denominator)
@@ -547,6 +552,20 @@ sub send_work_status {
     my ($self, $job, $numerator, $denominator) = @_;
     return $self->_job_request("work_status", $job, $numerator, $denominator);
 }
+
+# _finish_job_request($cmd, $job, [$v])
+#
+# send some data or message to the client for finished job
+# $cmd = work_complete || work_fail
+#
+sub _finish_job_request {
+    my ($self, $cmd, $job, $v) = @_;
+    my $res = $self->_job_request($cmd, $job, is_ref($v) ? ${$v}: $v);
+    # set job done flag because work method check it
+    $job_done{$job->handle} = {command => $cmd, result => $res};
+
+    return $res;
+} ## end sub _finish_job_request
 
 # _job_request($cmd, $job, [$v])
 #
@@ -689,10 +708,16 @@ sub _send {
     return Gearman::Util::send_req($jss, \$req);
 }
 
+#
+# _rc($cmd, [@val])
+#
 sub _rc {
     return Gearman::Util::pack_req_command(@_);
 }
 
+#
+# _join0(@v)
+#
 sub _join0 {
     return join("\0", @_);
 }
