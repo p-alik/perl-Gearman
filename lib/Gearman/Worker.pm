@@ -298,7 +298,6 @@ sub work {
             unless ($res->{type} eq "job_assign") {
                 my $msg = "Uh, wasn't expecting a $res->{type} packet.";
 
-                #FIXME unreachable if block
                 if ($res->{type} eq "error") {
                     $msg .= " [${$res->{blobref}}]\n";
                     $msg =~ s/\0/ -- /g;
