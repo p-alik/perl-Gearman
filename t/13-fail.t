@@ -26,6 +26,7 @@ my $client = new_ok(
 ## Test some failure conditions:
 ## Normal failure (worker returns undef or dies within eval).
 subtest "wokrker process fails", sub {
+    plan tests => 7;
     my $func    = "fail";
     my @workers = map(new_worker(
             job_servers => [$job_server],
@@ -38,7 +39,7 @@ subtest "wokrker process fails", sub {
         $client->do_task(
             $func, undef,
             {
-                on_fail => sub { fail(explain(@_)) },
+                on_fail => sub { pass "on fail callback" },
             }
         ),
         undef,
@@ -52,7 +53,7 @@ subtest "wokrker process fails", sub {
             $func => '',
             {
                 on_retry    => sub { $retried++ },
-                on_fail     => sub { fail(explain(@_)) },
+                on_fail     => sub { pass "on fail callback" },
                 retry_count => 3,
             }
         ),
@@ -71,7 +72,7 @@ subtest "wokrker process fails", sub {
         }
     );
     $ts->wait;
-    is($completed, 0, "on_complete not called on failed result");
+    is($completed, 0, "on_complete not called");
     is($failed,    1, "on_fail called on failed result");
 };
 
