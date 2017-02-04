@@ -31,6 +31,8 @@ t/15-priority.t
 t/16-background.t
 t/17-status.t
 t/18-ssl.t
+t/20-send-work-command.t
+t/25-work-finish-command.t
 t/40-prefix.t
 t/50-wait_timeout.t
 t/65-responseparser.t
