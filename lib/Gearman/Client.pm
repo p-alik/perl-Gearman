@@ -379,30 +379,24 @@ sub _get_task_from_args {
 
 given a (func, arg_p, opts?)
 
-B<return> either undef (on fail) or scalarref of result
+B<return> scalarref of WORK_COMPLETE result
 
 =cut
 
 sub do_task {
     my $self = shift;
     my $task = $self->_get_task_from_args(@_);
-
     my $ret     = undef;
-    my $did_err = 0;
 
     $task->{on_complete} = sub {
         $ret = shift;
-    };
-
-    $task->{on_fail} = sub {
-        $did_err = 1;
     };
 
     my $ts = $self->new_task_set;
     $ts->add_task($task);
     $ts->wait(timeout => $task->timeout);
 
-    return $did_err ? undef : $ret;
+    return $ret;
 } ## end sub do_task
 
 =head2 dispatch_background($func, $arg_p, $opts)
