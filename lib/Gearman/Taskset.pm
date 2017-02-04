@@ -418,7 +418,7 @@ sub _fail_jshandle {
     my ($self, $shandle, $type, $msg) = @_;
     $shandle
         or Carp::croak "_fail_jshandle() called without shandle parameter";
-warn join ";", $shandle, $type, $msg || '', '';
+
     my $task_list = $self->{waiting}{$shandle}
         or Carp::croak "Uhhhh:  got $type for unknown handle: $shandle";
 
