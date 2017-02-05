@@ -1,6 +1,6 @@
 package Gearman::Taskset;
 use version ();
-$Gearman::Taskset::VERSION = version->declare("2.002.004");
+$Gearman::Taskset::VERSION = version->declare("2.003_001");
 
 
 use strict;

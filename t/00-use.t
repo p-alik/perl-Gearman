@@ -15,7 +15,7 @@ my @mn = qw/
     Gearman::Worker
     /;
 
-my $v = version->declare("2.002.004");
+my $v = version->declare("2.003_001");
 
 foreach my $n (@mn) {
     use_ok($n);
