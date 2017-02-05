@@ -11,10 +11,10 @@ WriteMakefile(
     AUTHOR   => 'Brad Fitzpatrick <brad@danga.com>',
     ABSTRACT =>
         "Client and worker libraries for gearman job dispatch dispatch. Server is in separate package.",
-    VERSION_FROM   => "lib/Gearman/Client.pm",
-    LICENSE => 'perl',
+    VERSION_FROM     => "lib/Gearman/Client.pm",
+    LICENSE          => 'perl',
     MIN_PERL_VERSION => '5.008001',
-    BUILD_REQUIRES => {
+    BUILD_REQUIRES   => {
         "File::Which"       => 0,
         "IO::Socket::IP"    => 0,
         "IO::Socket::SSL"   => 0,
@@ -26,7 +26,7 @@ WriteMakefile(
         "Test::More"        => 0,
         "Test::TCP"         => "2.17",
         "Test::Timer"       => 0,
-        "version"           => 0,
+        "version"           => "0.77",
     },
     PREREQ_PM => {
         "Carp"            => 0,
@@ -42,7 +42,7 @@ WriteMakefile(
         "String::CRC32"   => 0,
         "Time::HiRes"     => 0,
         "fields"          => 0,
-        "version"         => 0,
+        "version"         => "0.77",
     },
     META_MERGE => {
         'meta-spec' => { version => 2 },
