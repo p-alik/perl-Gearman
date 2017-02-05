@@ -1,3 +1,15 @@
+2.003_001 2017-02-05 22:39:00 Europe/Berlin
+     -- worker:
+        -- remove THROW_EXCEPTIONS defination in BEGIN block
+        -- add support of protocol commands WORK_DATA and WORK_WARNING
+        -- new methods:
+           -- send_work_data
+           -- send_work_warning
+           -- send_work_complete
+           -- send_work_fail
+     -- fixing client do_task: do not overwrite on_fail callback
+     -- Gearman::Task support of low priority
+
 2.002.004 2016-12-05 09:02:16 Europe/Berlin
      -- requires Ref::Util >= 0.020; see cpan tester report 848fbc3e-b94f-11e6-8baf-a6caeafb6ca6
      -- Makefile.PL updates
