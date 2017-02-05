@@ -90,8 +90,29 @@ Number of times job will be retried if there are failures.  Defaults to 0.
 
 =item * high_priority
 
+B<the option high_priority is deprecated>. Use C<< priority => high >> instead.
 Boolean, whether this job should take priority over other jobs already
 enqueued.
+
+=item * priority
+
+valid value:
+
+=over
+
+=item
+
+high
+
+=item
+
+normal (defaul)
+
+=item
+
+low
+
+=back
 
 =item * timeout
 
@@ -160,6 +181,7 @@ use fields (
 
     # hookname -> coderef
     'hooks',
+    'priority',
 );
 
 # constructor, given: ($func, $argref, $opts);
@@ -193,6 +215,8 @@ sub new {
         try_timeout
         uniq
         /;
+
+    $self->_priority(delete $opts->{priority});
 
     $self->{retry_count} ||= 0;
 
@@ -390,6 +414,7 @@ run on_exception if defined
 
 sub exception {
     my ($self, $exc_ref) = @_;
+
     #FIXME the only on_exception callback get dereferenced value
     # could it be changed without damage?
     my $exception = Storable::thaw($$exc_ref);
@@ -455,8 +480,8 @@ sub warning {
 
     my $msg = shift;
 
-    $self->{on_warning}->($msg );
-} ## end sub data
+    $self->{on_warning}->($msg);
+} ## end sub warning
 
 =head2 handle()
 
@@ -569,24 +594,68 @@ sub timeout {
 
 =head2 mode()
 
-B<return> mode in depends of background and hight_priority
+B<return> mode in depends of background and priority
 
 =cut
 
 sub mode {
     my $self = shift;
-    return $self->{background}
-        ? (
-        $self->{high_priority}
-        ? "submit_job_high_bg"
-        : "submit_job_bg"
-        )
-        : (
-        $self->{high_priority}
-        ? "submit_job_high"
-        : "submit_job"
-        );
+    my $mode = "submit_job";
+    if ($self->_priority() ne "normal") {
+        $mode .= "_" . $self->_priority();
+    }
+
+    if ($self->{background}) {
+        $mode .= "_bg";
+    }
+
+    return $mode;
 } ## end sub mode
+
+#=head2 _priority($priority)
+#
+#set/get priority
+#
+#valid C<$priority> value
+#
+#=over
+#
+#=item
+#
+#high
+#
+#=item
+#
+#normal (default)
+#
+#=item
+#
+#low
+#
+#=back
+#
+#=cut
+
+sub _priority {
+    my ($self, $priority) = @_;
+    if ($self->{high_priority}) {
+        warn <<'HERE';
+Gearman::Task key high_priority is deprecated.
+Use priority => "high" instead
+HERE
+        $self->{priority} = "high";
+        delete($self->{high_priority});
+    } ## end if ($self->{high_priority...})
+
+    if ($priority) {
+        $priority =~ /^(high|normal|low)$/
+            || Carp::croak "unsupported priority value";
+        $self->{priority} = $priority;
+    }
+    $self->{priority} ||= "normal";
+
+    return $self->{priority};
+} ## end sub _priority
 
 1;
 __END__
