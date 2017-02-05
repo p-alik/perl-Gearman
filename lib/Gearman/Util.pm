@@ -61,6 +61,8 @@ our %cmd = (
     28 => ['IO', "work_data"],             # W->J/C: HANDLE[0]RES
     29 => ['IO', "work_warning"],          # W->J/C: HANDLE[0]RES
     32 => ['I',  "submit_job_high_bg"],    # C->J  FUNC[0]UNIQ[0]ARGS
+    33 => ['I',  "submit_job_low"],        # C->J  FUNC[0]UNIQ[0]ARGS
+    34 => ['I',  "submit_job_low_bg"],     # C->J  FUNC[0]UNIQ[0]ARGS
 );
 
 our %num;                                  # name -> num
