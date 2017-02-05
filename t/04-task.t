@@ -41,17 +41,16 @@ my ($f, $arg) = qw/
     /;
 
 my %opt = (
-    uniq          => rand(10),
-    on_complete   => 1,
-    on_fail       => 2,
-    on_exception  => 3,
-    on_retry      => undef,
-    on_status     => 4,
-    retry_count   => 6,
-    try_timeout   => 7,
-    high_priority => 1,
-    background    => 1,
-    timeout       => int(rand(10)),
+    uniq         => rand(10),
+    on_complete  => 1,
+    on_fail      => 2,
+    on_exception => 3,
+    on_retry     => undef,
+    on_status    => 4,
+    retry_count  => 6,
+    try_timeout  => 7,
+    background   => 1,
+    timeout      => int(rand(10)),
 );
 
 throws_ok { $mn->new($f, \$arg, { $f => 1 }) } qr/Unknown option/,
@@ -72,21 +71,43 @@ is($t->{$_}, 0, $_) for qw/
     retries_done
     /;
 
-subtest "mode", sub {
-    $t->{background}    = undef;
-    $t->{high_priority} = 0;
-    is($t->mode, "submit_job", "submit_job");
-    $t->{high_priority} = 1;
-    is($t->mode, "submit_job_high", "submit_job_high");
+subtest "priority mode", sub {
+    plan tests => 21;
 
-    is($t->{background} = 1, 1, "background");
-    is($t->mode, "submit_job_high_bg", "submit_job_high_bg");
-    $t->{high_priority} = 0;
-    is($t->mode, "submit_job_bg", "submit_job_bg");
+    foreach my $p (qw/low normal high/) {
+        my $s = sprintf("submit_job%s", $p eq "normal" ? '' : '_' . $p);
+        my $t = new_ok($mn, [$f, undef, { priority => $p }]);
 
-    ok($t->pack_submit_packet(new_ok("Gearman::Client", [prefix => $f])),
-        "pack_submit_packet");
+        is($t->_priority(), $p, "$p priority");
+
+        is($t->mode(), $s, "mode of task in $p prioirty");
+
+        $t = new_ok($mn, [$f, undef, { background => 1, priority => $p }]);
+        is(
+            $t->mode(),
+            join('_', $s, "bg"),
+            "mode of background task in $p prioirty"
+        );
+    } ## end foreach my $p (qw/low normal high/)
+
+    {
+        my $s = "submit_job";
+        my $t = new_ok($mn, [$f, undef]);
+        is($t->mode(), $s, "mode of task without explicit priority");
+
+        $s .= "_high";
+        $t = new_ok($mn, [$f, undef, { high_priority => 1 }]);
+        is($t->mode(), $s, "mode of task with high_priority=1");
+
+        $t = new_ok($mn, [$f, undef, { background => 1, high_priority => 1 }]);
+        is(
+            $t->mode(),
+            join('_', $s, "bg"),
+            "mode of background task with high_prioirty=1"
+        );
+    }
 };
+
 my @h = qw/
     on_post_hooks
     on_complete
