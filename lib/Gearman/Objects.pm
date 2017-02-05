@@ -22,7 +22,7 @@ use Socket          ();
 use List::MoreUtils qw/
     first_index
     /;
-use Ref::Util qw/
+use Ref::Util 0.020 qw/
     is_plain_arrayref
     is_plain_hashref
     is_plain_ref
