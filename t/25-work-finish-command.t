@@ -28,8 +28,9 @@ my @a           = map { int(rand(100)) } (0 .. int(rand(10) + 5));
 
 my $client = new_ok("Gearman::Client",
     [exceptions => 1, job_servers => [@job_servers]]);
+
 subtest "work complete", sub {
-    plan tests => 4;
+    plan tests => 3;
 
     ok(my $worker = worker_complete(job_servers => [@job_servers]), "worker");
 
@@ -44,7 +45,7 @@ subtest "work complete", sub {
 };
 
 subtest "work fail", sub {
-    plan tests => 4;
+    plan tests => 3;
 
     ok(my $worker = worker_fail(job_servers => [@job_servers]), "worker");
     my $res = $client->do_task(
@@ -96,18 +97,7 @@ sub _work {
     my $w  = shift;
     my $pg = Proc::Guard->new(
         code => sub {
-            $w->work(
-                on_complete => sub {
-                    pass("on complete callback");
-                },
-                on_fail => sub {
-                    pass("on fail callback");
-                },
-                stop_if => sub {
-                    my ($idle) = @_;
-                    return $idle;
-                }
-            );
+            $w->work();
         }
     );
 
