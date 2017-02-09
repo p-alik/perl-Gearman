@@ -160,7 +160,7 @@ subtest "process_packet(job_created)", sub {
     ok($ts->process_packet($r, $sock), "process_packet");
 
     is(scalar(@{ $ts->{need_handle} }), 0, "need_handle is empty");
-    is(scalar(@{ $ts->{waiting}{$h} }), 0, "waiting{$h} is empty");
+    is($ts->{waiting}{$h}, undef, "no waiting{$h}");
 };
 
 subtest "process_packet(work_complete)", sub {
@@ -189,7 +189,7 @@ subtest "process_packet(work_complete)", sub {
 
     $ts->{waiting}{$h} = [$task];
     ok($ts->process_packet($r), "process_packet");
-    is(scalar(@{ $ts->{waiting}{$h} }), 0, "waiting{$h} is empty");
+    is($ts->{waiting}{$h}, undef, "no waiting{$h}");
 };
 
 subtest "process_packet(work_data)", sub {
@@ -273,11 +273,11 @@ subtest "process_packet(work_fail)", sub {
     $ts->{waiting}{$h} = [$task];
     ok($ts->process_packet($r), "process_packet");
 
-    is(scalar(@{ $ts->{waiting}{$h} }), 0, "waiting{$h} is empty");
+    is($ts->{waiting}{$h}, undef, "no waiting{$h}");
 };
 
 subtest "process_packet(work_status)", sub {
-    plan tests => 5;
+    plan tests => 6;
     my $type = "work_status";
     my $r = { type => $type, blobref => \join "\0", $h, 3, 5 };
     $ts->{waiting}{$h} = [];
@@ -300,6 +300,7 @@ subtest "process_packet(work_status)", sub {
     $ts->{waiting}{$h} = [$task];
 
     ok($ts->process_packet($r), "process_packet");
+    is(scalar(@{ $ts->{waiting}{$h} }), 1, "waiting{$h}");
 };
 
 subtest "process_packet(unimplemented type)", sub {
