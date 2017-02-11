@@ -435,8 +435,7 @@ sub register_function {
     my $timeout = shift unless (ref $_[0] eq 'CODE');
     my $subref  = shift;
 
-    my $prefix = $self->prefix;
-    my $ability = defined($prefix) ? join("\t", $prefix, $func) : $func;
+    my $ability = $self->func($func);
 
     my $req;
     if (defined $timeout) {
@@ -459,8 +458,7 @@ send cant_do C<$funcname> request to L<job_servers>
 
 sub unregister_function {
     my ($self, $func) = @_;
-    my $prefix = $self->prefix;
-    my $ability = defined($prefix) ? join("\t", $prefix, $func) : $func;
+    my $ability = $self->func($func);
 
     my $req = _rc("cant_do", $ability);
 
