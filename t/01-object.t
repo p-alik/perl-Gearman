@@ -15,8 +15,7 @@ can_ok(
         _sock_cache
         canonicalize_job_servers
         debug
-        job_servers
-        prefix
+        func job_servers prefix
         set_job_servers
         sock_nodelay
         socket
@@ -89,14 +88,22 @@ subtest "debug", sub {
     is($c->debug(1), 1);
 };
 
-subtest "prefix", sub {
-    my $p = "foo";
+subtest "prefix func", sub {
+    plan tests => 10;
+
+    my ($p, $f) = qw/foo bar/;
+
     my $c = new_ok($mn, [prefix => $p]);
-    is($c->prefix(),      $p);
+    is($c->prefix(), $p);
+    is($c->func($f), join("\t", $c->prefix(), $f));
     is($c->prefix(undef), undef);
+    is($c->func($f),      $f);
+
     $c = new_ok($mn);
     is($c->prefix(),   undef);
+    is($c->func($f),   $f);
     is($c->prefix($p), $p);
+    is($c->func($f), join("\t", $c->prefix(), $f));
 };
 
 subtest "socket", sub {
