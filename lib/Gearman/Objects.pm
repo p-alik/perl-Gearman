@@ -135,6 +135,18 @@ sub debug {
     return shift->_property("debug", @_);
 }
 
+=head2 func($func)
+
+B<return> C<< $prefix ? $prefix\t$func : $func >>
+
+=cut
+
+sub func {
+    my ($self, $func) = @_;
+    my $prefix = $self->prefix;
+    return defined($prefix) ? join("\t", $prefix, $func) : $func;
+}
+
 =head2 prefix([$prefix])
 
 getter/setter
