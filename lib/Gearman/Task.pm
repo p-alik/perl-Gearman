@@ -340,11 +340,8 @@ B<return> Gearman::Util::pack_req_command(mode, func, uniq, argref)
 
 sub pack_submit_packet {
     my ($self, $client) = @_;
-    my $func = $self->{func};
-
-    if ($client && $client->prefix()) {
-        $func = join "\t", $client->prefix(), $self->{func};
-    }
+    is_ref($client) or Carp::croak("client parameter missed");
+    my $func = $client->func($self->{func});
 
     return Gearman::Util::pack_req_command(
         $self->mode,
