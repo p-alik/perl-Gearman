@@ -103,7 +103,6 @@ I<sum> job.
 use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;
-use Ref::Util qw/ is_ref /;
 use Storable ();
 
 use fields (
@@ -557,7 +556,7 @@ sub send_work_status {
 #
 sub _finish_job_request {
     my ($self, $cmd, $job, $v) = @_;
-    my $res = $self->_job_request($cmd, $job, is_ref($v) ? ${$v}: $v);
+    my $res = $self->_job_request($cmd, $job, ref($v) ? ${$v}: $v);
     # set job done flag because work method check it
     $job_done{$job->handle} = {command => $cmd, result => $res};
 
