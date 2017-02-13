@@ -22,12 +22,6 @@ use Socket          ();
 use List::MoreUtils qw/
     first_index
     /;
-use Ref::Util qw/
-    is_plain_arrayref
-    is_plain_hashref
-    is_plain_ref
-    is_ref
-    /;
 
 use fields qw/
     debug
@@ -40,7 +34,7 @@ use fields qw/
 sub new {
     my $self = shift;
     my (%opts) = @_;
-    unless (is_ref($self)) {
+    unless (ref $self) {
         $self = fields::new($self);
     }
     $self->{job_servers} = [];
@@ -102,11 +96,13 @@ B<return> [canonicalized list]
 sub canonicalize_job_servers {
     my ($self) = shift;
     my @in;
-    if (is_plain_ref($_[0])) {
-        if (is_plain_arrayref($_[0])) {
+
+    my $ref = ref($_[0]);
+    if ($ref) {
+        if ($ref eq "ARRAY") {
             @in = @{ $_[0] };
         }
-        elsif (is_plain_hashref($_[0])) {
+        elsif ($ref eq "HASH") {
             @in = ($_[0]);
         }
         else {
@@ -119,15 +115,13 @@ sub canonicalize_job_servers {
 
     my $out = [];
     foreach my $i (@in) {
-        if (is_ref($i)) {
-            $i->{port} ||= Gearman::Objects::DEFAULT_PORT;
-        }
-        elsif ($i !~ /:/) {
-            $i .= ':' . Gearman::Objects::DEFAULT_PORT;
+        if (ref($i)) {
+                      $i->{port} ||= Gearman::Objects::DEFAULT_PORT;
+        } elsif ($i !~ /:/) {
+          $i .= ':' . Gearman::Objects::DEFAULT_PORT;
         }
         push @{$out}, $i;
-    } ## end foreach my $i (@in)
-
+    } ## end foreach (@in)
     return $out;
 } ## end sub canonicalize_job_servers
 
@@ -181,7 +175,7 @@ B<return> depends on C<use_ssl> IO::Socket::(IP|SSL) on success
 
 sub socket {
     my ($self, $js, $t) = @_;
-    unless (is_ref($js)) {
+    unless (ref($js)) {
         my ($h, $p) = ($js =~ /^(.*):(\d+)$/);
         $js = { host => $h, port => $p };
     }
@@ -263,7 +257,7 @@ sub _property {
 # return host:port
 sub _js_str {
     my ($self, $js) = @_;
-    return is_plain_hashref($js) ? join(':', @{$js}{qw/host port/}) : $js;
+    return ref($js) eq "HASH" ? join(':', @{$js}{qw/host port/}) : $js;
 }
 
 #
