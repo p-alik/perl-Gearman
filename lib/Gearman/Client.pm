@@ -168,7 +168,7 @@ use Gearman::Task;
 use Gearman::Taskset;
 use Gearman::JobStatus;
 use Time::HiRes;
-use Ref::Util 0.020 qw/
+use Ref::Util qw/
     is_plain_scalarref
     is_ref
     /;

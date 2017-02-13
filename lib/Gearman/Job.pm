@@ -7,7 +7,9 @@ use warnings;
 
 use Gearman::Util ();
 use Carp ();
-use Ref::Util 0.020 qw/ is_ref /;
+use Ref::Util qw/
+    is_ref
+    /;
 
 =head1 NAME
 

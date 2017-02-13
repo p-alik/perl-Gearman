@@ -103,7 +103,7 @@ I<sum> job.
 use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;
-use Ref::Util 0.020 qw/ is_ref /;
+use Ref::Util qw/ is_ref /;
 use Storable ();
 
 use fields (
