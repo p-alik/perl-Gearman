@@ -138,10 +138,6 @@ use Gearman::Util ();
 use Scalar::Util  ();
 use String::CRC32 ();
 use Storable      ();
-use Ref::Util qw/
-    is_scalarref
-    is_ref
-    /;
 
 use fields (
 
@@ -188,10 +184,10 @@ use fields (
     'priority',
 );
 
-# constructor, given: ($func, $argef, $opts);
+# constructor, given: ($func, $argref, $opts);
 sub new {
     my $self = shift;
-    unless (is_ref $self) {
+    unless (ref $self) {
         $self = fields::new($self);
     }
 
@@ -199,7 +195,7 @@ sub new {
         or Carp::croak("No function given");
 
     $self->{argref} = shift || do { my $empty = ""; \$empty; };
-    (is_scalarref($self->{argref}))
+    (ref $self->{argref} eq "SCALAR")
         || Carp::croak("Argref not a scalar reference");
 
     my $opts = shift || {};
