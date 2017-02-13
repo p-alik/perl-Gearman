@@ -55,7 +55,7 @@ sub new {
 
 getter/setter
 
-C<$js> array reference or scalar
+C<$js> array reference, hash reference or scalar
 
 =cut
 
