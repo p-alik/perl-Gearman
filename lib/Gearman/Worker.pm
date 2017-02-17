@@ -580,14 +580,20 @@ sub _job_request {
 sub _register_all {
     my ($self, $req) = @_;
 
-    foreach my $js ($self->job_servers()) {
+    my $count = 0;
+    my @job_servers = $self->job_servers();
+    foreach my $js (@job_servers) {
         my $jss = $self->_get_js_sock($js)
             or next;
 
         unless (_send($jss, $req)) {
             $self->_uncache_sock($js, "write_register_func_error");
+            next;
         }
+        $count++;
     } ## end foreach my $js ($self->job_servers...)
+
+  return $count && $count == scalar(@job_servers);
 } ## end sub _register_all
 
 #
@@ -645,8 +651,7 @@ sub _get_js_sock {
 
     $self->_sock_cache($js, $sock);
 
-    unless ($self->_on_connect($sock) && $on_connect && $on_connect->($sock)) {
-
+    unless ($self->_on_connect($sock) || ($on_connect && $on_connect->($sock))) {
         # delete
         $self->_sock_cache($js, undef, 1);
         return;
