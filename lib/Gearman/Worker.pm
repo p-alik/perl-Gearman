@@ -171,14 +171,14 @@ sub reset_abilities {
     $self->{timeouts} = {};
 } ## end sub reset_abilities
 
-=head2 _uncache_sock($ipport, $reason)
+=head2 _uncache_sock($js, $reason)
 
 close TCP connection
 
 =cut
 
 sub _uncache_sock {
-    my ($self, $ipport, $reason) = @_;
+    my ($self, $js, $reason) = @_;
 
     # we can't reconnect as a child process, so all we can do is die and hope our
     # parent process respawns us...
@@ -187,7 +187,7 @@ sub _uncache_sock {
 
     # normal case, we just close this TCP connection and we'll reconnect later.
     # delete cached sock
-    $self->_sock_cache($ipport, undef, 1);
+    $self->_sock_cache($js, undef, 1);
 } ## end sub _uncache_sock
 
 =head2 work(%opts)
@@ -196,7 +196,9 @@ Endless loop takes a job and wait for the next one.
 You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
 
 =cut
+
 my %job_done;
+
 sub work {
     my ($self, %opts) = @_;
     my $stop_if     = delete($opts{stop_if}) || sub {0};
@@ -325,6 +327,7 @@ sub work {
 
             $last_update_time{$js_str} = $last_job_time = time();
             if ($err) {
+
                 #TODO should be work_exception replaced by work_fail?
                 # see 75b65e1
                 my $exception_req
@@ -334,21 +337,22 @@ sub work {
                     $self->_uncache_sock($js, "write_res_error");
                     next;
                 }
-            }
+            } ## end if ($err)
 
-            if(!defined $job_done{$job->handle}) {
+            if (!defined $job_done{ $job->handle }) {
                 if (defined $ret) {
                     $self->send_work_complete($job, $ret);
                 }
                 else {
                     $self->send_work_fail($job);
                 }
-            }
+            } ## end if (!defined $job_done...)
 
-            my $done = delete $job_done{$job->handle};
-            if($done->{command} eq "work_complete") {
+            my $done = delete $job_done{ $job->handle };
+            if ($done->{command} eq "work_complete") {
                 $complete_cb->($jobhandle, $ret) if $complete_cb;
-            } else {
+            }
+            else {
                 $fail_cb->($jobhandle, $err) if $fail_cb;
             }
 
@@ -489,7 +493,7 @@ notify the server (and listening clients) that job completed successfully
 =cut
 
 sub send_work_complete {
-  return shift->_finish_job_request("work_complete", @_);
+    return shift->_finish_job_request("work_complete", @_);
 }
 
 =head2 send_work_data($job, $data)
@@ -556,9 +560,10 @@ sub send_work_status {
 #
 sub _finish_job_request {
     my ($self, $cmd, $job, $v) = @_;
-    my $res = $self->_job_request($cmd, $job, ref($v) ? ${$v}: $v);
+    my $res = $self->_job_request($cmd, $job, ref($v) ? ${$v} : $v);
+
     # set job done flag because work method check it
-    $job_done{$job->handle} = {command => $cmd, result => $res};
+    $job_done{ $job->handle } = { command => $cmd, result => $res };
 
     return $res;
 } ## end sub _finish_job_request
@@ -580,7 +585,7 @@ sub _job_request {
 sub _register_all {
     my ($self, $req) = @_;
 
-    my $count = 0;
+    my $count       = 0;
     my @job_servers = $self->job_servers();
     foreach my $js (@job_servers) {
         my $jss = $self->_get_js_sock($js)
@@ -591,9 +596,9 @@ sub _register_all {
             next;
         }
         $count++;
-    } ## end foreach my $js ($self->job_servers...)
+    } ## end foreach my $js (@job_servers)
 
-  return $count && $count == scalar(@job_servers);
+    return $count && $count == scalar(@job_servers);
 } ## end sub _register_all
 
 #
@@ -651,7 +656,8 @@ sub _get_js_sock {
 
     $self->_sock_cache($js, $sock);
 
-    unless ($self->_on_connect($sock) || ($on_connect && $on_connect->($sock))) {
+    unless ($self->_on_connect($sock) || ($on_connect && $on_connect->($sock)))
+    {
         # delete
         $self->_sock_cache($js, undef, 1);
         return;
