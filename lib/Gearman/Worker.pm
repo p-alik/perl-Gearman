@@ -414,22 +414,22 @@ sub work {
 
 =head2 $worker->register_function($funcname, $timeout, $subref)
 
-Registers the function I<$funcname> as being provided by the worker
-I<$worker>, and advertises these capabilities to all of the job servers
+Registers the function C<$funcname> as being provided by the worker
+C<$worker>, and advertises these capabilities to all of the job servers
 defined in this worker.
 
-I<$subref> must be a subroutine reference that will be invoked when the
+C<$subref> must be a subroutine reference that will be invoked when the
 worker receives a request for this function. It will be passed a
-I<Gearman::Job> object representing the job that has been received by the
+L<Gearman::Job> object representing the job that has been received by the
 worker.
 
-I<$timeout> is an optional parameter specifying how long the jobserver will
+C<$timeout> is an optional parameter specifying how long the jobserver will
 wait for your subroutine to give an answer. Exceeding this time will result
 in the jobserver reassigning the task and ignoring your result. This prevents
 a gimpy worker from ruining the 'user experience' in many situations.
 
-The subroutine reference can return a return value, which will be sent back
-to the job server.
+B<return> C<< _register_all(can_do request) >>
+
 =cut
 
 sub register_function {
@@ -449,24 +449,26 @@ sub register_function {
         $req = _rc("can_do", $ability);
     }
 
-    $self->_register_all($req);
     $self->{can}{$ability} = $subref;
+
+    return $self->_register_all($req);
 } ## end sub register_function
 
 =head2 unregister_function($funcname)
 
 send cant_do C<$funcname> request to L<job_servers>
 
+B<return> C<< _register_all(cant_do) >>
+
 =cut
 
 sub unregister_function {
     my ($self, $func) = @_;
     my $ability = $self->func($func);
+    delete $self->{can}{$ability};
 
     my $req = _rc("cant_do", $ability);
-
-    $self->_register_all($req);
-    delete $self->{can}{$ability};
+    return $self->_register_all($req);
 } ## end sub unregister_function
 
 =head2 job_servers(@servers)
