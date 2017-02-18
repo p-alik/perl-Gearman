@@ -1,4 +1,4 @@
-2.003_001 2017-02-05 22:39:00 Europe/Berlin
+2.003_001 2017-02-18 18:37:00 Europe/Berlin
      -- worker:
         -- remove THROW_EXCEPTIONS defination in BEGIN block
         -- add support of protocol commands WORK_DATA and WORK_WARNING
@@ -7,6 +7,7 @@
            -- send_work_warning
            -- send_work_complete
            -- send_work_fail
+        -- _get_js_sock: no execution of object _on_connect if callback is defined
      -- fixing client do_task: do not overwrite on_fail callback
      -- Gearman::Task support of low priority
      -- remove Ref::Util dependency
