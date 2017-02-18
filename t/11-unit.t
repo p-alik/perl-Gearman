@@ -76,7 +76,7 @@ throws_ok(sub { &{"$mn\:\:pack_res_command"}('x') }, qr/Bogus type arg of/);
 
 subtest "read_text_status", sub {
     is(&{"$mn\:\:read_text_status"}(IO::Socket::IP->new(), \my $e), undef);
-    is($e, "eof");
+    is($e, "can't read from unconnected socket");
 };
 
 subtest "send_req", sub {
