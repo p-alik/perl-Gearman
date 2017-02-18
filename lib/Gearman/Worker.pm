@@ -658,12 +658,13 @@ sub _get_js_sock {
 
     $self->_sock_cache($js, $sock);
 
-    unless ($self->_on_connect($sock) || ($on_connect && $on_connect->($sock)))
-    {
+    my $ok = $on_connect ? $on_connect->($sock) : $self->_on_connect($sock);
+    unless ($ok) {
+
         # delete
         $self->_sock_cache($js, undef, 1);
         return;
-    } ## end unless ($self->_on_connect...)
+    } ## end unless ($ok)
 
     return $sock;
 } ## end sub _get_js_sock
