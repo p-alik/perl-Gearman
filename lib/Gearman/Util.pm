@@ -237,6 +237,7 @@ sub read_text_status {
         return undef;
     };
 
+    $sock->connected || return $err->("can't read from unconnected socket");
     my @lines;
     my $complete = 0;
     while (my $line = <$sock>) {
