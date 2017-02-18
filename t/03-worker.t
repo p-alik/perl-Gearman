@@ -107,7 +107,10 @@ subtest "work", sub {
     my $gts = t::Server->new();
 SKIP: {
         $gts || skip $t::Server::ERROR, 3;
-        my $w = new_ok($mn);
+        my $job_server = $gts->job_servers();
+        $job_server || skip "couldn't start ", $gts->bin(), 3;
+
+        my $w = new_ok($mn, [job_servers => $job_server]);
         time_ok(
             sub {
                 $w->work(stop_if => sub { pass "work stop if"; });
