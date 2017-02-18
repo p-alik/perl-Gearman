@@ -57,12 +57,13 @@ subtest "new", sub {
 };
 
 subtest "register_function", sub {
-    plan tests => 3;
+    plan tests => 8;
+
     my $w = new_ok($mn);
     my ($tn, $to) = qw/foo 2/;
     my $cb = sub {1};
 
-    ok($w->register_function($tn => $cb), "register_function($tn)");
+    is $w->register_function($tn => $cb), 0, "register_function($tn)";
 
     time_ok(
         sub {
@@ -71,6 +72,21 @@ subtest "register_function", sub {
         $to,
         "register_function($to, cb)"
     );
+
+SKIP: {
+        my $gts = t::Server->new();
+        $gts || skip $t::Server::ERROR, 5;
+
+        my @js = $gts->job_servers(int(rand(2) + 2));
+        @js || skip "couldn't start ", $gts->bin(), 5;
+
+        ok $w->job_servers(@js), "set job servers";
+        ok $w->register_function($tn, $to, $cb), "register_function";
+        is $w->{can}{$tn}, $cb, "can $tn";
+
+        ok $w->unregister_function($tn), "unregister_function";
+        is $w->{can}{$tn}, undef, "can not $tn";
+    } ## end SKIP:
 };
 
 subtest "reset_abilities", sub {
