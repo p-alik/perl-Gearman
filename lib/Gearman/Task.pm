@@ -1,6 +1,6 @@
 package Gearman::Task;
 use version;
-$Gearman::Task::VERSION = version->declare("2.003_001");
+$Gearman::Task::VERSION = version->declare("2.003_002");
 
 use strict;
 use warnings;

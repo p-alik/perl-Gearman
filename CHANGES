@@ -1,3 +1,7 @@
+2.003_002 2017-03-02 14:45:00 Europe/Berlin
+     -- restore Gearman::Client::Async support. #10
+     -- try to bug fix ssl callback testing
+
 2.003_001 2017-02-18 18:37:00 Europe/Berlin
      -- worker:
         -- remove THROW_EXCEPTIONS defination in BEGIN block
