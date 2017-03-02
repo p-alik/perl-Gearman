@@ -336,8 +336,9 @@ B<return> Gearman::Util::pack_req_command(mode, func, uniq, argref)
 
 sub pack_submit_packet {
     my ($self, $client) = @_;
-    ref($client) or Carp::croak("client parameter missed");
-    my $func = $client->func($self->{func});
+    # $client should be optional for sake of Gearman::Client::Async
+    # see https://github.com/p-alik/perl-Gearman/issues/10
+    my $func = $client ? $client->func($self->{func}) : $self->{func};
 
     return Gearman::Util::pack_req_command(
         $self->mode,
