@@ -47,13 +47,16 @@ subtest "new", sub {
         /;
     ok($w->{client_id} =~ /^\p{Lowercase}+$/, "client_id");
 
-    {
+SKIP: {
+        $ENV{GEARMAN_WORKER_USE_STDIO}
+            && skip 'environment with $ENV{GEARMAN_WORKER_USE_STDIO}', 1;
+
         $ENV{GEARMAN_WORKER_USE_STDIO} = 1;
-        throws_ok { $mn->new(); }
+        throws_ok { $mn->new(debug => 1); }
         qr/Unable to initialize connection to gearmand/,
             "GEARMAN_WORKER_USE_STDIO env";
         undef($ENV{GEARMAN_WORKER_USE_STDIO});
-    }
+    } ## end SKIP:
 };
 
 subtest "register_function", sub {
