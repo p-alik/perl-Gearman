@@ -123,6 +123,19 @@ sub new {
     $self = fields::new($class) unless ref $self;
 
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
+        if ($opts{job_servers}) {
+            warn join ' ', __PACKAGE__,
+                'ignores job_servers if $ENV{GEARMAN_WORKER_USE_STDIO} is set';
+
+            # delete job_servers to insure Gearman::Objects
+            # does not treat correspondent object property
+            delete($opts{job_servers});
+        } ## end if ($opts{job_servers})
+    } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
+
+    $self->SUPER::new(%opts);
+
+    if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
         open my $sock, '+<&', \*STDIN
             or die "Unable to dup STDIN to socket for worker to use.";
         $self->{job_servers} = [$sock];
@@ -130,21 +143,13 @@ sub new {
 
         die "Unable to initialize connection to gearmand"
             unless $self->_on_connect($sock);
-        if ($opts{job_servers}) {
-            warn join ' ', __PACKAGE__,
-                'ignores job_servers if $ENV{GEARMAN_WORKER_USE_STDIO} is set';
-
-            delete($opts{job_servers});
-        } ## end if ($opts{job_servers})
     } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
-
-    $self->SUPER::new(%opts);
 
     $self->{last_connect_fail} = {};
     $self->{down_since}        = {};
     $self->{can}               = {};
     $self->{timeouts}          = {};
-    $self->{client_id} = join("", map { chr(int(rand(26)) + 97) } (1 .. 30));
+    $self->{client_id} = join('', map { chr(int(rand(26)) + 97) } (1 .. 30));
 
     return $self;
 } ## end sub new
@@ -483,7 +488,7 @@ process of a gearman server.
 
 sub job_servers {
     my $self = shift;
-    return if ($ENV{GEARMAN_WORKER_USE_STDIO});
+    $ENV{GEARMAN_WORKER_USE_STDIO} && return $self->{job_servers};
 
     return $self->SUPER::job_servers(@_);
 } ## end sub job_servers
