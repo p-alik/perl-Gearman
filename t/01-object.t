@@ -134,7 +134,7 @@ SKIP: {
 
 SKIP: {
         my $sock = $c->socket($js);
-        $sock || skip "failed connect to $js: $!", 2;
+        $sock || skip "failed connect to $host:$js->{port}: $!", 2;
         isa_ok($sock, "IO::Socket::IP");
         is($sock->timeout, $to, "ssl socket callback");
     } ## end SKIP:
