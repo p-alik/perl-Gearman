@@ -108,7 +108,6 @@ subtest "prefix func", sub {
 
 subtest "socket", sub {
 
-    #TODO skip if can not resolve google.com
     my $host = "google.com";
     my $to   = int(rand(5)) + 1;
     my $js   = {
@@ -126,7 +125,10 @@ SKIP: {
             "failed connect to $host:$js->{port} or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
             2;
         isa_ok($sock, "IO::Socket::SSL");
-        is($sock->timeout, $to, "ssl socket callback");
+    SKIP: {
+            $sock->connected() || skip "no connection to $host:$js->{port}", 1;
+            is($sock->timeout, $to, "ssl socket callback");
+        }
     } ## end SKIP:
 
     $to = int(rand(5)) + 1;
