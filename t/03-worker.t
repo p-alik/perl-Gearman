@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 # OK gearmand v1.0.6
+# OK Gearman::Server v1.130.2
 
 use Net::EmptyPort qw/ empty_port /;
 use Test::More;
@@ -143,10 +144,10 @@ subtest "_get_js_sock", sub {
 SKIP: {
         $gts || skip $t::Server::ERROR, 4;
 
-        my $job_server = $gts->job_servers();
-        $job_server || skip "couldn't start ", $gts->bin(), 4;
+        my @job_servers = $gts->job_servers();
+        @job_servers || skip "couldn't start ", $gts->bin(), 4;
 
-        ok($w->job_servers($job_server));
+        ok($w->job_servers(@job_servers));
 
         $js = $w->job_servers()->[0];
         my $js_str = $w->_js_str($js);

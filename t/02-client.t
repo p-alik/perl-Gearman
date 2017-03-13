@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 # OK gearmand v1.0.6
+# OK Gearman::Server v1.130.2
 
 use Test::More;
 use Test::Exception;
@@ -56,10 +57,10 @@ subtest "js socket", sub {
     my $gts = t::Server->new();
     $gts || plan skip_all => $t::Server::ERROR;
 
-    my $job_server = $gts->job_servers();
-    $job_server || plan skip_all => "couldn't start ", $gts->bin();
+    my @job_servers = $gts->job_servers();
+    @job_servers || plan skip_all => "no gearmand";
 
-    my $gc = new_ok($mn, [job_servers => [$job_server]]);
+    my $gc = new_ok($mn, [job_servers => [@job_servers]]);
     foreach ($gc->job_servers()) {
         ok(my $s = $gc->_get_js_sock($_), "_get_js_sock($_)") || next;
         isa_ok($s, "IO::Socket::IP");

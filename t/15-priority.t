@@ -1,6 +1,9 @@
 use strict;
 use warnings;
 
+# OK gearmand v1.0.6
+# OK Gearman::Server v1.130.2
+
 use List::Util;
 use Test::More;
 
@@ -10,16 +13,13 @@ use t::Worker qw/ new_worker /;
 my $gts = t::Server->new();
 $gts || plan skip_all => $t::Server::ERROR;
 
-my $job_server = $gts->job_servers();
-$job_server || BAIL_OUT "couldn't start ", $gts->bin();
-
-
-note explain $job_server;
+my @job_servers = $gts->job_servers();
+@job_servers || BAIL_OUT "no gearmand";
 
 use_ok("Gearman::Client");
 
 my $client = new_ok("Gearman::Client",
-    [exceptions => 1, job_servers => [$job_server]]);
+    [exceptions => 1, job_servers => [@job_servers]]);
 
 ## Test high_priority.
 ## Create a taskset with 4 tasks, and have the 3rd fail.
@@ -96,7 +96,7 @@ subtest "hight priority", sub {
 
     note "start workers";
     my $pg = new_worker(
-        job_servers => [$job_server],
+        job_servers => [@job_servers],
         func        => {
             echo_ws => sub {
                 select undef, undef, undef, 0.25;

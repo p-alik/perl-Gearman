@@ -12,16 +12,16 @@ use t::Worker qw/ new_worker /;
 my $gts = t::Server->new();
 $gts || plan skip_all => $t::Server::ERROR;
 
-my $job_server = $gts->job_servers();
-$job_server || BAIL_OUT "couldn't start ", $gts->bin();
+my @job_servers = $gts->job_servers();
+@job_servers || BAIL_OUT "no gearmand";
 
 my $func = "long";
 
 use_ok("Gearman::Client");
-my $client = new_ok("Gearman::Client", [job_servers => $job_server]);
+my $client = new_ok("Gearman::Client", [job_servers => @job_servers]);
 
 my $worker = new_worker(
-    job_servers => [$job_server],
+    job_servers => [@job_servers],
     func        => {
         $func => sub {
             my ($job) = @_;

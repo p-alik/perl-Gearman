@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 # OK gearmand v1.0.6
+# OK Gearman::Server v1.130.2
 
 use Test::More;
 use Test::Timer;
@@ -12,8 +13,8 @@ use t::Worker qw/ new_worker /;
 my $gts = t::Server->new();
 $gts || plan skip_all => $t::Server::ERROR;
 
-my $job_server = $gts->job_servers();
-$job_server || BAIL_OUT "couldn't start ", $gts->bin();
+my @job_servers = $gts->job_servers();
+@job_servers || BAIL_OUT "no gearmand";
 
 my %cb = (
     sleep => sub {
@@ -30,13 +31,13 @@ my %cb = (
     ],
 );
 
-my @workers = map(new_worker(job_servers => [$job_server], func => {%cb}),
+my @workers = map(new_worker(job_servers => [@job_servers], func => {%cb}),
     (0 .. int(rand(1) + 1)));
 
 use_ok("Gearman::Client");
 
 my $client = new_ok("Gearman::Client",
-    [exceptions => 1, job_servers => [$job_server]]);
+    [exceptions => 1, job_servers => [@job_servers]]);
 
 ## Test sleeping less than the timeout
 subtest "sleep tree", sub {

@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 # OK gearmand v1.0.6
+# OK Gearman::Server v1.130.2
 
 use Test::More;
 use Time::HiRes qw/sleep/;
@@ -12,8 +13,8 @@ use t::Worker qw/ new_worker /;
 my $gts = t::Server->new();
 $gts || plan skip_all => $t::Server::ERROR;
 
-my $job_server = $gts->job_servers();
-$job_server || BAIL_OUT "couldn't start ", $gts->bin();
+my @job_servers = $gts->job_servers();
+@job_servers || BAIL_OUT "no gearmand";
 
 use_ok("Gearman::Client");
 use_ok("Gearman::Task");
@@ -27,9 +28,9 @@ subtest "echo prefix", sub {
     foreach (@p) {
         my $prefix = join '_', "prefix", $_;
         $clients{$_} = new_ok("Gearman::Client",
-            [prefix => $prefix, job_servers => [$job_server]]);
+            [prefix => $prefix, job_servers => [@job_servers]]);
         $workers{$_} = new_worker(
-            job_servers => [$job_server],
+            job_servers => [@job_servers],
             prefix => $prefix,
             func => {
             $func => sub {
@@ -84,9 +85,9 @@ subtest "dispatch background", sub {
         prefix_a
         /;
     my $client = new_ok("Gearman::Client",
-        [prefix => $prefix, job_servers => [$job_server]]);
+        [prefix => $prefix, job_servers => [@job_servers]]);
     my $worker = new_worker(
-            job_servers => [$job_server],
+            job_servers => [@job_servers],
             prefix => $prefix,
             func => {
         $func => sub {
