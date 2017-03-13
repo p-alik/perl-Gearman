@@ -11,6 +11,9 @@ use Storable qw/
     thaw
     /;
 
+# because no Gearman::Server do not support protocol commands WORK_DATA and WORK_WARNING
+$ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+
 use t::Server ();
 
 my $gts = t::Server->new();
