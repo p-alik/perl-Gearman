@@ -45,6 +45,9 @@ subtest "work complete", sub {
 };
 
 subtest "work fail", sub {
+
+    # because no Gearman::Server do not support protocol commands WORK_DATA and WORK_WARNING
+    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
     plan tests => 3;
 
     ok(my $worker = worker_fail(job_servers => [@job_servers]), "worker");
