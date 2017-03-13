@@ -1,6 +1,6 @@
 package Gearman::Client;
 use version ();
-$Gearman::Client::VERSION = version->declare("2.003_002");
+$Gearman::Client::VERSION = version->declare("2.003.001");
 
 use strict;
 use warnings;

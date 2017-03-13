@@ -1,3 +1,6 @@
+2.003.001 2017-03-13 21:47:00 Europe/Berlin
+     -- test compatibility for gearmand and Gearman::Server
+
 2.003_002 2017-03-02 14:45:00 Europe/Berlin
      -- restore Gearman::Client::Async support. #10
      -- try to bug fix ssl callback testing
