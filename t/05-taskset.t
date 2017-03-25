@@ -4,6 +4,8 @@ use warnings;
 use IO::Socket::IP;
 use Test::More;
 use Test::Exception;
+
+use lib '.';
 use t::Server ();
 
 my @js;

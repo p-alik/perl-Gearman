@@ -7,6 +7,7 @@ use List::Util qw/ sum /;
 use Test::Exception;
 use Test::More;
 
+use lib '.';
 use t::Server ();
 use t::Worker qw/ new_worker /;
 

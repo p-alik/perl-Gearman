@@ -6,6 +6,8 @@ use warnings;
 
 use Test::More;
 use Test::Exception;
+
+use lib '.';
 use t::Server ();
 
 my $mn = "Gearman::Client";

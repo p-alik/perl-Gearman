@@ -8,6 +8,8 @@ use Net::EmptyPort qw/ empty_port /;
 use Test::More;
 use Test::Timer;
 use Test::Exception;
+
+use lib '.';
 use t::Server ();
 
 my $mn = "Gearman::Worker";

@@ -5,7 +5,6 @@ use warnings;
 use Proc::Guard;
 use Test::Exception;
 use Test::More;
-
 use Storable qw/
     freeze
     thaw
@@ -14,6 +13,7 @@ use Storable qw/
 # because no Gearman::Server do not support protocol commands WORK_DATA and WORK_WARNING
 $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
 
+use lib '.';
 use t::Server ();
 
 my $gts = t::Server->new();

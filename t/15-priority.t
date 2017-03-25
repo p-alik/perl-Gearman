@@ -7,6 +7,7 @@ use warnings;
 use List::Util;
 use Test::More;
 
+use lib '.';
 use t::Server ();
 use t::Worker qw/ new_worker /;
 

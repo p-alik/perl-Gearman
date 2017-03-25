@@ -4,6 +4,8 @@ use warnings;
 # OK gearmand v1.0.6
 
 use Test::More;
+
+use lib '.';
 use t::Server ();
 use t::Worker qw/ new_worker /;
 

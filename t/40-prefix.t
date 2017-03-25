@@ -7,6 +7,7 @@ use warnings;
 use Test::More;
 use Time::HiRes qw/sleep/;
 
+use lib '.';
 use t::Server ();
 use t::Worker qw/ new_worker /;
 

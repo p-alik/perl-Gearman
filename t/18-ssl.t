@@ -2,12 +2,14 @@ use strict;
 use warnings;
 
 use List::Util qw/ sum /;
-use Test::More;
-use t::Worker qw/ new_worker /;
 use Storable qw/
     freeze
     thaw
     /;
+use Test::More;
+
+use lib '.';
+use t::Worker qw/ new_worker /;
 
 BEGIN {
     use IO::Socket::SSL ();
@@ -46,13 +48,11 @@ my $job_server = {
     key_file  => $ENV{SSL_KEY_FILE},
     socket_cb => sub {
         my ($hr) = @_;
+        $hr->{SSL_cipher_list} = 'DEFAULT:!DH'; # 'ALL:!LOW:!EXP:!aNULL';
         if (defined($ENV{SSL_VERIFY_MODE})) {
             $hr->{SSL_verify_mode} = eval "$ENV{SSL_VERIFY_MODE}";
         }
 
-        # $hr->{SSL_ca_file}     = $ENV{SSL_CA_FILE};
-        # $hr->{SSL_cert_file}   = $ENV{SSL_CERT_FILE};
-        # $hr->{SSL_key_file}    = $ENV{SSL_KEY_FILE};
         return $hr;
         }
 };
@@ -131,7 +131,7 @@ sub _client {
         "Gearman::Client",
         [
             debug       => $debug,
-            exceptions  => 1,
+            exceptions  => 0,
             job_servers => [$job_server],
         ]
     );

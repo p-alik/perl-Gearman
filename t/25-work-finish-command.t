@@ -12,6 +12,7 @@ use Storable qw/
     thaw
     /;
 
+use lib '.';
 use t::Server ();
 
 my $gts = t::Server->new();
