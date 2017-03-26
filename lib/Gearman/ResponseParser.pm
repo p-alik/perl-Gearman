@@ -1,6 +1,6 @@
 package Gearman::ResponseParser;
 use version ();
-$Gearman::ResponseParser::VERSION = version->declare("2.003.001");
+$Gearman::ResponseParser::VERSION = version->declare("2.003.002");
 
 
 use strict;
