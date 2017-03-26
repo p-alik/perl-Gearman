@@ -33,7 +33,7 @@ install:
 script:
   - perl Makefile.PL
   - make
-  - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -b -r -s t
+  - AUTHOR_TESTING=1 PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -b -r -s t
   - cover
 
 after_success:
