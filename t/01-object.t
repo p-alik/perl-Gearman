@@ -109,37 +109,32 @@ subtest "prefix func", sub {
 subtest "socket", sub {
 
     my $host = "google.com";
-    my $to   = int(rand(5)) + 1;
-    my $js   = {
-        use_ssl   => 1,
-        socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; },
-        host      => $host,
-        port      => 443
-    };
+    my %p    = (
+        443 => "SSL",
+        80  => "IP"
+    );
+    while (my ($p, $s) = each(%p)) {
+        my $c  = new_ok($mn);
+        my $to = int(rand(5)) + 1;
+        my $js = {
+            use_ssl   => $p == 443,
+            socket_cb => sub { my ($hr) = @_; $hr->{Timeout} = $to; },
+            host      => $host,
+            port      => $p
+        };
 
-    my $c = new_ok($mn);
-SKIP: {
         my $sock = $c->socket($js);
-        $sock
-            || skip
-            "failed connect to $host:$js->{port} or ssl handshake: $!, $IO::Socket::SSL::SSL_ERROR",
-            2;
-        isa_ok($sock, "IO::Socket::SSL");
+
     SKIP: {
-            $sock->connected() || skip "no connection to $host:$js->{port}", 1;
-            is($sock->timeout, $to, "ssl socket callback");
-        }
-    } ## end SKIP:
-
-    $to = int(rand(5)) + 1;
-    $js->{port} = 80;
-
-SKIP: {
-        my $sock = $c->socket($js);
-        $sock || skip "failed connect to $host:$js->{port}: $!", 2;
-        isa_ok($sock, "IO::Socket::IP");
-        is($sock->timeout, $to, "ssl socket callback");
-    } ## end SKIP:
+            $sock || skip "failed connect to $host:$js->{port}: $!", 2;
+            isa_ok($sock, "IO::Socket::$s");
+        SKIP: {
+                $sock->connected() || skip "no connection to $host:$js->{port}",
+                    1;
+                is($sock->timeout, $to, join ' ', $s, "socket callback");
+            }
+        } ## end SKIP:
+    } ## end while (my ($p, $s) = each...)
 };
 
 subtest "sock cache", sub {
