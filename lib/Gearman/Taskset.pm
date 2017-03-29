@@ -2,7 +2,6 @@ package Gearman::Taskset;
 use version ();
 $Gearman::Taskset::VERSION = version->declare("2.004.002");
 
-
 use strict;
 use warnings;
 
@@ -59,6 +58,7 @@ use fields (
 use Carp          ();
 use Gearman::Util ();
 use Gearman::ResponseParser::Taskset;
+use IO::Select;
 
 # i thought about weakening taskset's client, but might be too weak.
 use Scalar::Util ();
@@ -94,7 +94,7 @@ sub DESTROY {
     my $self = shift;
 
     # During global cleanup this may be called out of order, and the client my not exist in the taskset.
-    return unless $self->{client};
+    return unless $self->client;
 
     if ($self->{default_sock}) {
         $self->client->_sock_cache($self->{default_sockaddr},
@@ -216,41 +216,27 @@ sub wait {
         . " passed to Taskset->wait."
         if keys %opts;
 
-    my %parser;    # fd -> Gearman::ResponseParser object
+    # fd -> Gearman::ResponseParser object
+    my %parser;
 
-    my ($rin, $rout, $eout) = ('', '', '');
-    my %watching;
-
-    for my $sock ($self->{default_sock}, values %{ $self->{loaned_sock} }) {
-        next unless $sock;
-        if (my $fd = $sock->fileno) {
-            vec($rin, $fd, 1) = 1;
-            $watching{$fd} = $sock;
-        }
-    } ## end for my $sock ($self->{default_sock...})
+    my $io = IO::Select->new($self->{default_sock},
+        values %{ $self->{loaned_sock} });
 
     while (!$self->{cancelled} && keys %{ $self->{waiting} }) {
         my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
-
-        # TODO drop the eout.
-        my $nfound = select($rout = $rin, undef, $eout = $rin, $time_left);
+        my $nfound = select($io->bits(), undef, undef, $time_left);
         if ($timeout && $time_left <= 0) {
             $self->cancel;
             return;
         }
         next if !$nfound;
-
-        foreach my $fd (keys %watching) {
-            next unless vec($rout, $fd, 1);
-
-            # TODO: deal with error vector
-            my $sock   = $watching{$fd};
+        foreach my $fd ($io->can_read()) {
             my $parser = $parser{$fd}
                 ||= Gearman::ResponseParser::Taskset->new(
-                source  => $sock,
+                source  => $fd,
                 taskset => $self
                 );
-            eval { $parser->parse_sock($sock); };
+            eval { $parser->parse_sock($fd); };
 
             if ($@) {
 
@@ -258,7 +244,7 @@ sub wait {
                 # We're not in an accessible place here, so if all job servers fail we must die to prevent hanging.
                 Carp::croak("Job server failure: $@");
             } ## end if ($@)
-        } ## end foreach my $fd (keys %watching)
+        } ## end foreach my $fd ($io->can_read...)
     } ## end while (!$self->{cancelled...})
 } ## end sub wait
 
@@ -543,7 +529,7 @@ sub process_packet {
         work_fail => sub {
             my ($blob) = shift;
             my ($shandle, $msg) = split(/\0/, $blob);
-            $shandle ||=$blob;
+            $shandle ||= $blob;
             $self->_fail_jshandle($shandle, "work_fail", $msg);
             return 1;
         },
