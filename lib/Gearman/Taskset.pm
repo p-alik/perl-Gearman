@@ -351,10 +351,8 @@ sub _get_hashed_sock {
 # otherwise, return value is undefined.
 sub _wait_for_packet {
     my ($self, $sock, $timeout) = @_;
-
-    #TODO check $err after read
-    my $err;
-    my $res = Gearman::Util::read_res_packet($sock, \$err, $timeout);
+    my $res = Gearman::Util::read_res_packet($sock, \my $err, $timeout);
+    $err && Carp::croak("reading response packet failed: $err");
 
     return $res ? $self->process_packet($res, $sock) : 0;
 } ## end sub _wait_for_packet
