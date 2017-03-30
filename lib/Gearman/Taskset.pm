@@ -7,7 +7,7 @@ use warnings;
 
 =head1 NAME
 
-Gearman::Taskset - a taskset in Gearman, from the point of view of a client
+Gearman::Taskset - a taskset in Gearman, from the point of view of a L<Gearman::Client>
 
 =head1 SYNOPSIS
 
@@ -22,37 +22,23 @@ Gearman::Taskset - a taskset in Gearman, from the point of view of a client
 
 =head1 DESCRIPTION
 
-Gearman::Taskset is a Gearman::Client's representation of tasks queue t in Gearman
+Gearman::Taskset is a L<Gearman::Client>'s representation of tasks queue
 
 =head1 METHODS
 
 =cut
 
 use fields (
-
-    # { handle => [Task, ...] }
-    'waiting',
-
-    # Gearman::Client
-    'client',
-
-    # arrayref
-    'need_handle',
-
-    # default socket (non-merged requests)
-    'default_sock',
-
-    # default socket's ip/port
-    'default_sockaddr',
-
-    # { hostport => socket }
-    'loaned_sock',
-
-    # bool, if taskset has been cancelled mid-processing
-    'cancelled',
-
-    # hookname -> coderef
-    'hooks',
+    qw/
+        waiting
+        client
+        need_handle
+        default_sock
+        default_sockaddr
+        loaned_sock
+        cancelled
+        hooks
+        /
 );
 
 use Carp          ();
@@ -80,12 +66,25 @@ sub new {
         $self = fields::new($self);
     }
 
+    # { handle => [Task, ...] }
     $self->{waiting}     = {};
     $self->{need_handle} = [];
     $self->{client}      = $client;
+
+    # { hostport => socket }
     $self->{loaned_sock} = {};
-    $self->{cancelled}   = 0;
-    $self->{hooks}       = {};
+
+    # bool, if taskset has been cancelled mid-processing
+    $self->{cancelled} = 0;
+
+    # { hookname => coderef }
+    $self->{hooks} = {};
+
+    # default socket (non-merged requests)
+    $self->{default_sock} = undef;
+
+    # $self->client()->_js_str($self->{default_sock});
+    $self->{default_sockaddr} = undef;
 
     return $self;
 } ## end sub new
@@ -176,9 +175,10 @@ sub cancel {
         $sock->close;
     }
 
-    $self->{waiting}     = {};
-    $self->{need_handle} = [];
     $self->{client}      = undef;
+    $self->{loaned_sock} = {};
+    $self->{need_handle} = [];
+    $self->{waiting}     = {};
 } ## end sub cancel
 
 #
