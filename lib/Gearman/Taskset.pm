@@ -141,14 +141,16 @@ sub add_hook {
 
 =head2 client ()
 
-this method is part of the "Taskset" interface, also implemented by
-Gearman::Client::Async, where no tasksets make sense, so instead the
-Gearman::Client::Async object itself is also its taskset.  (the
-client tracks all tasks).  so don't change this, without being aware
-of Gearman::Client::Async.  similarly, don't access $ts->{client} without
-going via this accessor.
+B<return> L<Gearman::Client>
 
 =cut
+
+# this method is part of the "Taskset" interface, also implemented by
+# Gearman::Client::Async, where no tasksets make sense, so instead the
+# Gearman::Client::Async object itself is also its taskset.  (the
+# client tracks all tasks).  so don't change this, without being aware
+# of Gearman::Client::Async.  similarly, don't access $ts->{client} without
+# going via this accessor.
 
 sub client {
     return shift->{client};
@@ -278,7 +280,7 @@ sub add_task {
     while (@{ $self->{need_handle} }) {
         my $rv
             = $self->_wait_for_packet($jssock,
-            $self->{client}->{command_timeout});
+            $self->client()->{command_timeout});
         if (!$rv) {
 
             # ditch it, it failed.
@@ -306,7 +308,7 @@ sub _get_default_sock {
     my $getter = sub {
         my $js = shift;
         return $self->{loaned_sock}{$js}
-            || $self->{client}->_get_js_sock($js);
+            || $self->client()->_get_js_sock($js);
     };
 
     my ($js, $jss) = $self->client()->_get_random_js_sock($getter);
