@@ -116,7 +116,7 @@ subtest "task", sub {
     throws_ok { $ts->_fail_jshandle() } qr/called without shandle/,
         "caught _fail_jshandle() without shandle";
 
-    throws_ok { $ts->_fail_jshandle('x') } qr/unknown handle/,
+    throws_ok { $ts->_fail_jshandle(qw/x y/) } qr/unknown handle/,
         "caught _fail_jshandle() unknown shandle";
 
     dies_ok { $ts->_wait_for_packet() } "_wait_for_packet() dies";
@@ -290,7 +290,7 @@ subtest "process_packet(work_status)", sub {
     my $r = { type => $type, blobref => \join "\0", $h, 3, 5 };
     $ts->{waiting}{$h} = [];
     throws_ok { $ts->process_packet($r) }
-    qr/got $type for unknown handle/, "caught unknown handle";
+    qr/Got $type for unknown handle/, "caught unknown handle";
 
     ok(
         my $task = $ts->client()->_get_task_from_args(
