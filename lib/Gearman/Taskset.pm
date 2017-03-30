@@ -406,12 +406,12 @@ sub _fail_jshandle {
         or Carp::croak "_fail_jshandle() called without shandle parameter";
 
     my $task_list = $self->{waiting}{$shandle}
-        or Carp::croak "Uhhhh:  got $type for unknown handle: $shandle";
+        or Carp::croak "Got $type for unknown handle: $shandle";
 
     my $task = shift @{$task_list};
     (Scalar::Util::blessed($task) && $task->isa("Gearman::Task"))
         || Carp::croak
-        "Uhhhh:  task_list is empty on $type for handle $shandle\n";
+        "task_list is empty on $type for handle $shandle\n";
 
     $task->fail($msg || "jshandle fail");
 
@@ -464,7 +464,7 @@ sub process_packet {
             my $task      = shift @$task_list;
             $assert{task}->(
                 $task,
-                "Uhhhh:  task_list is empty on work_complete for handle $shandle"
+                "task_list is empty on work_complete for handle $shandle"
             );
 
             $task->complete(\$blob);
@@ -482,7 +482,7 @@ sub process_packet {
             my $task      = $task_list->[0];
             $assert{task}->(
                 $task,
-                "Uhhhh:  task_list is empty on work_data for handle $shandle"
+                "task_list is empty on work_data for handle $shandle"
             );
 
             $task->data(\$blob);
@@ -499,7 +499,7 @@ sub process_packet {
             my $task      = $task_list->[0];
             $assert{task}->(
                 $task,
-                "Uhhhh:  task_list is empty on work_warning for handle $shandle"
+                "task_list is empty on work_warning for handle $shandle"
             );
 
             $task->warning(\$blob);
@@ -517,7 +517,7 @@ sub process_packet {
             my $task      = $task_list->[0];
             $assert{task}->(
                 $task,
-                "Uhhhh:  task_list is empty on work_exception for handle $shandle"
+                "task_list is empty on work_exception for handle $shandle"
             );
 
             #FIXME we have to freeze $blob because Task->exception expected it in this form.
@@ -539,7 +539,7 @@ sub process_packet {
             my $task_list = $self->{waiting}{$shandle};
             ref($task_list) eq "ARRAY" && scalar(@{$task_list})
                 or Carp::croak
-                "Uhhhh:  got work_status for unknown handle: $shandle";
+                "Got work_status for unknown handle: $shandle";
 
             # FIXME: the server is (probably) sending a work_status packet for each
             # interested client, even if the clients are the same, so probably need
