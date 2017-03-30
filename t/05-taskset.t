@@ -38,14 +38,14 @@ my $c = new_ok($cn, [job_servers => [@js]]);
 my $ts = new_ok($mn, [$c]);
 
 subtest "new", sub {
-    is($ts->client,             $c,      "client");
-    is($ts->{cancelled},        0,       "cancelled");
-    is($ts->{default_sockaddr}, undef,   "default_sockaddr");
-    is($ts->{default_sock},     undef,   "default_sock");
-    is_deeply($ts->{hooks},       {},  "hooks");
-    is_deeply($ts->{loaned_sock}, {},  "loaned_sock");
+    is($ts->client,             $c,    "client");
+    is($ts->{cancelled},        0,     "cancelled");
+    is($ts->{default_sockaddr}, undef, "default_sockaddr");
+    is($ts->{default_sock},     undef, "default_sock");
+    is_deeply($ts->{hooks},       {}, "hooks");
+    is_deeply($ts->{loaned_sock}, {}, "loaned_sock");
     is_deeply($ts->{need_handle}, [], "need_handle");
-    is_deeply($ts->{waiting},     {},  "waiting");
+    is_deeply($ts->{waiting}, {}, "waiting");
 
     throws_ok { $mn->new('a') }
     qr/^provided client argument is not a $cn reference/,
@@ -66,18 +66,18 @@ subtest "cancel", sub {
     my $ts = new_ok($mn, [$cn->new(job_servers => [@js])]);
     is($ts->{cancelled}, 0);
 
-    my $s =  IO::Socket::IP->new();
+    my $s = IO::Socket::IP->new();
     $ts->{default_sock} = $s;
     $ts->{loaned_sock}->{x} = $s;
 
     $ts->cancel();
 
-    is($ts->client,             undef, "client");
-    is($ts->{cancelled},          1,     "cancelled");
-    is($ts->{default_sock},       undef, "default_sock");
+    is($ts->client,         undef, "client");
+    is($ts->{cancelled},    1,     "cancelled");
+    is($ts->{default_sock}, undef, "default_sock");
     is_deeply($ts->{loaned_sock}, {}, "loaned_sock");
-    is_deeply($ts->{need_handle},   [],     "need_handle");
-    is_deeply($ts->{waiting}, {},     "waiting");
+    is_deeply($ts->{need_handle}, [], "need_handle");
+    is_deeply($ts->{waiting}, {}, "waiting");
 };
 
 subtest "socket", sub {
@@ -87,7 +87,7 @@ subtest "socket", sub {
     my $job_server = $gts->job_servers();
     $job_server || plan skip_all => "couldn't start ", $gts->bin();
 
-    my $ts = new_ok($mn, [ $cn->new(job_servers => [$job_server])]);
+    my $ts = new_ok($mn, [$cn->new(job_servers => [$job_server])]);
 
     my @js = @{ $ts->client()->job_servers() };
     for (my $i = 0; $i < scalar(@js); $i++) {
@@ -105,7 +105,12 @@ subtest "socket", sub {
 
 subtest "task", sub {
     my $f = "foo";
-    my $t = Gearman::Task->new($f, undef, {on_fail => sub {die "dies on fail"}});
+    my $t = Gearman::Task->new(
+        $f, undef,
+        {
+            on_fail => sub { die "dies on fail" }
+        }
+    );
     my $c = $cn->new(job_servers => []);
     my $ts = new_ok($mn, [$c]);
     is($ts->add_task($f), undef, "add_task($f) returns undef");
@@ -122,13 +127,14 @@ subtest "task", sub {
     dies_ok { $ts->_wait_for_packet() } "_wait_for_packet() dies";
     dies_ok { $ts->add_task() } "add_task() dies";
 
-    SKIP: {
-      my @job_servers = eval {t::Server->new()->job_servers(int(rand(2)+1))};
-      @job_servers || skip "no jobserver", 2;
-      $ts->client->job_servers([@job_servers]);
-      ok($ts->add_task($f), "add_task($f)");
-      is_deeply $ts->{need_handle}, [];
-    };
+SKIP: {
+        my @job_servers
+            = eval { t::Server->new()->job_servers(int(rand(2) + 1)) };
+        @job_servers || skip "no jobserver", 2;
+        $ts->client->job_servers([@job_servers]);
+        ok($ts->add_task($f), "add_task($f)");
+        is_deeply $ts->{need_handle}, [];
+    } ## end SKIP:
 };
 
 my $f = "foo";
@@ -152,7 +158,7 @@ subtest "process_packet(job_created)", sub {
     );
 
     $ts->{need_handle} = [];
-    $ts->{client} = new_ok("Gearman::Client", [job_servers => [@js]]);
+    $ts->{client} = new_ok($cn, [job_servers => [@js]]);
 
     my $type = "job_created";
     my $r = { type => $type, blobref => \$h };
