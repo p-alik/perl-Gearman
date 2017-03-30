@@ -438,7 +438,7 @@ sub process_packet {
             my ($blob) = shift;
             my $task = shift @{ $self->{need_handle} };
             $assert{task}
-                ->($task, "Um, got an unexpected job_created notification");
+                ->($task, "Got an unexpected job_created notification");
             my $shandle = $blob;
             my $ipport  = $self->_ip_port($sock);
 
