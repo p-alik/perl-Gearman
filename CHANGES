@@ -1,4 +1,4 @@
-2.003.001 2017-03-26 22:01:00 Europe/Berlin
+2.003.002 2017-03-26 22:01:00 Europe/Berlin
      - tests are perl 5.25 ready (use lib .)
      -- GEARMAN_WORKER_USE_STDIO test only with AUTHOR_TESTING
 
