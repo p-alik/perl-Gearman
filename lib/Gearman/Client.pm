@@ -99,12 +99,6 @@ Returns a scalar reference to the result, or undef on failure.
 If you provide on_complete and on_fail handlers, they're ignored, as
 this function currently overrides them.
 
-=head2 $client-E<gt>dispatch_background($task)
-
-=head2 $client-E<gt>dispatch_background($funcname, $arg, \%options)
-
-Dispatches a task and doesn't wait for the result. Return value
-is an opaque scalar that can be used to refer to the task with get_status.
 
 =head2 $taskset = $client-E<gt>new_task_set
 
@@ -399,13 +393,18 @@ sub do_task {
     return $ret;
 } ## end sub do_task
 
-=head2 dispatch_background($func, $arg_p, $opts)
+=head2 dispatch_background($func, $arg_p, $options_hr)
 
 =head2 dispatch_background($task)
 
-dispatches job in background
+Dispatches a C<task> and doesn't wait for the result. Return value
+is an opaque scalar that can be used to refer to the task with L<get_status>.
 
-return the handle from the jobserver, or undef on failure
+B<It is strongly recommended to set> L<Gearman::Task> C<uniq> B<option>
+to insure gearmand does not squash jobs if it store background jobs in a persistence backend.
+See the issue L<#87|https://github.com/gearman/gearmand/issues/87#issuecomment-291119785>
+
+B<return> the handle from the jobserver, or undef on failure
 
 =cut
 
@@ -458,8 +457,8 @@ sub add_hook {
 =head2 get_status($handle)
 
 The Gearman Server will assign a scalar job handle when you request a 
-background job with dispatch_background. Save this scalar, and use it later in 
-order to request the status of this job. 
+background job with L<dispatch_background>. Save this scalar, and use it later
+in order to request the status of this job.
 
 B<return> L<Gearman::JobStatus> on success
 
