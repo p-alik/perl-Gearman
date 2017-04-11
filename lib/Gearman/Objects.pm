@@ -28,6 +28,7 @@ use fields qw/
     job_servers
     js_count
     prefix
+    prefix_separator
     sock_cache
     /;
 
@@ -45,6 +46,7 @@ sub new {
 
     $self->debug($opts{debug});
     $self->prefix($opts{prefix});
+    $self->prefix_separator($opts{prefix_separator});
 
     $self->{sock_cache} = {};
 
@@ -131,14 +133,14 @@ sub debug {
 
 =head2 func($func)
 
-B<return> C<< $prefix ? $prefix\t$func : $func >>
+B<return> C<< join $prefix_separator, $prefix, $func >>
 
 =cut
 
 sub func {
     my ($self, $func) = @_;
     my $prefix = $self->prefix;
-    return defined($prefix) ? join("\t", $prefix, $func) : $func;
+    return defined($prefix) ? join($self->prefix_separator, $prefix, $func) : $func;
 }
 
 =head2 prefix([$prefix])
@@ -149,6 +151,22 @@ getter/setter
 
 sub prefix {
     return shift->_property("prefix", @_);
+}
+
+=head2 prefix_separator([$separator])
+
+getter/setter
+
+default: "\t"
+
+I<If gearmand uses memcached persistent queue type override default separator to insure jobs recovery>
+
+=cut
+
+sub prefix_separator {
+  my ($self) = shift;
+  my $r = $self->_property("prefix_separator", scalar(@_) ? $_[0] : ());
+  return $r ? $r : $self->_property("prefix_separator", "\t");
 }
 
 =head2 socket($js, [$timeout])
