@@ -16,6 +16,7 @@ can_ok(
         canonicalize_job_servers
         debug
         func job_servers prefix
+        prefix_separator
         set_job_servers
         sock_nodelay
         socket
@@ -89,21 +90,44 @@ subtest "debug", sub {
 };
 
 subtest "prefix func", sub {
-    plan tests => 10;
+    plan tests => 3;
 
     my ($p, $f) = qw/foo bar/;
 
-    my $c = new_ok($mn, [prefix => $p]);
-    is($c->prefix(), $p);
-    is($c->func($f), join("\t", $c->prefix(), $f));
-    is($c->prefix(undef), undef);
-    is($c->func($f),      $f);
+    subtest "no prefix", sub {
+        my $c = new_ok($mn);
 
-    $c = new_ok($mn);
-    is($c->prefix(),   undef);
-    is($c->func($f),   $f);
-    is($c->prefix($p), $p);
-    is($c->func($f), join("\t", $c->prefix(), $f));
+        is($c->prefix(), undef);
+        is($c->func($f), $f);
+
+        is($c->prefix($p), $p);
+        is($c->func($f), join("\t", $c->prefix(), $f));
+    };
+
+    subtest "prefix", sub {
+        my $c = new_ok($mn, [prefix => $p]);
+
+        is($c->prefix(), $p);
+        is($c->func($f), join("\t", $c->prefix(), $f));
+
+        is($c->prefix(undef), undef);
+        is($c->func($f),      $f);
+    };
+
+    subtest "prefix separator", sub {
+        my $separator = '#';
+        my $c = new_ok($mn, [prefix => $p, prefix_separator => $separator]);
+
+        is($c->prefix(), $p);
+        is($c->prefix_separator(), $separator);
+        is($c->func($f), join($separator, $c->prefix(), $f));
+
+        is($c->prefix_separator(undef), "\t");
+        is($c->func($f), join("\t", $c->prefix(), $f));
+
+        is($c->prefix(undef), undef);
+        is($c->func($f),      $f);
+    };
 };
 
 subtest "socket", sub {
