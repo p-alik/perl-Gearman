@@ -16,7 +16,6 @@ Gearman::Client - Client for gearman distributed job system
     $client->job_servers(
       '127.0.0.1',
       {
-        ca_certs  => ...,
         cert_file  => ...,
         host      => '10.0.0.1',
         key_file   => ...,
