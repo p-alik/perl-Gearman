@@ -1,3 +1,6 @@
+2.004.002 2017-04-11 11:01:00 Europe/Berlin
+    - do not force Client and Worker to set useless SSL ca_certs parameter
+
 2.004.001 2017-04-11 14:38:00 Europe/Berlin
      - Gearman::Client and Gearman::Worker could set prefix separator
        - It would be recommended to replace default prefix separator to insure
