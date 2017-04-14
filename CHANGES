@@ -1,3 +1,8 @@
+2.004.003 2017-04-11 22:24:00 Europe/Berlin
+    - Client and Worker could set SSL ca_file parameter
+    - Taskset.pm refactoring:
+      replace fileno handling by IO::Select
+
 2.004.002 2017-04-11 11:01:00 Europe/Berlin
     - do not force Client and Worker to set useless SSL ca_certs parameter
 
