@@ -89,7 +89,7 @@ C<$js> a string, hash reference or array reference of aforementioned.
 
 Hash reference should contain at least host key.
 
-All keys: host, port (4730 on default), use_ssl, key_file, cert_file,
+All keys: host, port (4730 on default), use_ssl, ca_file, cert_file, key_file,
 socket_cb
 
 B<return> [canonicalized list]
