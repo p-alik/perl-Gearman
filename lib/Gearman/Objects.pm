@@ -207,7 +207,7 @@ sub socket {
     my $sc = "IO::Socket::IP";
     if ($js->{use_ssl}) {
         $sc = "IO::Socket::SSL";
-        for (qw/ key_file cert_file /) {
+        for (qw/ ca_file cert_file key_file /) {
             $js->{$_} || next;
             $opts{ join('_', "SSL", $_) } = $js->{$_};
         }
