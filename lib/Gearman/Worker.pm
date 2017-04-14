@@ -18,12 +18,13 @@ Gearman::Worker - Worker for gearman distributed job system
     $worker->job_servers(
       '127.0.0.1',
       {
-        cert_file  => ...,
         host      => '10.0.0.1',
-        key_file   => ...,
-        port      => 4733,
+        port      => 4730,
         socket_cb => sub {...},
         use_ssl   => 1,
+        ca_file   => ...,
+        cert_file => ...,
+        key_file  => ...,
       }
     );
     $worker->register_function($funcname => $subref);
@@ -51,12 +52,15 @@ Creates a new I<Gearman::Worker> object, and returns the object.
 If I<%options> is provided, initializes the new worker object with the
 settings in I<%options>, which can contain:
 
+I<Gearman::Worker> is derived from L<Gearman::Objects>
+
 =over 4
 
 =item * job_servers
 
-Calls I<job_servers> (see below) to initialize the list of job
-servers. It will be ignored if this worker is running as a child
+List of job servers. Value should be an array reference, hash reference
+or scalar.
+It will be ignored if this worker is running as a child
 process of a gearman server.
 
 =item * prefix
@@ -65,7 +69,7 @@ Calls I<prefix> (see below) to set the prefix / namespace.
 
 =back
 
-=head2 $client-E<gt>prefix($prefix)
+=head2 $worker-E<gt>prefix($prefix)
 
 Sets the namespace / prefix for the function names.  This is useful
 for sharing job servers between different applications or different
@@ -90,15 +94,13 @@ integers.
     $worker->register_function(sum => sub { sum @{ thaw($_[0]->arg) } });
     $worker->work while 1;
 
-See the I<Gearman::Client> documentation for a sample client sending the
+See the L<Gearman::Client> documentation for a sample client sending the
 I<sum> job.
 
 =head1 METHODS
 
 =cut
 
-#TODO: retries?
-#
 use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;

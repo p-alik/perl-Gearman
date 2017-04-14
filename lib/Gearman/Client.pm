@@ -16,12 +16,13 @@ Gearman::Client - Client for gearman distributed job system
     $client->job_servers(
       '127.0.0.1',
       {
-        cert_file  => ...,
         host      => '10.0.0.1',
-        key_file   => ...,
-        port      => 4733,
+        port      => 4730,
         socket_cb => sub {...},
         use_ssl   => 1,
+        ca_file   => ...,
+        cert_file => ...,
+        key_file  => ...,
       }
     );
 
@@ -44,10 +45,12 @@ Gearman::Client - Client for gearman distributed job system
 
 I<Gearman::Client> is a client class for the Gearman distributed job
 system, providing a framework for sending jobs to one or more Gearman
-servers.  These jobs are then distributed out to a farm of workers.
+servers. These jobs are then distributed out to a farm of workers.
 
 Callers instantiate a I<Gearman::Client> object and from it dispatch
 single tasks, sets of tasks, or check on the status of tasks.
+
+I<Gearman::Client> is derived from L<Gearman::Objects>
 
 =head1 USAGE
 
@@ -62,8 +65,10 @@ settings in I<%options>, which can contain:
 
 =item * job_servers
 
-Calls I<job_servers> (see below) to initialize the list of job
-servers.  Value in this case should be an arrayref.
+List of job servers. Value should be an array reference, hash reference
+or scalar.
+
+Calls L<Gearman::Objects> to set I<job_servers>
 
 =item * prefix
 

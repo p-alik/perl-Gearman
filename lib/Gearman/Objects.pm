@@ -53,11 +53,12 @@ sub new {
     return $self;
 } ## end sub new
 
-=head2 job_servers([$js])
+=head2 job_servers([$job_servers])
 
-getter/setter
+Initialize the list of job servers.
+C<$job_servers>should be an array reference, hash reference or scalar.
 
-C<$js> array reference, hash reference or scalar
+B<return> C<[job_servers]>
 
 =cut
 
@@ -70,7 +71,7 @@ sub job_servers {
 
 =head2 set_job_servers($js)
 
-set job_servers attribute by canonicalized C<$js>_
+set job_servers attribute by canonicalized C<$js>
 
 =cut
 
