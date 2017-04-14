@@ -23,7 +23,6 @@ BEGIN {
         AUTHOR_TESTING
         SSL_GEARMAND_HOST
         SSL_GEARMAND_PORT
-        SSL_VERIFY_MODE
         SSL_CERT_FILE
         SSL_KEY_FILE
         /;
@@ -48,7 +47,8 @@ my $job_server = {
     key_file  => $ENV{SSL_KEY_FILE},
     socket_cb => sub {
         my ($hr) = @_;
-        $hr->{SSL_cipher_list} = 'DEFAULT:!DH'; # 'ALL:!LOW:!EXP:!aNULL';
+
+        # $hr->{SSL_cipher_list} = 'DEFAULT:!DH'; # 'ALL:!LOW:!EXP:!aNULL';
         if (defined($ENV{SSL_VERIFY_MODE})) {
             $hr->{SSL_verify_mode} = eval "$ENV{SSL_VERIFY_MODE}";
         }
