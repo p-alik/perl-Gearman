@@ -1,3 +1,6 @@
+2.004.004 2017-05-09 07:53:00 Europe/Berlin
+    - refactoring: Taskset carefully loops over loaned_sock
+
 2.004.003 2017-04-11 22:24:00 Europe/Berlin
     - Client and Worker could set SSL ca_file parameter
     - Taskset.pm refactoring:
