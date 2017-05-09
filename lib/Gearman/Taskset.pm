@@ -100,6 +100,7 @@ sub DESTROY {
             $self->{default_sock});
     }
 
+    keys %{ $self->{loaned_sock} };
     while (my ($hp, $sock) = each %{ $self->{loaned_sock} }) {
         $self->client->_sock_cache($hp, $sock);
     }
@@ -171,7 +172,7 @@ sub cancel {
         $self->{default_sock} = undef;
     }
 
-    while (my ($hp, $sock) = each %{ $self->{loaned_sock} }) {
+    foreach my $sock (values %{ $self->{loaned_sock} }) {
         $sock->close;
     }
 
@@ -373,13 +374,16 @@ sub _ip_port {
 
     # look for a hostport in loaned_sock
     my $hostport;
-    while (my ($hp, $s) = each %{ $self->{loaned_sock} }) {
+    my @k = keys %{ $self->{loaned_sock} };
+    while (!$hostport && (my $hp = shift @k)) {
+        my $s = $self->{loaned_sock}->{$hp};
         $s || next;
         if ($sock == $s) {
             $hostport = $hp;
-            last;
+
+            # last;
         }
-    } ## end while (my ($hp, $s) = each...)
+    } ## end while (!$hostport && (my ...))
 
     # hopefully it solves client->get_status mismatch
     $hostport && return $hostport;
