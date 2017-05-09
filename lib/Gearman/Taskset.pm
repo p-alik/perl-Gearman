@@ -414,8 +414,7 @@ sub _fail_jshandle {
 
     my $task = shift @{$task_list};
     (Scalar::Util::blessed($task) && $task->isa("Gearman::Task"))
-        || Carp::croak
-        "task_list is empty on $type for handle $shandle\n";
+        || Carp::croak "task_list is empty on $type for handle $shandle\n";
 
     $task->fail($msg || "jshandle fail");
 
@@ -484,10 +483,8 @@ sub process_packet {
 
             my $task_list = $self->{waiting}{$shandle};
             my $task      = $task_list->[0];
-            $assert{task}->(
-                $task,
-                "task_list is empty on work_data for handle $shandle"
-            );
+            $assert{task}->($task,
+                "task_list is empty on work_data for handle $shandle");
 
             $task->data(\$blob);
 
@@ -502,8 +499,7 @@ sub process_packet {
             my $task_list = $self->{waiting}{$shandle};
             my $task      = $task_list->[0];
             $assert{task}->(
-                $task,
-                "task_list is empty on work_warning for handle $shandle"
+                $task, "task_list is empty on work_warning for handle $shandle"
             );
 
             $task->warning(\$blob);
@@ -542,8 +538,7 @@ sub process_packet {
             my ($shandle, $nu, $de) = split(/\0/, $blob);
             my $task_list = $self->{waiting}{$shandle};
             ref($task_list) eq "ARRAY" && scalar(@{$task_list})
-                or Carp::croak
-                "Got work_status for unknown handle: $shandle";
+                or Carp::croak "Got work_status for unknown handle: $shandle";
 
             # FIXME: the server is (probably) sending a work_status packet for each
             # interested client, even if the clients are the same, so probably need
