@@ -302,7 +302,7 @@ sub work {
             } ## end if ($res->{type} eq "no_job")
 
             unless ($res->{type} eq "job_assign") {
-                my $msg = "Uh, wasn't expecting a $res->{type} packet.";
+                my $msg = "unexpected packet type: $res->{type}";
 
                 if ($res->{type} eq "error") {
                     $msg .= " [${$res->{blobref}}]\n";
@@ -312,7 +312,7 @@ sub work {
             } ## end unless ($res->{type} eq "job_assign")
 
             ${ $res->{blobref} } =~ s/^(.+?)\0(.+?)\0//
-                or die "Uh, regexp on job_assign failed";
+                or die "regexp on job_assign failed";
             my ($handle, $ability) = ($1, $2);
             my $job = Gearman::Job->new(
                 func   => $ability,
