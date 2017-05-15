@@ -66,9 +66,6 @@ subtest "work fail", sub {
 };
 
 subtest "work exception", sub {
-
-    # Gearman::Server does not support protocol commands WORK_EXCEPTION
-    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
     plan tests => 3;
 
     ok(my $worker = worker_exception(job_servers => [@job_servers]), "worker");
