@@ -256,7 +256,6 @@ sub work {
             # to test gearmand server going away here.  (SIGPIPE on
             # send_req, etc) this testing has been done manually, at
             # least.
-
             unless (_send($jss, $grab_req)) {
                 if ($!{EPIPE} && $self->{parent_pipe}) {
 
@@ -527,16 +526,16 @@ sub send_work_warning {
     return $self->_job_request("work_warning", $job, $msg);
 }
 
-# =head2 send_work_exception($job, $exception)
+=head4 send_work_exception($job, $exception)
 
-# Use this method to notify the server (and any listening clients) that the C<job> failed with the given C<$exception>.
+Use this method to notify the server (and any listening clients) that the C<job> failed with the given C<$exception>.
 
-# =cut
+=cut
 
-# sub send_work_exception {
-#     my ($self, $job, $exc) = @_;
-#     return $self->_job_request("work_exception", $job, $exc);
-# }
+sub send_work_exception {
+    my ($self) = shift;
+    return $self->_finish_job_request("work_exception", @_);
+}
 
 =head2 send_work_fail($job, [$message])
 
