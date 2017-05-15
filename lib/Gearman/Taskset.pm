@@ -512,9 +512,8 @@ sub process_packet {
                 or Carp::croak "Bogus work_exception from server";
             $blob =~ s/^$qr//;
             my $shandle = $1;
-
             my $task_list = $self->{waiting}{$shandle};
-            my $task      = $task_list->[0];
+            my $task      = shift @{$task_list};
             $assert{task}->(
                 $task,
                 "task_list is empty on work_exception for handle $shandle"
@@ -523,6 +522,8 @@ sub process_packet {
             #FIXME we have to freeze $blob because Task->exception expected it in this form.
             # The only reason I see to do it so, is Worker->work implementation. With Gearman::Server it uses nfreeze for exception value.
             $task->exception(\Storable::freeze(\$blob));
+
+            delete $self->{waiting}{$shandle} unless @$task_list;
 
             return 1;
         },
