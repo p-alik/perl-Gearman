@@ -537,15 +537,14 @@ sub send_work_exception {
     return $self->_finish_job_request("work_exception", @_);
 }
 
-=head2 send_work_fail($job, [$message])
+=head2 send_work_fail($job)
 
 Use this method to notify the server (and any listening clients) that the job failed.
 
 =cut
 
 sub send_work_fail {
-    my ($self) = shift;
-    return $self->_finish_job_request("work_fail", @_);
+    return shift->_finish_job_request("work_fail", shift);
 }
 
 =head2 send_work_status($job, $numerator, $denominator)
