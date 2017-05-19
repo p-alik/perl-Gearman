@@ -528,10 +528,7 @@ sub process_packet {
             return 1;
         },
         work_fail => sub {
-            my ($blob) = shift;
-            my ($shandle, $msg) = split(/\0/, $blob);
-            $shandle ||= $blob;
-            $self->_fail_jshandle($shandle, "work_fail", $msg);
+            $self->_fail_jshandle(shift, "work_fail");
             return 1;
         },
         work_status => sub {
