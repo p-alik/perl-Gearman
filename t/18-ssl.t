@@ -11,6 +11,8 @@ use Test::More;
 use lib '.';
 use t::Worker qw/ new_worker /;
 
+plan tests => 5;
+
 BEGIN {
     use IO::Socket::SSL ();
     if (defined($ENV{SSL_DEBUG})) {
@@ -61,6 +63,8 @@ use_ok("Gearman::Client");
 use_ok("Gearman::Worker");
 
 subtest "client echo request", sub {
+    plan tests => 8;
+
     my $client = _client();
     ok(my $sock = $client->_get_random_js_sock(), "get socket");
     my $msg = "$$ client echo request";
@@ -68,6 +72,8 @@ subtest "client echo request", sub {
 };
 
 subtest "worker echo request", sub {
+    plan tests => 8;
+
     my $worker = new_ok(
         "Gearman::Worker",
         [
@@ -89,6 +95,8 @@ subtest "worker echo request", sub {
 };
 
 subtest "sum", sub {
+    plan tests => 2;
+
     my $func = "sum";
     my $cb   = sub {
         my $sum = 0;
