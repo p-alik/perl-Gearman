@@ -63,7 +63,8 @@ use_ok("Gearman::Worker");
 subtest "client echo request", sub {
     my $client = _client();
     ok(my $sock = $client->_get_random_js_sock(), "get socket");
-    _echo($sock);
+    my $msg = "$$ client echo request";
+    _echo($sock, $msg);
 };
 
 subtest "worker echo request", sub {
@@ -83,7 +84,8 @@ subtest "worker echo request", sub {
         "get socket"
     ) || return;
 
-    _echo($sock);
+    my $msg = "$$ worker echo request";
+    _echo($sock, $msg);
 };
 
 subtest "sum", sub {
@@ -115,15 +117,16 @@ subtest "sum", sub {
 done_testing();
 
 sub _echo {
-    my ($sock) = @_;
-    ok(my $req = Gearman::Util::pack_req_command("echo_req"),
+    my ($sock, $msg) = @_;
+    ok(my $req = Gearman::Util::pack_req_command("echo_req", $msg),
         "prepare echo req");
     my $len = length($req);
     ok(my $rv = $sock->write($req, $len), "write to socket");
     my $err;
     ok(my $res = Gearman::Util::read_res_packet($sock, \$err), "read respose");
-    is(ref($res),    "HASH",     "respose is a hash");
-    is($res->{type}, "echo_res", "response type");
+    is(ref($res),            "HASH",     "respose is a hash");
+    is($res->{type},         "echo_res", "response type");
+    is(${ $res->{blobref} }, $msg,       "response blobref");
 } ## end sub _echo
 
 sub _client {
