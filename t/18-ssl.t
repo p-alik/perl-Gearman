@@ -11,8 +11,6 @@ use Test::More;
 use lib '.';
 use t::Worker qw/ new_worker /;
 
-plan tests => 5;
-
 BEGIN {
     use IO::Socket::SSL ();
     if (defined($ENV{SSL_DEBUG})) {
@@ -35,7 +33,13 @@ BEGIN {
         $skip = $e;
         last;
     }
-    $skip && plan skip_all => sprintf 'without $ENV{%s}', $skip;
+
+    if ($skip) {
+        plan skip_all => sprintf 'without $ENV{%s}', $skip;
+    }
+    else {
+        plan tests => 5;
+    }
 }
 
 my $debug = defined($ENV{SSL_DEBUG}) && $ENV{SSL_DEBUG};
