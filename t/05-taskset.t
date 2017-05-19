@@ -90,12 +90,12 @@ subtest "cancel", sub {
 
 subtest "socket", sub {
     plan tests => 6;
-
+SKIP: {
     my $gts = t::Server->new();
-    $gts || plan skip_all => $t::Server::ERROR;
+    $gts || skip $t::Server::ERROR, 6;
 
     my $job_server = $gts->job_servers();
-    $job_server || plan skip_all => "couldn't start ", $gts->bin();
+    $job_server || skip join(' ', "couldn't start", $gts->bin()), 6;
 
     my $ts = new_ok($mn, [$cn->new(job_servers => [$job_server])]);
 
@@ -111,6 +111,7 @@ subtest "socket", sub {
 
     ok($ts->_get_default_sock(),                "_get_default_sock");
     ok($ts->_ip_port($ts->_get_default_sock()), "_ip_port");
+};
 };
 
 subtest "task", sub {
