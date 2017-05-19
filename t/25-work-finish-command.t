@@ -57,7 +57,7 @@ subtest "work fail", sub {
         $func => $arg,
         {
             on_fail => sub {
-                is(shift, "PID $$ job fail", "on fail callback");
+                is(shift, "jshandle fail", "on fail callback");
             },
             on_exception => sub { fail("exception") }
         },
