@@ -274,7 +274,7 @@ subtest "process_packet(work_exception)", sub {
 
     $ts->{waiting}{$h} = [$task];
     ok($ts->process_packet($r), "process_packet");
-    is(scalar(@{ $ts->{waiting}{$h} }), 0, "waiting{$h}");
+    is($ts->{waiting}{$h}, undef, "waiting{$h}");
 };
 
 subtest "process_packet(work_fail)", sub {
