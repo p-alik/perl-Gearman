@@ -1,3 +1,7 @@
+2.004.006 2017-05-25 18:39:00 Europe/Berlin
+    - bug fixing: Taskset->add_task support for large data
+    - ssl tests large task data and large work result
+
 2.004.005 2017-05-19 13:11:00 Europe/Berlin
     - new worker method send_work_exception
     - send_work_fail does not support message parameter
