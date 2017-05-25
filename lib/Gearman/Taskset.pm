@@ -273,9 +273,8 @@ sub add_task {
 
     my $req = $task->pack_submit_packet($self->client);
     my $len = length($req);
-    my $rv  = $jssock->syswrite($req, $len);
-    $rv ||= 0;
-    Carp::croak "Wrote $rv but expected to write $len" unless $rv == $len;
+    Gearman::Util::send_req($jssock, \$req)
+        || Carp::croak "Written data does not match length of data ($len)";
 
     push @{ $self->{need_handle} }, $task;
     while (@{ $self->{need_handle} }) {
