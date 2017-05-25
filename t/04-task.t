@@ -7,6 +7,7 @@ use Test::Exception;
 
 use_ok("Gearman::Client");
 use_ok("Gearman::Taskset");
+use_ok("Gearman::Util");
 
 my $mn = "Gearman::Task";
 use_ok($mn);
@@ -19,9 +20,7 @@ can_ok(
         exception
         fail
         final_fail
-        func
-        handle
-        hash
+        func handle hash
         is_finished
         mode
         pack_submit_packet
@@ -204,6 +203,23 @@ subtest "warning", sub {
 subtest "handle", sub {
     ok($t->handle($f));
     is($t->{handle}, $f);
+};
+
+subtest "pack_submit_packet", sub {
+    plan tests => 5;
+    my $c = new_ok("Gearman::Client");
+    my $v = Gearman::Util::pack_req_command($t->mode,
+        join("\0", $t->func, $t->{uniq}, ${ $t->{argref} }));
+
+    is $t->pack_submit_packet($c), $v;
+    is $t->pack_submit_packet(), $v;
+
+    my $v = Gearman::Util::pack_req_command($t->mode,
+        join("\0", $t->func, '', ''));
+    ${ $t->{argref} } = undef;
+    $t->{uniq} = undef;
+    is $t->pack_submit_packet($c), $v;
+    is $t->pack_submit_packet(), $v;
 };
 
 done_testing();
