@@ -272,9 +272,8 @@ sub add_task {
     return $task->fail("undefined jssock") unless ($jssock);
 
     my $req = $task->pack_submit_packet($self->client);
-    my $len = length($req);
     Gearman::Util::send_req($jssock, \$req)
-        || Carp::croak "Written data does not match length of data ($len)";
+        || Carp::croak "Error sending data to job server";
 
     push @{ $self->{need_handle} }, $task;
     while (@{ $self->{need_handle} }) {
