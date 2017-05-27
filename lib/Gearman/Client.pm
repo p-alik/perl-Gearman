@@ -248,7 +248,7 @@ sub _job_server_status_command {
 
 =head2 get_job_server_status()
 
-B<return> {job => {capable, queued, running}}
+B<return> C<< {job_server => {job => {capable, queued, running}}} >>
 
 =cut
 
@@ -259,14 +259,13 @@ sub get_job_server_status {
     $self->_job_server_status_command(
         "status\n",
         sub {
-            my ($hostport, $line) = @_;
-
+            my ($js, $line) = @_;
             unless ($line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/) {
                 return;
             }
 
             my ($job, $queued, $running, $capable) = ($1, $2, $3, $4);
-            $js_status->{$hostport}->{$job} = {
+            $js_status->{ $self->_js_str($js) }->{$job} = {
                 queued  => $queued,
                 running => $running,
                 capable => $capable,
@@ -380,7 +379,7 @@ B<return> scalarref of WORK_COMPLETE result
 sub do_task {
     my $self = shift;
     my $task = $self->_get_task_from_args(@_);
-    my $ret     = undef;
+    my $ret  = undef;
 
     $task->{on_complete} = sub {
         $ret = shift;
