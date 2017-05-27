@@ -234,7 +234,7 @@ sub _job_server_status_command {
         my @lines = Gearman::Util::read_text_status($sock, \$err);
         if ($err) {
 
-            #TODO warn
+            $self->debug() && warn $err;
             next;
         }
 
