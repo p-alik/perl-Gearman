@@ -280,7 +280,7 @@ sub get_job_server_status {
 
 supported only by L<Gearman::Server>
 
-B<return> {job => {address, listeners, key}}
+B<return> C<< {job-server => {job => {address, listeners, key}}} >>
 
 =cut
 
@@ -290,13 +290,13 @@ sub get_job_server_jobs {
     $self->_job_server_status_command(
         "jobs\n",
         sub {
-            my ($hostport, $line) = @_;
+            my ($js, $line) = @_;
 
             # Yes, the unique key is sometimes omitted.
             return unless $line =~ /^(\S+)\s+(\S*)\s+(\S+)\s+(\d+)$/;
 
             my ($job, $key, $address, $listeners) = ($1, $2, $3, $4);
-            $js_jobs->{$hostport}->{$job} = {
+            $js_jobs->{ $self->_js_str($js) }->{$job} = {
                 key       => $key,
                 address   => $address,
                 listeners => $listeners,
