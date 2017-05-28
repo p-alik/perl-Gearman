@@ -321,15 +321,15 @@ sub get_job_server_clients {
     $self->_job_server_status_command(
         "clients\n",
         sub {
-            my ($hostport, $line) = @_;
-
+            my ($js, $line) = @_;
+            my $js_str = $self->_js_str($js);
             if ($line =~ /^(\S+)$/) {
                 $client = $1;
-                $js_clients->{$hostport}->{$client} ||= {};
+                $js_clients->{$js_str}->{$client} ||= {};
             }
             elsif ($client && $line =~ /^\s+(\S+)\s+(\S*)\s+(\S+)$/) {
                 my ($job, $key, $address) = ($1, $2, $3);
-                $js_clients->{$hostport}->{$client}->{$job} = {
+                $js_clients->{$js_str}->{$client}->{$job} = {
                     key     => $key,
                     address => $address,
                 };
