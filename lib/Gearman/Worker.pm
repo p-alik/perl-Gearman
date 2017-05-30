@@ -168,7 +168,7 @@ sub reset_abilities {
         my $jss = $self->_get_js_sock($js)
             or next;
 
-        unless (_send($jss, $req)) {
+        unless (_send($jss, \$req)) {
             $self->_uncache_sock($js, "err_write_reset_abilities");
         }
     } ## end foreach my $js (@{ $self->{...}})
@@ -219,7 +219,7 @@ sub work {
     my $last_job_time;
 
     my $on_connect = sub {
-        return _send($_[0], $presleep_req);
+        return _send($_[0], \$presleep_req);
     };
 
     my %js_map = map { $self->_js_str($_) => $_ } $self->job_servers;
@@ -256,7 +256,7 @@ sub work {
             # to test gearmand server going away here.  (SIGPIPE on
             # send_req, etc) this testing has been done manually, at
             # least.
-            unless (_send($jss, $grab_req)) {
+            unless (_send($jss, \$grab_req)) {
                 if ($!{EPIPE} && $self->{parent_pipe}) {
 
                     # our parent process died, so let's just quit
@@ -267,7 +267,7 @@ sub work {
                 $self->_uncache_sock($js, "grab_job_timeout");
                 delete $last_update_time{$js_str};
                 next;
-            } ## end unless (_send($jss, $grab_req...))
+            } ## end unless (_send($jss, \$grab_req...))
 
             # if we're a child process talking over a unix pipe, give more
             # time, since we know there are no network issues, and also
@@ -293,7 +293,7 @@ sub work {
             } while ($res->{type} eq "noop");
 
             if ($res->{type} eq "no_job") {
-                unless (_send($jss, $presleep_req)) {
+                unless (_send($jss, \$presleep_req)) {
                     delete $last_update_time{$js_str};
                     $self->_uncache_sock($js, "write_presleep_error");
                 }
@@ -335,7 +335,7 @@ sub work {
                 my $exception_req
                     = _rc("work_exception",
                     _join0($handle, Storable::nfreeze(\$err)));
-                unless (_send($jss, $exception_req)) {
+                unless (_send($jss, \$exception_req)) {
                     $self->_uncache_sock($js, "write_res_error");
                     next;
                 }
@@ -579,7 +579,7 @@ sub _job_request {
     my ($self, $cmd, $job, $v) = @_;
     my $req = _rc($cmd, $v ? _join0($job->handle, $v) : $job->handle);
 
-    return _send($job->{jss}, $req);
+    return _send($job->{jss}, \$req);
 } ## end sub _job_request
 
 #
@@ -594,7 +594,7 @@ sub _register_all {
         my $jss = $self->_get_js_sock($js)
             or next;
 
-        unless (_send($jss, $req)) {
+        unless (_send($jss, \$req)) {
             $self->_uncache_sock($js, "write_register_func_error");
             next;
         }
@@ -681,7 +681,7 @@ sub _on_connect {
     my ($self, $sock) = @_;
 
     my $cid_req = _rc("set_client_id", $self->{client_id});
-    return unless _send($sock, $cid_req);
+    return unless _send($sock, \$cid_req);
 
     # get this socket's state caught-up
     foreach my $ability (keys %{ $self->{can} }) {
@@ -706,18 +706,15 @@ sub _set_ability {
     else {
         $req = _rc("can_do", $ability);
     }
-    return _send($sock, $req);
+    return _send($sock, \$req);
 } ## end sub _set_ability
 
 #
-# _send($jss, $req)
+# _send($jss, $req_ref)
 #
 # send C<$req> to C<$jss>
 #
-sub _send {
-    my ($jss, $req) = @_;
-    return Gearman::Util::send_req($jss, \$req);
-}
+*_send = \&Gearman::Util::send_req;
 
 #
 # _rc($cmd, [@val])
