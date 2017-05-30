@@ -722,9 +722,7 @@ sub _send {
 #
 # _rc($cmd, [@val])
 #
-sub _rc {
-    return Gearman::Util::pack_req_command(@_);
-}
+*_rc = \&Gearman::Util::pack_req_command;
 
 #
 # _join0(@v)
