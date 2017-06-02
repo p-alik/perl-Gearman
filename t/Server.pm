@@ -59,7 +59,8 @@ sub _start_server {
             my %args = (
                 "--port"   => $port,
                 "--listen" => $self->host,
-                $ENV{GEARMAND_DEBUG} ? ("--verbose" => "DEBUG") : ()
+                $ENV{GEARMAND_DEBUG} ? ("--verbose" => "DEBUG") : (),
+                "--log-file" => $ENV{GEARMAND_LOG_FILE} || "/dev/stderr",
             );
 
             exec($self->bin(), %args) or do {
