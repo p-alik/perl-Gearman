@@ -79,6 +79,10 @@ example).
 The namespace is currently implemented as a simple tab separated
 concatenation of the prefix and the function name.
 
+=item * client_id
+
+Unique worker identifier for job servers.
+
 =head1 EXAMPLES
 
 =head2 Summation
@@ -150,7 +154,8 @@ sub new {
     $self->{down_since}        = {};
     $self->{can}               = {};
     $self->{timeouts}          = {};
-    $self->{client_id} = join('', map { chr(int(rand(26)) + 97) } (1 .. 30));
+    $self->{client_id}         = $opts{client_id}
+        || join('', map { chr(int(rand(26)) + 97) } (1 .. 30));
 
     return $self;
 } ## end sub new
