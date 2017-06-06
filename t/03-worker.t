@@ -88,9 +88,10 @@ SKIP: {
         $gts || skip $t::Server::ERROR, 5;
 
         my @js = $gts->job_servers(int(rand(2) + 2));
-        @js || skip "couldn't start ", $gts->bin(), 5;
 
+        @js || skip "couldn't start ", $gts->bin(), 5;
         ok $w->job_servers(@js), "set job servers";
+
         ok $w->register_function($tn, $to, $cb), "register_function";
         is $w->{can}{$tn}, $cb, "can $tn";
 
