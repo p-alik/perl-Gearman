@@ -435,15 +435,20 @@ wait for your subroutine to give an answer. Exceeding this time will result
 in the jobserver reassigning the task and ignoring your result. This prevents
 a gimpy worker from ruining the 'user experience' in many situations.
 
-B<return> C<< _register_all(can_do request) >>
+B<return> true if C<$funcname> registration successfully transmitted to C<job_servers>
 
 =cut
 
 sub register_function {
-    my $self    = shift;
-    my $func    = shift;
+    my $self = shift;
+    my $func = shift;
+    $func || return;
+
     my $timeout = shift unless (ref $_[0] eq 'CODE');
-    my $subref  = shift;
+    my $subref = shift;
+
+    my @js = $self->job_servers;
+    @js || return;
 
     my $ability = $self->func($func);
 
@@ -458,7 +463,21 @@ sub register_function {
 
     $self->{can}{$ability} = $subref;
 
-    return $self->_register_all($req);
+    my $done = 0;
+    return $self->_register_all(
+        undef,
+        on_connect => sub {
+            my ($sock) = @_;
+            $self->_set_client_id($sock) || return;
+
+            foreach my $ability (keys %{ $self->{can} }) {
+                my $timeout = $self->{timeouts}->{$ability};
+                ($self->_set_ability($sock, $ability, $timeout)) && $done++;
+            }
+
+            return $done == scalar @js;
+        }
+    );
 } ## end sub register_function
 
 =head2 unregister_function($funcname)
@@ -588,25 +607,21 @@ sub _job_request {
 } ## end sub _job_request
 
 #
-# _register_all($req)
+# _register_all($req, %opt)
 #
 sub _register_all {
-    my ($self, $req) = @_;
-
-    my $count       = 0;
+    my ($self, $req, %opts) = @_;
     my @job_servers = $self->job_servers();
     foreach my $js (@job_servers) {
-        my $jss = $self->_get_js_sock($js)
-            or next;
+        my $jss = $self->_get_js_sock($js, %opts);
+
+        ($jss && $req) || next;
 
         unless (_send($jss, \$req)) {
             $self->_uncache_sock($js, "write_register_func_error");
             next;
         }
-        $count++;
     } ## end foreach my $js (@job_servers)
-
-    return $count && $count == scalar(@job_servers);
 } ## end sub _register_all
 
 #
