@@ -481,7 +481,7 @@ sub unregister_function {
 =head2 job_servers(@servers)
 
 Override L<Gearman::Objects> method to skip job server initialization if
-wokring with L<Gearman::Server>.
+working with L<Gearman::Server>.
 
 Calling this method will do nothing in a worker that is running as a child
 process of a gearman server.
