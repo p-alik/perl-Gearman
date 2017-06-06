@@ -24,7 +24,7 @@ can_ok(
 );
 
 subtest "job servers", sub {
-  plan tests => 19;
+    plan tests => 19;
     {
         # scalar
         my $host = "foo";
@@ -78,16 +78,20 @@ subtest "job servers", sub {
         ok(my @js = $c->job_servers, "job_servers");
         isa_ok($js[$#servers], "HASH");
         for (my $i = 0; $i <= $#servers; $i++) {
-            eq_or_diff(@{ $c->canonicalize_job_servers($servers[$i]) }[0],
+            is(@{ $c->canonicalize_job_servers($servers[$i]) }[0],
                 $js[$i], "canonicalize_job_servers($servers[$i])");
         }
     }
+
 };
 
 subtest "debug", sub {
+    plan tests => 6;
+
     my $c = new_ok($mn, [debug => 1]);
     is($c->debug(),  1);
     is($c->debug(0), 0);
+
     $c = new_ok($mn);
     is($c->debug(),  undef);
     is($c->debug(1), 1);
@@ -122,7 +126,7 @@ subtest "prefix func", sub {
         my $separator = '#';
         my $c = new_ok($mn, [prefix => $p, prefix_separator => $separator]);
 
-        is($c->prefix(), $p);
+        is($c->prefix(),           $p);
         is($c->prefix_separator(), $separator);
         is($c->func($f), join($separator, $c->prefix(), $f));
 
@@ -135,6 +139,7 @@ subtest "prefix func", sub {
 };
 
 subtest "socket", sub {
+    plan tests => 6;
 
     my $host = "google.com";
     my %p    = (
@@ -166,6 +171,8 @@ subtest "socket", sub {
 };
 
 subtest "sock cache", sub {
+    plan tests => 10;
+
     my $c = new_ok($mn);
     isa_ok($c->{sock_cache}, "HASH");
     is(keys(%{ $c->{sock_cache} }), 0);
@@ -188,6 +195,8 @@ subtest "sock cache", sub {
 };
 
 subtest "js stringify", sub {
+    plan tests => 5;
+
     my $c = new_ok($mn);
     my ($h, $p) = ("foo", int(rand(10) + 1000));
     my ($js_str, $js) = (join(':', $h, $p), { host => $h, port => $p });
