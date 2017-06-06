@@ -147,7 +147,7 @@ sub new {
         $self->{parent_pipe} = $sock;
 
         die "Unable to initialize connection to gearmand"
-            unless $self->_on_connect($sock);
+            unless $self->_set_client_id($sock);
     } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
 
     $self->{last_connect_fail} = {};
@@ -664,40 +664,24 @@ sub _get_js_sock {
 
     $self->_sock_cache($js, $sock);
 
-    my $ok = $on_connect ? $on_connect->($sock) : $self->_on_connect($sock);
-    unless ($ok) {
+    if ($on_connect && !$on_connect->($sock)) {
 
         # delete
         $self->_sock_cache($js, undef, 1);
         return;
-    } ## end unless ($ok)
+    } ## end if ($on_connect && !$on_connect...)
 
     return $sock;
 } ## end sub _get_js_sock
 
 #
-# _on_connect($sock)
+# _set_client_id($sock)
 #
-# Housekeeping things to do on connection to a server. Method call
-# with one argument being the 'socket' we're going to take care of.
-# returns true on success, false on failure.
-#
-sub _on_connect {
+sub _set_client_id {
     my ($self, $sock) = @_;
-
-    my $cid_req = _rc("set_client_id", $self->{client_id});
-    return unless _send($sock, \$cid_req);
-
-    # get this socket's state caught-up
-    foreach my $ability (keys %{ $self->{can} }) {
-        my $timeout = $self->{timeouts}->{$ability};
-        unless ($self->_set_ability($sock, $ability, $timeout)) {
-            return;
-        }
-    } ## end foreach my $ability (keys %...)
-
-    return 1;
-} ## end sub _on_connect
+    my $req = _rc("set_client_id", $self->{client_id});
+    return _send($sock, \$req);
+}
 
 #
 # _set_ability($sock, $ability, [$timeout])
