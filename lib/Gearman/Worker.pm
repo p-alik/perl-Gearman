@@ -607,6 +607,7 @@ sub _job_request {
 sub _register_all {
     my ($self, $req, %opts) = @_;
     my @job_servers = $self->job_servers();
+    my $done        = 0;
     foreach my $js (@job_servers) {
         my $jss = $self->_get_js_sock($js, %opts);
 
@@ -616,7 +617,11 @@ sub _register_all {
             $self->_uncache_sock($js, "write_register_func_error");
             next;
         }
+
+        $done++;
     } ## end foreach my $js (@job_servers)
+
+    return $done == scalar @job_servers;
 } ## end sub _register_all
 
 #
