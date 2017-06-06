@@ -67,6 +67,10 @@ process of a gearman server.
 
 Calls I<prefix> (see below) to set the prefix / namespace.
 
+=item * client_id
+
+Unique worker identifier for C<job_servers>.
+
 =back
 
 =head2 $worker-E<gt>prefix($prefix)
@@ -78,10 +82,6 @@ example).
 
 The namespace is currently implemented as a simple tab separated
 concatenation of the prefix and the function name.
-
-=item * client_id
-
-Unique worker identifier for job servers.
 
 =head1 EXAMPLES
 
