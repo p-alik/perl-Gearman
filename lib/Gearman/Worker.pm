@@ -452,32 +452,27 @@ sub register_function {
 
     my $ability = $self->func($func);
 
-    my $req;
     if (defined $timeout) {
-        $req = _rc("can_do_timeout", _join0($ability, $timeout));
         $self->{timeouts}{$ability} = $timeout;
-    }
-    else {
-        $req = _rc("can_do", $ability);
     }
 
     $self->{can}{$ability} = $subref;
 
     my $done = 0;
-    return $self->_register_all(
+    $self->_register_all(
         undef,
         on_connect => sub {
             my ($sock) = @_;
             $self->_set_client_id($sock) || return;
 
-            foreach my $ability (keys %{ $self->{can} }) {
-                my $timeout = $self->{timeouts}->{$ability};
-                ($self->_set_ability($sock, $ability, $timeout)) && $done++;
-            }
+            my $ok = $self->_set_ability($sock, $ability, $timeout);
+            $ok && $done++;
 
-            return $done == scalar @js;
+            return $ok;
         }
     );
+
+    return $done == scalar @js;
 } ## end sub register_function
 
 =head2 unregister_function($funcname)
