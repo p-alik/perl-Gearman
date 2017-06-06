@@ -40,7 +40,8 @@ can_ok(
 subtest "new", sub {
     plan tests => 8;
 
-    my $w = new_ok($mn);
+    my $client_id = 1 + rand(100000);
+    my $w = new_ok($mn, [client_id => $client_id]);
     isa_ok($w, 'Gearman::Objects');
 
     is(ref($w->{$_}), "HASH", "$_ is a hash ref") for qw/
@@ -49,7 +50,7 @@ subtest "new", sub {
         can
         timeouts
         /;
-    ok($w->{client_id} =~ /^\p{Lowercase}+$/, "client_id");
+    is $w->{client_id}, $client_id, "client_id";
 
 SKIP: {
         $ENV{AUTHOR_TESTING}
