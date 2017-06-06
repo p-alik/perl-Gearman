@@ -130,8 +130,11 @@ B<return> C<< join $prefix_separator, $prefix, $func >>
 sub func {
     my ($self, $func) = @_;
     my $prefix = $self->prefix;
-    return defined($prefix) ? join($self->prefix_separator, $prefix, $func) : $func;
-}
+    return
+        defined($prefix)
+        ? join($self->prefix_separator, $prefix, $func)
+        : $func;
+} ## end sub func
 
 =head2 prefix([$prefix])
 
@@ -149,14 +152,14 @@ getter/setter
 
 default: "\t"
 
-I<If gearmand uses memcached persistent queue type override default separator to insure jobs recovery>
+I<If gearmand uses memcached persistent queue type, override default separator to insure jobs recovery>
 
 =cut
 
 sub prefix_separator {
-  my ($self) = shift;
-  my $r = $self->_property("prefix_separator", scalar(@_) ? $_[0] : ());
-  return $r ? $r : $self->_property("prefix_separator", "\t");
+    my ($self) = shift;
+    my $r = $self->_property("prefix_separator", scalar(@_) ? $_[0] : ());
+    return $r ? $r : $self->_property("prefix_separator", "\t");
 }
 
 =head2 socket($js, [$timeout])
