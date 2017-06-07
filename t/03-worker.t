@@ -19,9 +19,9 @@ can_ok(
     $mn, qw/
         _get_js_sock
         _job_request
-        _on_connect
         _register_all
         _set_ability
+        _set_client_id
         _uncache_sock
         job_servers
         register_function
@@ -73,7 +73,7 @@ subtest "register_function", sub {
     my ($tn, $to) = qw/foo 2/;
     my $cb = sub {1};
 
-    is $w->register_function($tn => $cb), 0, "register_function($tn)";
+    is $w->register_function($tn => $cb), undef, "register_function($tn)";
 
     time_ok(
         sub {
@@ -167,15 +167,29 @@ SKIP: {
     } ## end SKIP:
 };
 
-subtest "_on_connect-_set_ability", sub {
+subtest "_set_ability", sub {
+    plan tests => 7;
     my $w = new_ok($mn);
     my $m = "foo";
-
-    is($w->_on_connect(), undef);
 
     is($w->_set_ability(), 0);
     is($w->_set_ability(undef, $m), 0);
     is($w->_set_ability(undef, $m, 2), 0);
+    my $gts = t::Server->new();
+SKIP: {
+        $gts || skip $t::Server::ERROR, 3;
+
+        my @job_servers = $gts->job_servers();
+        @job_servers || skip "couldn't start ", $gts->bin(), 3;
+
+        ok($w->job_servers(@job_servers));
+
+        my $js     = $w->job_servers()->[0];
+        my $js_str = $w->_js_str($js);
+
+        is($w->_set_ability($w->_get_js_sock($js), $m), 1);
+        is($w->_set_ability($w->_get_js_sock($js), $m, 2), 1);
+    } ## end SKIP:
 };
 
 done_testing();
