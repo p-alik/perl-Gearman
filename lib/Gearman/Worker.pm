@@ -444,7 +444,11 @@ sub register_function {
     my $func = shift;
     $func || return;
 
-    my $timeout = shift unless (ref $_[0] eq 'CODE');
+    my $timeout;
+    if(ref($_[0]) ne 'CODE') {
+        $timeout = shift;
+    }
+
     my $subref = shift;
 
     my @js = $self->job_servers;
