@@ -439,22 +439,8 @@ sub register_function {
 
     my $done = 0;
     foreach my $js (@job_servers) {
-        my $sock = $self->_get_js_sock($js);
-
-        ($sock) || next;
-
-        unless ($self->_set_client_id($sock)) {
-            $self->_uncache_sock($js, "set client id request failed");
-            next;
-        }
-
-        unless ($self->_set_ability($sock, $ability, $timeout)) {
-            $self->_uncache_sock($js, "can do request failed");
-            next;
-        }
-
-        $done++;
-    } ## end foreach my $js (@job_servers)
+        $self->_register_function($ability, $js) && $done++;
+    }
 
     return $done == scalar @job_servers;
 } ## end sub register_function
@@ -629,14 +615,13 @@ sub _get_js_sock {
     if (my $sock = $self->_sock_cache($js)) {
         return $sock if getpeername($sock);
 
-        # delete cached sock
-        $self->_sock_cache($js, undef, 1);
-    } ## end if (my $sock = $self->...)
+        $self->_uncache_sock($js, "getpeername failed");
+    }
 
     my $now        = time;
     my $down_since = $self->{down_since}{$js_str};
     if ($down_since) {
-        warn "job server down since $down_since" if $self->debug;
+        warn "$js_str down since $down_since" if $self->debug;
 
         my $down_for = $now - $down_since;
         my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
@@ -655,13 +640,25 @@ sub _get_js_sock {
         return;
     } ## end unless ($sock)
 
-    delete $self->{last_connect_fail}{$js_str};
-    delete $self->{down_since}{$js_str};
-
     $sock->autoflush(1);
     $self->sock_nodelay($sock);
 
     $self->_sock_cache($js, $sock);
+
+    delete $self->{last_connect_fail}{$js_str};
+    if (delete $self->{down_since}{$js_str}) {
+        my @can  = keys %{ $self->{can} };
+        my @fail = ();
+        foreach (@can) {
+            $self->_register_function($_, $js, $sock) || push @fail, $_;
+        }
+
+        if (@fail) {
+            $self->_uncache_sock($js, join ' ', "failed registration of",
+                @fail);
+            return;
+        }
+    } ## end if (delete $self->{down_since...})
 
     if ($on_connect && !$on_connect->($sock)) {
         $self->_uncache_sock($js, "on connect callback failed");
@@ -716,6 +713,29 @@ sub _set_ability {
     }
     return _send($sock, \$req);
 } ## end sub _set_ability
+
+#
+# _register_function($ability, $js, [$sock])
+# set client id
+# can do
+#
+sub _register_function {
+    my ($self, $ability, $js, $sock) = @_;
+    $sock ||= $self->_get_js_sock($js);
+    $sock || return;
+
+    unless ($self->_set_client_id($sock)) {
+        $self->_uncache_sock($js, "set client id request failed");
+        return;
+    }
+
+    unless ($self->_set_ability($sock, $ability, $self->{timeouts}{$ability})) {
+        $self->_uncache_sock($js, "can do request failed");
+        return;
+    }
+
+    return 1;
+} ## end sub _register_function
 
 #
 # _send($jss, $req_ref)
