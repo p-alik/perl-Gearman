@@ -84,13 +84,10 @@ subtest "register_function", sub {
     );
 
 SKIP: {
-        my $gts = t::Server->new();
-        $gts || skip $t::Server::ERROR, 5;
+        my @job_servers = t::Server->new()->job_servers(int(rand(2) + 2));
+        @job_servers || skip $t::Server::ERROR, 5;
 
-        my @js = $gts->job_servers(int(rand(2) + 2));
-
-        @js || skip "couldn't start ", $gts->bin(), 5;
-        ok $w->job_servers(@js), "set job servers";
+        ok $w->job_servers(@job_servers), "set job servers";
 
         ok $w->register_function($tn, $to, $cb), "register_function";
         is $w->{can}{$tn}, $cb, "can $tn";
@@ -115,13 +112,13 @@ subtest "reset_abilities", sub {
 
 subtest "work", sub {
     plan tests => 3;
-    my $gts = t::Server->new();
-SKIP: {
-        $gts || skip $t::Server::ERROR, 3;
-        my $job_server = $gts->job_servers();
-        $job_server || skip "couldn't start ", $gts->bin(), 3;
 
-        my $w = new_ok($mn, [job_servers => $job_server]);
+    # my $gts = t::Server->new();
+SKIP: {
+        my @job_servers = t::Server->new()->job_servers();
+        @job_servers || skip $t::Server::ERROR, 3;
+
+        my $w = new_ok($mn, [job_servers => @job_servers]);
         time_ok(
             sub {
                 $w->work(stop_if => sub { pass "work stop if"; });
@@ -147,12 +144,9 @@ subtest "_get_js_sock", sub {
     delete $w->{parent_pipe};
     is($w->_get_js_sock($js), undef, "_get_js_sock(...) undef");
 
-    my $gts = t::Server->new();
 SKIP: {
-        $gts || skip $t::Server::ERROR, 4;
-
-        my @job_servers = $gts->job_servers();
-        @job_servers || skip "couldn't start ", $gts->bin(), 4;
+        my @job_servers = t::Server->new()->job_servers();
+        @job_servers || skip $t::Server::ERROR, 4;
 
         ok($w->job_servers(@job_servers));
 
@@ -175,12 +169,9 @@ subtest "_set_ability", sub {
     is($w->_set_ability(), 0);
     is($w->_set_ability(undef, $m), 0);
     is($w->_set_ability(undef, $m, 2), 0);
-    my $gts = t::Server->new();
 SKIP: {
-        $gts || skip $t::Server::ERROR, 3;
-
-        my @job_servers = $gts->job_servers();
-        @job_servers || skip "couldn't start ", $gts->bin(), 3;
+        my @job_servers = t::Server->new()->job_servers();
+        @job_servers || skip $t::Server::ERROR, 3;
 
         ok($w->job_servers(@job_servers));
 
