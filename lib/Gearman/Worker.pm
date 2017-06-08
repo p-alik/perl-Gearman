@@ -445,38 +445,33 @@ sub register_function {
     $func || return;
 
     my $timeout;
-    if(ref($_[0]) ne 'CODE') {
+    if (ref($_[0]) ne 'CODE') {
         $timeout = shift;
     }
 
-    my $subref = shift;
-
-    my @js = $self->job_servers;
-    @js || return;
-
+    my $subref  = shift;
     my $ability = $self->func($func);
+    $self->{can}{$ability} = $subref;
 
     if (defined $timeout) {
         $self->{timeouts}{$ability} = $timeout;
     }
 
-    $self->{can}{$ability} = $subref;
+    my @job_servers = $self->job_servers();
+    @job_servers || return;
 
     my $done = 0;
-    $self->_register_all(
-        undef,
-        on_connect => sub {
-            my ($sock) = @_;
-            $self->_set_client_id($sock) || return;
+    foreach my $js (@job_servers) {
+        my $sock = $self->_get_js_sock($js);
 
-            my $ok = $self->_set_ability($sock, $ability, $timeout);
-            $ok && $done++;
+        ($sock) || next;
 
-            return $ok;
-        }
-    );
+        $self->_set_client_id($sock)
+            && $self->_set_ability($sock, $ability, $timeout)
+            && $done++;
+    } ## end foreach my $js (@job_servers)
 
-    return $done == scalar @js;
+    return $done == scalar @job_servers;
 } ## end sub register_function
 
 =head2 unregister_function($funcname)
