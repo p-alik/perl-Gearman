@@ -182,25 +182,6 @@ sub reset_abilities {
     $self->{timeouts} = {};
 } ## end sub reset_abilities
 
-=head2 _uncache_sock($js, $reason)
-
-close TCP connection
-
-=cut
-
-sub _uncache_sock {
-    my ($self, $js, $reason) = @_;
-
-    # we can't reconnect as a child process, so all we can do is die and hope our
-    # parent process respawns us...
-    die "Error/timeout talking to gearman parent process: [$reason]"
-        if $self->{parent_pipe};
-
-    # normal case, we just close this TCP connection and we'll reconnect later.
-    # delete cached sock
-    $self->_sock_cache($js, undef, 1);
-} ## end sub _uncache_sock
-
 =head2 work(%opts)
 
 Endless loop takes a job and wait for the next one.
@@ -466,9 +447,17 @@ sub register_function {
 
         ($sock) || next;
 
-        $self->_set_client_id($sock)
-            && $self->_set_ability($sock, $ability, $timeout)
-            && $done++;
+        unless ($self->_set_client_id($sock)) {
+            $self->_uncache_sock($js, "set client id request failed");
+            next;
+        }
+
+        unless ($self->_set_ability($sock, $ability, $timeout)) {
+            $self->_uncache_sock($js, "can do request failed");
+            next;
+        }
+
+        $done++;
     } ## end foreach my $js (@job_servers)
 
     return $done == scalar @job_servers;
@@ -679,14 +668,34 @@ sub _get_js_sock {
     $self->_sock_cache($js, $sock);
 
     if ($on_connect && !$on_connect->($sock)) {
-
-        # delete
-        $self->_sock_cache($js, undef, 1);
+        $self->_uncache_sock($js, "on connect callback failed");
         return;
-    } ## end if ($on_connect && !$on_connect...)
+    }
 
     return $sock;
 } ## end sub _get_js_sock
+
+=head2 _uncache_sock($js, $reason)
+
+close TCP connection
+
+=cut
+
+sub _uncache_sock {
+    my ($self, $js, $reason) = @_;
+
+    # we can't reconnect as a child process, so all we can do is die and hope our
+    # parent process respawns us...
+    die "Error/timeout talking to gearman parent process: [$reason]"
+        if $self->{parent_pipe};
+
+    $self->debug && warn join ' ', "close connection to", $self->_js_str($js),
+        $reason || '';
+
+    # normal case, we just close this TCP connection and we'll reconnect later.
+    # delete cached sock
+    $self->_sock_cache($js, undef, 1);
+} ## end sub _uncache_sock
 
 #
 # _set_client_id($sock)
