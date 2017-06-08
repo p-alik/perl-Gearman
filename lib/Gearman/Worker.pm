@@ -164,22 +164,18 @@ sub new {
 
 tell all the jobservers that this worker can't do anything
 
+B<return> true if C<reset_abilityes> request successfully transmitted to C<job_servers>
+
 =cut
 
 sub reset_abilities {
     my $self = shift;
     my $req  = _rc("reset_abilities");
-    foreach my $js (@{ $self->{job_servers} }) {
-        my $jss = $self->_get_js_sock($js)
-            or next;
-
-        unless (_send($jss, \$req)) {
-            $self->_uncache_sock($js, "err_write_reset_abilities");
-        }
-    } ## end foreach my $js (@{ $self->{...}})
 
     $self->{can}      = {};
     $self->{timeouts} = {};
+
+    return $self->_register_all($req);
 } ## end sub reset_abilities
 
 =head2 work(%opts)
@@ -467,7 +463,7 @@ sub register_function {
 
 send cant_do C<$funcname> request to L<job_servers>
 
-B<return> C<< _register_all(cant_do) >>
+B<return> true if CANT_DO C<$funcname> request successfully transmitted to C<job_servers>
 
 =cut
 
@@ -590,19 +586,19 @@ sub _job_request {
 } ## end sub _job_request
 
 #
-# _register_all($req, %opt)
+# _register_all($req)
 #
 sub _register_all {
-    my ($self, $req, %opts) = @_;
+    my ($self, $req) = @_;
     my @job_servers = $self->job_servers();
     my $done        = 0;
     foreach my $js (@job_servers) {
-        my $jss = $self->_get_js_sock($js, %opts);
+        my $jss = $self->_get_js_sock($js);
 
         ($jss && $req) || next;
 
         unless (_send($jss, \$req)) {
-            $self->_uncache_sock($js, "write_register_func_error");
+            $self->_uncache_sock($js, "$req request failed");
             next;
         }
 
