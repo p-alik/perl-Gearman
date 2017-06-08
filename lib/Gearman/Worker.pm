@@ -140,6 +140,13 @@ sub new {
 
     $self->SUPER::new(%opts);
 
+    $self->{last_connect_fail} = {};
+    $self->{down_since}        = {};
+    $self->{can}               = {};
+    $self->{timeouts}          = {};
+    $self->{client_id}         = $opts{client_id}
+        || join('', map { chr(int(rand(26)) + 97) } (1 .. 30));
+
     if ($ENV{GEARMAN_WORKER_USE_STDIO}) {
         open my $sock, '+<&', \*STDIN
             or die "Unable to dup STDIN to socket for worker to use.";
@@ -149,13 +156,6 @@ sub new {
         die "Unable to initialize connection to gearmand"
             unless $self->_set_client_id($sock);
     } ## end if ($ENV{GEARMAN_WORKER_USE_STDIO...})
-
-    $self->{last_connect_fail} = {};
-    $self->{down_since}        = {};
-    $self->{can}               = {};
-    $self->{timeouts}          = {};
-    $self->{client_id}         = $opts{client_id}
-        || join('', map { chr(int(rand(26)) + 97) } (1 .. 30));
 
     return $self;
 } ## end sub new
