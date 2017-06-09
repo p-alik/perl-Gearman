@@ -225,7 +225,6 @@ sub work {
 
         my $js_count  = @jobby_js;
         my $js_offset = int(rand($js_count));
-        my $is_idle   = 0;
 
         for (my $i = 0; $i < $js_count; $i++) {
             my $js_index = ($i + $js_offset) % $js_count;
@@ -358,7 +357,6 @@ sub work {
             push @jss, [$js_str, $jss];
         } ## end foreach my $js_str (keys(%js_map...))
 
-        $is_idle = 1;
         my $wake_vec = '';
 
         foreach my $j (@jss) {
@@ -381,7 +379,7 @@ sub work {
             } ## end foreach my $j (@jss)
         } ## end if ($nready)
 
-        $is_idle = 0 if keys %active_js;
+        my $is_idle = scalar(keys %active_js) > 0 ? 0 : 1;
 
         return if $stop_if->($is_idle, $last_job_time);
 
