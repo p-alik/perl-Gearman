@@ -27,8 +27,17 @@ Gearman::Worker - Worker for gearman distributed job system
         key_file  => ...,
       }
     );
+
     $worker->register_function($funcname => $subref);
-    $worker->work while 1;
+
+    $worker->work(
+      stop_if => sub {
+        my ($is_idle, $last_job_time) = @_;
+        # stop idle worker
+        return $is_idle;
+      }
+    );
+
 
 =head1 DESCRIPTION
 
