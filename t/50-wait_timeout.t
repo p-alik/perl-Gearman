@@ -67,10 +67,10 @@ subtest "wait with timeout", sub {
 subtest "$func args", sub {
     plan tests => 3;
 
+    my $arg = 'x' x (5 * 1024 * 1024);
+    my $m;
     my $tasks = $client->new_task_set;
     isa_ok($tasks, 'Gearman::Taskset');
-
-    my $arg = 'x' x (5 * 1024 * 1024);
 
     $tasks->add_task(
         $func,
@@ -79,26 +79,24 @@ subtest "$func args", sub {
             on_complete => sub {
                 my $rr = shift;
                 if (length($$rr) != length($arg)) {
-                    fail(     "Large job failed size check: got "
-                            . length($$rr)
-                            . ", want "
-                            . length($arg));
-                } ## end if (length($$rr) != length...)
-                elsif ($$rr ne $arg) {
-                    fail("Large job failed content check");
+                    $m = join ' ', "Large job failed size check: got",
+                        length($$rr), ", want", length($arg);
                 }
-                else {
-                    pass("Large job succeeded");
+                elsif ($$rr ne $arg) {
+                    $m = "Large job failed content check";
+                } else {
+                    $m = "Large job succeeded";
                 }
             },
             on_fail => sub {
-                fail("Large job failed");
+                $m = "Large job failed";
             },
         }
     );
 
     my $to = 10;
     time_ok(sub { $tasks->wait(timeout => $to) }, $to, "timeout");
+    is($m, "Large job succeeded", "Large job succeeded");
 };
 
 done_testing();
