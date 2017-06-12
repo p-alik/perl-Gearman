@@ -65,7 +65,7 @@ subtest "wait with timeout", sub {
 };
 
 subtest "$func args", sub {
-    $ENV{AUTHOR_TESTING} || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
+    ($ENV{AUTHOR_TESTING}  && $ENV{AUTHOR_TESTING} == 2)  || plan skip_all => 'without $ENV{AUTHOR_TESTING}';
     plan tests => 3;
 
     my $arg = 'x' x (5 * 1024 * 1024);
