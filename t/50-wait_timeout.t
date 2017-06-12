@@ -10,7 +10,7 @@ use lib '.';
 use t::Server ();
 use t::Worker qw/ new_worker /;
 
-my $gts = t::Server->new();
+my $gts         = t::Server->new();
 my @job_servers = $gts->job_servers();
 @job_servers || plan skip_all => $t::Server::ERROR;
 
@@ -34,6 +34,8 @@ my $worker = new_worker(
 );
 
 subtest "wait with timeout", sub {
+    plan tests => 10;
+
     ok(my $tasks = $client->new_task_set, "new_task_set");
     isa_ok($tasks, 'Gearman::Taskset');
 
@@ -63,6 +65,8 @@ subtest "wait with timeout", sub {
 };
 
 subtest "$func args", sub {
+    plan tests => 3;
+
     my $tasks = $client->new_task_set;
     isa_ok($tasks, 'Gearman::Taskset');
 
