@@ -1,4 +1,4 @@
-2.004.008 2017-06-12 08:38:00 Europe/Berlin
+2.004.008 2017-06-13 13:35:00 Europe/Berlin
     - bug fixing: double worker registration
       https://github.com/p-alik/perl-Gearman/issues/21
     - tests start gearmand with --log-file option. Default /dev/stderr
