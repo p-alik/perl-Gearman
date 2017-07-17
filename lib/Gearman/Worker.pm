@@ -628,9 +628,9 @@ sub _get_js_sock {
     my $now        = time;
     my $down_since = $self->{down_since}{$js_str};
     if ($down_since) {
-        warn "$js_str down since $down_since" if $self->debug;
-
         my $down_for = $now - $down_since;
+        warn "$js_str down for $down_for" if $self->debug;
+
         my $retry_period = $down_for > 60 ? 30 : (int($down_for / 2) + 1);
         if ($self->{last_connect_fail}{$js_str} > $now - $retry_period) {
             return;
