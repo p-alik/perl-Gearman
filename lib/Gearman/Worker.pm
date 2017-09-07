@@ -519,7 +519,7 @@ sub send_work_warning {
     return $self->_job_request("work_warning", $job, $msg);
 }
 
-=head4 send_work_exception($job, $exception)
+=head2 send_work_exception($job, $exception)
 
 Use this method to notify the server (and any listening clients) that the C<job> failed with the given C<$exception>.
 
