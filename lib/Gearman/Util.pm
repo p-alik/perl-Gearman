@@ -161,7 +161,7 @@ sub read_res_packet {
             next unless length($buf) >= 12;
             my $header = substr($buf, 0, 12, '');
             ($magic, $type, $len) = unpack("a4NN", $header);
-            return $err->("malformed_magic") unless $magic eq "\0RES";
+            return $err->("malformed_magic: '$magic'") unless $magic eq "\0RES";
             my $starting = length($buf);
             $readlen = $len - $starting;
             $offset  = $starting;
