@@ -379,10 +379,10 @@ B<return> scalarref of WORK_COMPLETE result
 sub do_task {
     my $self = shift;
     my $task = $self->_get_task_from_args(@_);
-    my $ret  = undef;
-
+    my ($ret, $sub) = (undef, $task->{on_complete});
     $task->{on_complete} = sub {
-        $ret = shift;
+        ($ret) = @_;
+        $sub && $sub->(@_);
     };
 
     my $ts = $self->new_task_set;
