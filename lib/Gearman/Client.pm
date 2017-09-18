@@ -75,19 +75,9 @@ Calls L<Gearman::Objects> to set I<job_servers>
 
 =item * prefix
 
-Calls I<prefix> (see below) to set the prefix / namespace.
+Calls I<prefix> (see L<Gearman::Objects>) to set the prefix / namespace.
 
 =back
-
-=head2 $client->job_servers(@servers)
-
-Initializes the client I<$client> with the list of job servers in I<@servers>.
-I<@servers> should contain a list of IP addresses, with optional port
-numbers. For example:
-
-    $client->job_servers('127.0.0.1', { host => "192.168.1.100", port => 4730 });
-
-If the port number is not provided, C<4730> is used as the default.
 
 =head1 EXAMPLES
 
@@ -419,7 +409,7 @@ sub add_hook {
 
 =head2 get_status($handle)
 
-The Gearman Server will assign a scalar job handle when you request a 
+The Gearman Server will assign a scalar job handle when you request a
 background job with L<dispatch_background>. Save this scalar, and use it later
 in order to request the status of this job.
 
