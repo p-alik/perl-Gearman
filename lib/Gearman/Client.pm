@@ -89,13 +89,6 @@ numbers. For example:
 
 If the port number is not provided, C<4730> is used as the default.
 
-=head2 $client-E<gt>prefix($prefix)
-
-Sets the namespace / prefix for the function names.
-
-See L<Gearman::Worker> for more details.
-
-
 =head1 EXAMPLES
 
 =head2 Summation

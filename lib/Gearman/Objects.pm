@@ -138,7 +138,7 @@ sub func {
 
 =head2 prefix([$prefix])
 
-getter/setter
+getr/set the namespace / prefix for the function names.
 
 =cut
 
