@@ -86,19 +86,6 @@ numbers. For example:
 
 If the port number is not provided, C<4730> is used as the default.
 
-=head2 $taskset = $client-E<gt>new_task_set
-
-Creates and returns a new L<Gearman::Taskset> object.
-
-=head2 $taskset-E<gt>add_task($task)
-
-=head2 $taskset-E<gt>add_task($funcname, $arg, $uniq)
-
-=head2 $taskset-E<gt>add_task($funcname, $arg, \%options)
-
-Adds a task to a taskset.  Three different calling conventions are
-available.
-
 =head2 $taskset-E<gt>wait
 
 Waits for a response from the job server for any of the tasks listed

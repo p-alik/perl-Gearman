@@ -255,6 +255,8 @@ sub wait {
 
 =head2 add_task($func, <$scalar | $scalarref>, <$uniq | $opts_hr>
 
+Adds a task to the taskset.  Three different calling conventions are available.
+
 C<$opts_hr> see L<Gearman::Task>
 
 =cut
