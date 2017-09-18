@@ -27,7 +27,10 @@ Gearman::Client - Client for gearman distributed job system
     );
 
     # running a single task
-    my $result_ref = $client->do_task("add", "1+2");
+    my $result_ref = $client->do_task("add", "1+2", {
+      on_fail => sub {...},
+      on_complete => sub {...}
+    });
     print "1 + 2 = $$result_ref\n";
 
     # waiting on a set of tasks in parallel
@@ -85,13 +88,6 @@ numbers. For example:
     $client->job_servers('127.0.0.1', { host => "192.168.1.100", port => 4730 });
 
 If the port number is not provided, C<4730> is used as the default.
-
-=head2 $taskset-E<gt>wait
-
-Waits for a response from the job server for any of the tasks listed
-in the taskset. Will call the I<on_*> handlers for each of the tasks
-that have been completed, updated, etc.  Doesn't return until
-everything has finished running or failing.
 
 =head2 $client-E<gt>prefix($prefix)
 

@@ -202,7 +202,10 @@ sub _get_loaned_sock {
 
 =head2 wait(%opts)
 
-event loop for reading in replies
+Waits for a response from the job server for any of the tasks listed
+in the taskset. Will call the I<on_*> handlers for each of the tasks
+that have been completed, updated, etc.  Doesn't return until
+everything has finished running or failing.
 
 =cut
 
