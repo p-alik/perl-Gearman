@@ -86,16 +86,6 @@ numbers. For example:
 
 If the port number is not provided, C<4730> is used as the default.
 
-=head2 $client-E<gt>do_task($task)
-
-=head2 $client-E<gt>do_task($funcname, $arg, \%options)
-
-Dispatches a task and waits on the results.  May either provide a
-L<Gearman::Task> object, or the 3 arguments that the Gearman::Task
-constructor takes.
-
-Returns a scalar reference to the result, or undef on failure.
-
 =head2 $taskset = $client-E<gt>new_task_set
 
 Creates and returns a new L<Gearman::Taskset> object.
@@ -366,9 +356,11 @@ sub _get_task_from_args {
 
 =head2 do_task($funcname, $arg, \%options)
 
-given a (func, arg_p, opts?)
+Dispatches a task and waits on the results.  May either provide a
+L<Gearman::Task> object, or the 3 arguments that the L<Gearman::Task>
+constructor takes.
 
-B<return> scalarref of WORK_COMPLETE result
+B<return> scalarref of WORK_COMPLETE result, or undef on failure.
 
 =cut
 
