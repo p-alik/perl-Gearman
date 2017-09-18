@@ -82,7 +82,7 @@ Initializes the client I<$client> with the list of job servers in I<@servers>.
 I<@servers> should contain a list of IP addresses, with optional port
 numbers. For example:
 
-    $client->job_servers('127.0.0.1', '192.168.1.100:4730');
+    $client->job_servers('127.0.0.1', { host => "192.168.1.100", port => 4730 });
 
 If the port number is not provided, C<4730> is used as the default.
 
@@ -169,7 +169,7 @@ sub new {
 
 =head2 new_task_set()
 
-B<return> Gearman::Taskset
+Creates and returns a new L<Gearman::Taskset> object.
 
 =cut
 
