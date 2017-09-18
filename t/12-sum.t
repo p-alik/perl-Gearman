@@ -37,7 +37,7 @@ my @workers
     (0 .. int(rand(1) + 1)));
 
 subtest "taskset 1", sub {
-    plan tests => 6;
+    plan tests => 7;
     throws_ok { $client->do_task(sum => []) }
     qr/Function argument must be scalar or scalarref/,
         'do_task does not accept arrayref argument';
@@ -47,7 +47,8 @@ subtest "taskset 1", sub {
     my $out = $client->do_task(
         sum => freeze([@a]),
         {
-            on_fail => sub { fail(explain(@_)) },
+            on_fail     => sub { fail(explain(@_)) },
+            on_complete => sub { pass "on complete hook" }
         }
     );
 
