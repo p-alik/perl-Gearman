@@ -96,10 +96,6 @@ constructor takes.
 
 Returns a scalar reference to the result, or undef on failure.
 
-If you provide on_complete and on_fail handlers, they're ignored, as
-this function currently overrides them.
-
-
 =head2 $taskset = $client-E<gt>new_task_set
 
 Creates and returns a new L<Gearman::Taskset> object.
