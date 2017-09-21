@@ -42,7 +42,9 @@ I<%options> can contain:
 
 =over 4
 
-=item * uniq
+=item
+
+uniq
 
 A key which indicates to the server that other tasks with the same
 function name and key will be merged into one.  That is, the task
@@ -52,49 +54,65 @@ will get the response multiplexed back to them.
 Uniq may also contain the magic value "-" (a single hyphen) which
 means the uniq key is the contents of the args.
 
-=item * on_complete
+=item
+
+on_complete
 
 A subroutine reference to be invoked when the task is completed. The
 subroutine will be passed a reference to the return value from the worker
 process.
 
-=item * on_fail
+=item
+
+on_fail
 
 A subroutine reference to be invoked when the task fails (or fails for
 the last time, if retries were specified). The reason could be passed
 to this callback as an argument. This callback won't be called after a
 failure if more retries are still possible.
 
-=item * on_retry
+=item
+
+on_retry
 
 A subroutine reference to be invoked when the task fails, but is about
 to be retried.
 
 Is passed one argument, what retry attempt number this is.  (starts with 1)
 
-=item * on_status
+=item
+
+on_status
 
 A subroutine reference to be invoked if the task emits status updates.
 Arguments passed to the subref are ($numerator, $denominator), where those
 are left up to the client and job to determine.
 
-=item * on_warning
+=item
+
+on_warning
 
 A subroutine reference to be invoked if the task emits status updates.
 Arguments passed to the subref are ($numerator, $denominator), where those
 are left up to the client and job to determine.
 
-=item * retry_count
+=item
+
+retry_count
 
 Number of times job will be retried if there are failures.  Defaults to 0.
 
-=item * high_priority
+=item
+
+high_priority
 
 B<the option high_priority is deprecated>. Use C<< priority => high >> instead.
 Boolean, whether this job should take priority over other jobs already
 enqueued.
 
-=item * priority
+=item
+
+priority
 
 valid value:
 
@@ -114,14 +132,18 @@ low
 
 =back
 
-=item * timeout
+=item
+
+timeout
 
 Automatically fail, calling your on_fail callback, after this many
 seconds have elapsed without an on_fail or on_complete being
 called. Defaults to 0, which means never.  Bypasses any retry_count
 remaining.
 
-=item * try_timeout
+=item
+
+try_timeout
 
 Automatically fail, calling your on_retry callback (or on_fail if out of
 retries), after this many seconds have elapsed. Defaults to 0, which means
