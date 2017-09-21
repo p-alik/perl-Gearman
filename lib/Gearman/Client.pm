@@ -66,19 +66,25 @@ settings in I<%options>, which can contain:
 
 =over 4
 
-=item * exceptions
+=item
+
+exceptions
 
 If true, the client sends an L<OPTION_REQ exceptions|http://gearman.org/protocol/> request for each connection to the job server.
 This causes job server to forward WORK_EXCEPTION packets to the client.
 
-=item * job_servers
+=item
+
+job_servers
 
 List of job servers. Value should be an array reference, hash reference
 or scalar.
 
 Calls L<Gearman::Objects> to set I<job_servers>
 
-=item * prefix
+=item
+
+prefix
 
 Calls I<prefix> (see L<Gearman::Objects>) to set the prefix / namespace.
 
