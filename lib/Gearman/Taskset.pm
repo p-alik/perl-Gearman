@@ -106,11 +106,11 @@ sub DESTROY {
     }
 } ## end sub DESTROY
 
-=head2 run_hook($name)
-
-run a hook callback if defined
-
-=cut
+#=head2 run_hook($name)
+#
+#run a hook callback if defined
+#
+#=cut
 
 sub run_hook {
     my ($self, $name) = (shift, shift);
@@ -121,11 +121,11 @@ sub run_hook {
     warn "Gearman::Taskset hook '$name' threw error: $@\n" if $@;
 } ## end sub run_hook
 
-=head2 add_hook($name, [$cb])
-
-add a hook
-
-=cut
+#=head2 add_hook($name, [$cb])
+#
+#add a hook
+#
+#=cut
 
 sub add_hook {
     my ($self, $name, $cb) = @_;
@@ -139,11 +139,11 @@ sub add_hook {
     }
 } ## end sub add_hook
 
-=head2 client ()
-
-B<return> L<Gearman::Client>
-
-=cut
+#=head2 client ()
+#
+#B<return> L<Gearman::Client>
+#
+#=cut
 
 # this method is part of the "Taskset" interface, also implemented by
 # Gearman::Client::Async, where no tasksets make sense, so instead the
@@ -156,11 +156,11 @@ sub client {
     return shift->{client};
 }
 
-=head2 cancel()
-
-Close sockets, cleanup internals.
-
-=cut
+#=head2 cancel()
+#
+#Close sockets, cleanup internals.
+#
+#=cut
 
 sub cancel {
     my $self = shift;
@@ -424,9 +424,11 @@ sub _fail_jshandle {
     delete $self->{waiting}{$shandle} unless @{$task_list};
 } ## end sub _fail_jshandle
 
-=head2 process_packet($res, $sock)
-
-=cut
+#=head2 process_packet($res, $sock)
+#
+# process response packet
+#
+#=cut
 
 sub process_packet {
     my ($self, $res, $sock) = @_;
