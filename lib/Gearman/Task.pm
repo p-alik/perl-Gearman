@@ -521,17 +521,13 @@ sub handle {
     return $self->{handle};
 } ## end sub handle
 
-#FIXME obsolete?
 
-#=head2 set_on_post_hooks($code)
-#
-#=cut
-#
-#sub set_on_post_hooks {
-#    my ($self, $code) = @_;
-#    $self->{on_post_hooks} = $code;
-#}
-#
+# Gearman::Client::Async is the only consumer of set_on_post_hooks
+sub set_on_post_hooks {
+    my ($self, $code) = @_;
+    $self->{on_post_hooks} = $code;
+}
+
 #=head2 wipe()
 #
 #cleanup
