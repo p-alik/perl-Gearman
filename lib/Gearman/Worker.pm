@@ -118,6 +118,7 @@ use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;
 use Storable ();
+use IO::Select;
 
 use fields (
     'last_connect_fail',    # host:port -> unixtime
@@ -356,37 +357,22 @@ sub work {
             $active_js{$js_str} = 1;
         } ## end for (my $i = 0; $i < $js_count...)
 
-        my @jss;
-
         foreach my $js_str (keys(%js_map)) {
             my $jss
                 = $self->_get_js_sock($js_map{$js_str},
-                on_connect => $on_connect, register_on_reconnect => 1)
-                or next;
-            push @jss, [$js_str, $jss];
+                on_connect => $on_connect, register_on_reconnect => 1);
+              $jss || next;
+
+            my $io = IO::Select->new($jss);
+            $io->can_write(10) || next;
+
+            if($last_job_time && time() - $last_job_time >= 10) {
+                # chill for some arbitrary time until we're woken up again
+                select($io->bits(), undef, undef, 10 + rand(2));
+            }
+
+            $active_js{$js_str} = 1;
         } ## end foreach my $js_str (keys(%js_map...))
-
-        my $wake_vec = '';
-
-        foreach my $j (@jss) {
-            (undef, my $_jss) = @{$j};
-            my $fd = $_jss->fileno;
-            vec($wake_vec, $fd, 1) = 1;
-        }
-
-        my $timeout = keys(%active_js) ? 0 : (10 + rand(2));
-
-        # chill for some arbitrary time until we're woken up again
-        my $nready = select(my $wout = $wake_vec, undef, undef, $timeout);
-
-        if ($nready) {
-            foreach my $j (@jss) {
-                my ($js_str, $jss) = @{$j};
-                my $fd = $jss->fileno;
-                $active_js{$js_str} = 1
-                    if vec($wout, $fd, 1);
-            } ## end foreach my $j (@jss)
-        } ## end if ($nready)
 
         my $is_idle = scalar(keys %active_js) > 0 ? 0 : 1;
 
