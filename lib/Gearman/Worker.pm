@@ -369,7 +369,7 @@ sub work {
 
         my $is_idle = scalar(keys %active_js) > 0 ? 0 : 1;
 
-        return if $stop_if->($is_idle, $last_job_time);
+        last if $stop_if->($is_idle, $last_job_time);
     } ## end while (1)
 } ## end sub work
 
