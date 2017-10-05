@@ -239,7 +239,7 @@ sub work {
             my $js_index = ($i + $js_offset) % $js_count;
             my $js_str   = $jobby_js[$js_index];
             my $js       = $js_map{$js_str};
-            my $jss      = $self->_get_js_sock($js, on_connect => $on_connect)
+            my $jss      = $self->_get_js_sock($js, on_connect => $on_connect, register_on_reconnect => 1)
                 or next;
 
             # TODO: add an optional sleep in here for the test suite
@@ -361,7 +361,7 @@ sub work {
         foreach my $js_str (keys(%js_map)) {
             my $jss
                 = $self->_get_js_sock($js_map{$js_str},
-                on_connect => $on_connect)
+                on_connect => $on_connect, register_on_reconnect => 1)
                 or next;
             push @jss, [$js_str, $jss];
         } ## end foreach my $js_str (keys(%js_map...))
@@ -650,13 +650,12 @@ sub _get_js_sock {
     $sock->autoflush(1);
     $self->sock_nodelay($sock);
 
-    $self->_sock_cache($js, $sock);
-
     delete $self->{last_connect_fail}{$js_str};
-    if (delete $self->{down_since}{$js_str}) {
-        my @can  = keys %{ $self->{can} };
+    delete $self->{down_since}{$js_str};
+
+    if( $opts{register_on_reconnect} ) {
         my @fail = ();
-        foreach (@can) {
+        foreach (keys %{ $self->{can} }) {
             $self->_register_function($_, $js, $sock) || push @fail, $_;
         }
 
