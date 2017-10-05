@@ -638,6 +638,8 @@ sub _get_js_sock {
         }
     } ## end if (delete $self->{down_since...})
 
+    $self->_sock_cache($js, $sock);
+
     if ($on_connect && !$on_connect->($sock)) {
         $self->_uncache_sock($js, "on connect callback failed");
         return;
