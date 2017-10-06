@@ -495,6 +495,8 @@ sub send_work_warning {
 
 Use this method to notify the server (and any listening clients) that the C<job> failed with the given C<$exception>.
 
+If you are using L<Gearman::Client>, you have to set parameter exceptions properly to get worker exception notifications.
+
 =cut
 
 sub send_work_exception {
