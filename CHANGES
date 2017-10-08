@@ -1,4 +1,4 @@
-2.004.009 2017-10-06 16:01:00 Europe/Berlin
+2.004.009 2017-10-08 21:04:00 Europe/Berlin
     - bug fixing Worker->work: register functions on reconnect.
       see: https://github.com/p-alik/perl-Gearman/issues/23
     - Gearman::Client->do_task invokes Gearman::Task on_complete hook, if it is defined
