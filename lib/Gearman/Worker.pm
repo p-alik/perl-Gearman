@@ -346,8 +346,6 @@ sub work {
                 $self->_uncache_sock($js, "write_res_error");
                 next;
             }
-
-            $active_js{$js_str} = 1;
         } ## end for (my $i = 0; $i < $js_count...)
 
         foreach my $js_str (keys(%js_map)) {
