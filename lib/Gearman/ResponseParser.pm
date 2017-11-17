@@ -171,7 +171,8 @@ C<$sock> is readable, we should sysread it and feed it to L<parse_data($data)>
 sub parse_sock {
     my ($self, $sock) = @_;
     my $data;
-    my $rv = sysread($sock, $data, 128 * 1024);
+    my $need = (length($self->{header}) ? ($self->{pkt}{len} - length(${ $self->{pkt}{blobref} })) : 12);
+    my $rv = sysread($sock, $data, $need);
 
     if (!defined $rv) {
         $self->on_error("read_error: $!");
