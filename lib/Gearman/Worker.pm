@@ -124,7 +124,6 @@ use Carp          ();
 use Gearman::Util ();
 use Gearman::Job;
 use Storable ();
-use IO::Select;
 
 use fields (
     'last_connect_fail',    # host:port -> unixtime
@@ -227,6 +226,9 @@ sub work {
     # in the loop we contact all servers.
     my %active_js = map { $_ => 1 } keys(%js_map);
 
+    # ( js => last_update_time, ... )
+    my %last_update_time;
+
     while (1) {
 
         # "Jobby" job servers are the set of server which we will contact
@@ -259,6 +261,7 @@ sub work {
                 } ## end if ($!{EPIPE} && $self...)
 
                 $self->_uncache_sock($js, "grab_job_timeout");
+                delete $last_update_time{$js_str};
                 next;
             } ## end unless (_send($jss, \$grab_req...))
 
@@ -270,6 +273,7 @@ sub work {
             unless (Gearman::Util::wait_for_readability($jss->fileno, $timeout))
             {
                 $self->_uncache_sock($js, "grab_job_timeout");
+                delete $last_update_time{$js_str};
                 next;
             } ## end unless (Gearman::Util::wait_for_readability...)
 
@@ -279,14 +283,17 @@ sub work {
                 $res = Gearman::Util::read_res_packet($jss, \$err);
                 unless ($res) {
                     $self->_uncache_sock($js, "read_res_error");
+                    delete $last_update_time{$js_str};
                     next;
                 }
             } while ($res->{type} eq "noop");
 
             if ($res->{type} eq "no_job") {
                 unless (_send($jss, \$presleep_req)) {
+                    delete $last_update_time{$js_str};
                     $self->_uncache_sock($js, "write_presleep_error");
                 }
+                $last_update_time{$js_str} = time;
                 next;
             } ## end if ($res->{type} eq "no_job")
 
@@ -319,8 +326,7 @@ sub work {
             my $err     = $@;
             warn "Job '$ability' died: $err" if $err;
 
-            $last_job_time = time();
-
+            $last_update_time{$js_str} = $last_job_time = time();
             if ($err) {
                 my $exception_req
                     = _rc("work_exception",
@@ -352,29 +358,53 @@ sub work {
                 $self->_uncache_sock($js, "write_res_error");
                 next;
             }
+
+            $active_js{$js_str} = 1;
         } ## end for (my $i = 0; $i < $js_count...)
+
+        my @jss;
 
         foreach my $js_str (keys(%js_map)) {
             my $jss
                 = $self->_get_js_sock($js_map{$js_str},
-                on_connect => $on_connect, register_on_reconnect => 1);
-              $jss || next;
-
-            my $io = IO::Select->new($jss);
-            $io->can_write(10) || next;
-
-            if($last_job_time && time() - $last_job_time >= 10) {
-                # chill for some arbitrary time until we're woken up again
-                select($io->bits(), undef, undef, 10 + rand(2));
-            }
-
-            $active_js{$js_str} = 1;
+                on_connect => $on_connect, register_on_reconnect => 1)
+                or next;
+            push @jss, [$js_str, $jss];
         } ## end foreach my $js_str (keys(%js_map...))
+
+        my $wake_vec = '';
+
+        foreach my $j (@jss) {
+            (undef, my $_jss) = @{$j};
+            my $fd = $_jss->fileno;
+            vec($wake_vec, $fd, 1) = 1;
+        }
+
+        my $timeout = keys(%active_js) ? 0 : (10 + rand(2));
+
+        # chill for some arbitrary time until we're woken up again
+        my $nready = select(my $wout = $wake_vec, undef, undef, $timeout);
+
+        if ($nready) {
+            foreach my $j (@jss) {
+                my ($js_str, $jss) = @{$j};
+                my $fd = $jss->fileno;
+                $active_js{$js_str} = 1
+                    if vec($wout, $fd, 1);
+            } ## end foreach my $j (@jss)
+        } ## end if ($nready)
 
         my $is_idle = scalar(keys %active_js) > 0 ? 0 : 1;
 
-        last if $stop_if->($is_idle, $last_job_time);
+        return if $stop_if->($is_idle, $last_job_time);
+
+        my $update_since = time - (15 + rand 60);
+
+        while (my ($js_str, $last_update) = each %last_update_time) {
+            $active_js{$js_str} = 1 if $last_update < $update_since;
+        }
     } ## end while (1)
+
 } ## end sub work
 
 =head2 $worker->register_function($funcname, $subref)
