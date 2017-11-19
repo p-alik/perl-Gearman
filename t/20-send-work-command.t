@@ -78,6 +78,9 @@ sub worker {
     my $pg = Proc::Guard->new(
         code => sub {
             $w->work(
+                on_fail => sub {
+                    fail join ' ', "on fail", @_;
+                },
                 stop_if => sub {
                     my ($idle) = @_;
                     return $idle;
