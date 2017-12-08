@@ -255,7 +255,6 @@ sub wait {
     }
 
     if ($pending_sock) {
-        my $fd = $pending_sock;
         return $cb->($pending_sock);
     }
 
