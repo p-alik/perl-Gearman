@@ -116,8 +116,6 @@ sub read_res_packet {
     my $timeout    = shift;
     my $time_start = Time::HiRes::time();
 
-    #TODO improvement for SSL socket
-    # http://search.cpan.org/~sullr/IO-Socket-SSL/lib/IO/Socket/SSL.pod#Using_Non-Blocking_Sockets
     my $err = sub {
         my $code = shift;
         $sock->close() if $sock->connected;
@@ -138,15 +136,19 @@ sub read_res_packet {
     warn " Starting up event loop\n" if DEBUG;
 
     while (1) {
-        my $time_remaining = undef;
-        if (defined $timeout) {
-            warn "  We have a timeout of $timeout\n" if DEBUG;
-            $time_remaining = $time_start + $timeout - Time::HiRes::time();
-            return $err->("timeout") if $time_remaining < 0;
+        if (ref($sock) eq "IO::Socket::SSL" && $sock->pending()) {
+            warn "  We have @{[ $sock->pending() ]}  bytes...\n" if DEBUG;
         }
+        else {
+            my $time_remaining = undef;
+            if (defined $timeout) {
+                warn "  We have a timeout of $timeout\n" if DEBUG;
+                $time_remaining = $time_start + $timeout - Time::HiRes::time();
+                return $err->("timeout") if $time_remaining < 0;
+            }
 
-        $is->can_read($time_remaining) || next;
-
+            $is->can_read($time_remaining) || next;
+        } ## end else [ if (ref($sock) eq "IO::Socket::SSL"...)]
         warn "   Entering read loop\n" if DEBUG;
 
         my ($ok, $err_code) = _read_sock($sock, \$buf, \$readlen, \$offset);
@@ -199,7 +201,6 @@ sub _read_sock {
     my ($sock, $buf_ref, $readlen_ref, $offset_ref) = @_;
     local $!;
     my $rv = sysread($sock, $$buf_ref, $$readlen_ref, $$offset_ref);
-
     unless ($rv) {
         warn "   Read error: $!\n" if DEBUG;
         $! == EAGAIN && return;
