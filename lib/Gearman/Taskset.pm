@@ -259,7 +259,7 @@ sub wait {
     }
 
     while (!$self->{cancelled} && keys %{ $self->{waiting} }) {
-        my $time_left = $timeout ? $timeout - Time::HiRes::time() : 5.5;
+        my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
         my $nfound = select($io->bits(), undef, undef, $time_left);
         if ($timeout && $time_left <= 0) {
             $self->cancel;
