@@ -225,32 +225,51 @@ sub wait {
     # fd -> Gearman::ResponseParser object
     my %parser;
 
+    my $cb = sub {
+        my ($fd) = shift;
+
+        my $parser = $parser{$fd} ||= Gearman::ResponseParser::Taskset->new(
+            source  => $fd,
+            taskset => $self
+        );
+        eval {
+            $parser->parse_sock($fd);
+            1;
+        } or do {
+
+            # TODO this should remove the fd from the list, and reassign any tasks to other jobserver, or bail.
+            # We're not in an accessible place here, so if all job servers fail we must die to prevent hanging.
+            Carp::croak("Job server failure: $@");
+            } ## end do
+    };
+
     my $io = IO::Select->new($self->{default_sock},
         values %{ $self->{loaned_sock} });
 
+    my $pending_sock;
+    foreach ($io->handles) {
+        if (ref($_) eq "IO::Socket::SSL" && $_->pending()) {
+            $pending_sock = $_;
+        }
+    }
+
+    if ($pending_sock) {
+        my $fd = $pending_sock;
+        return $cb->($pending_sock);
+    }
+
     while (!$self->{cancelled} && keys %{ $self->{waiting} }) {
-        my $time_left = $timeout ? $timeout - Time::HiRes::time() : 0.5;
+        my $time_left = $timeout ? $timeout - Time::HiRes::time() : 5.5;
         my $nfound = select($io->bits(), undef, undef, $time_left);
         if ($timeout && $time_left <= 0) {
             $self->cancel;
             return;
         }
+
         next if !$nfound;
         foreach my $fd ($io->can_read()) {
-            my $parser = $parser{$fd}
-                ||= Gearman::ResponseParser::Taskset->new(
-                source  => $fd,
-                taskset => $self
-                );
-            eval { $parser->parse_sock($fd); };
-
-            if ($@) {
-
-                # TODO this should remove the fd from the list, and reassign any tasks to other jobserver, or bail.
-                # We're not in an accessible place here, so if all job servers fail we must die to prevent hanging.
-                Carp::croak("Job server failure: $@");
-            } ## end if ($@)
-        } ## end foreach my $fd ($io->can_read...)
+            $cb->($fd);
+        }
     } ## end while (!$self->{cancelled...})
 } ## end sub wait
 
