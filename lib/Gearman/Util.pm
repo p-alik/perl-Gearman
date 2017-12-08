@@ -8,9 +8,10 @@ use warnings;
 # man errno
 # Resource temporarily unavailable
 # (may be the same value as EWOULDBLOCK) (POSIX.1)
-use POSIX qw(:errno_h);
-use Time::HiRes qw();
 use IO::Select;
+use POSIX qw(:errno_h);
+use Scalar::Util qw();
+use Time::HiRes qw();
 
 =head1 NAME
 
@@ -116,6 +117,8 @@ sub read_res_packet {
     my $timeout    = shift;
     my $time_start = Time::HiRes::time();
 
+    Scalar::Util::blessed($sock) || die "provided value is not a blessed object";
+
     my $err = sub {
         my $code = shift;
         $sock->close() if $sock->connected;
@@ -130,13 +133,13 @@ sub read_res_packet {
     my $readlen = 12;
     my $offset  = 0;
     my $buf     = '';
+    my $using_ssl = $sock->isa("IO::Socket::SSL");
 
     my ($magic, $type, $len);
 
     warn " Starting up event loop\n" if DEBUG;
-
     while (1) {
-        if (ref($sock) eq "IO::Socket::SSL" && $sock->pending()) {
+        if ($using_ssl && $sock->pending()) {
             warn "  We have @{[ $sock->pending() ]}  bytes...\n" if DEBUG;
         }
         else {
