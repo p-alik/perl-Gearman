@@ -248,9 +248,10 @@ sub wait {
 
     my $pending_sock;
     foreach ($io->handles) {
-        if (ref($_) eq "IO::Socket::SSL" && $_->pending()) {
-            $pending_sock = $_;
-        }
+        (ref($_) eq "IO::Socket::SSL" && $_->pending()) || next;
+
+        $pending_sock = $_;
+        last;
     }
 
     if ($pending_sock) {
