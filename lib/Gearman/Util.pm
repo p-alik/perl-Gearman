@@ -117,7 +117,8 @@ sub read_res_packet {
     my $timeout    = shift;
     my $time_start = Time::HiRes::time();
 
-    Scalar::Util::blessed($sock) || die "provided value is not a blessed object";
+    Scalar::Util::blessed($sock)
+        || die "provided value is not a blessed object";
 
     my $err = sub {
         my $code = shift;
@@ -130,9 +131,9 @@ sub read_res_packet {
 
     my $is = IO::Select->new($sock);
 
-    my $readlen = 12;
-    my $offset  = 0;
-    my $buf     = '';
+    my $readlen   = 12;
+    my $offset    = 0;
+    my $buf       = '';
     my $using_ssl = $sock->isa("IO::Socket::SSL");
 
     my ($magic, $type, $len);
@@ -151,7 +152,7 @@ sub read_res_packet {
             }
 
             $is->can_read($time_remaining) || next;
-        } ## end else [ if (ref($sock) eq "IO::Socket::SSL"...)]
+        } ## end else [ if ($using_ssl && $sock...)]
         warn "   Entering read loop\n" if DEBUG;
 
         my ($ok, $err_code) = _read_sock($sock, \$buf, \$readlen, \$offset);
