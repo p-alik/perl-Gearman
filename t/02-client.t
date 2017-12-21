@@ -72,8 +72,11 @@ subtest "js socket", sub {
 subtest 'Client: "on_fail" handler is triggered on timeout' => sub {
     my ($now, $then) = (time);
 
-    my $gts            = t::Server->new();
-    my $c              = new_ok($mn, [job_servers => [$gts->job_servers()]]);
+    my $gts         = t::Server->new();
+    my @job_servers = $gts->job_servers();
+    @job_servers || plan skip_all => $t::Server::ERROR;
+
+    my $c              = new_ok($mn, [job_servers => [@job_servers]]);
     my $timeout        = 2;
     my $initial_error  = '"on_fail" was NOT triggered';
     my $expected_error = '"on_fail" was triggered';
