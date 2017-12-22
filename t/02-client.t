@@ -56,7 +56,7 @@ subtest "new_task_set", sub {
 };
 
 subtest "js socket", sub {
-    my $gts = t::Server->new();
+    my $gts         = t::Server->new();
     my @job_servers = $gts->job_servers();
     @job_servers || plan skip_all => $t::Server::ERROR;
 
@@ -70,12 +70,11 @@ subtest "js socket", sub {
 };
 
 subtest 'Client: "on_fail" handler is triggered on timeout' => sub {
-    my ($now, $then) = (time);
-
     my $gts         = t::Server->new();
     my @job_servers = $gts->job_servers();
     @job_servers || plan skip_all => $t::Server::ERROR;
 
+    my ($now, $then)   = (time);
     my $c              = new_ok($mn, [job_servers => [@job_servers]]);
     my $timeout        = 2;
     my $initial_error  = '"on_fail" was NOT triggered';
