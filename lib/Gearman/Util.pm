@@ -5,6 +5,9 @@ $Gearman::Util::VERSION = version->declare("2.004.0013");
 use strict;
 use warnings;
 
+# for sake of _read_sock
+no warnings "recursion";
+
 # man errno
 # Resource temporarily unavailable
 # (may be the same value as EWOULDBLOCK) (POSIX.1)
