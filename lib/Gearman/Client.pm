@@ -88,6 +88,14 @@ prefix
 
 Calls I<prefix> (see L<Gearman::Objects>) to set the prefix / namespace.
 
+=item
+
+command_timeout
+
+Maximum time a gearman command should take to get a result (not a job timeout)
+
+default: 30 seconds
+
 =back
 
 =head1 EXAMPLES
