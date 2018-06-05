@@ -96,6 +96,14 @@ Maximum time a gearman command should take to get a result (not a job timeout)
 
 default: 30 seconds
 
+=item
+
+backoff_max
+
+Max number of failed connection attempts before an job server will be temporary disabled
+
+default: 90
+
 =back
 
 =head1 EXAMPLES
