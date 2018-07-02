@@ -179,7 +179,7 @@ sub new {
 
 tell all the jobservers that this worker can't do anything
 
-B<return> true if C<reset_abilityes> request successfully transmitted to C<job_servers>
+B<return> true if C<reset_abilities> request successfully transmitted to C<job_servers>
 
 =cut
 
