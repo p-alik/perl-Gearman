@@ -28,14 +28,29 @@ Gearman::Worker - Worker for gearman distributed job system
       }
     );
 
-    $worker->register_function($funcname => $subref);
+    $worker->register_function($funcname => sub {
+        ...
+      }
+    );
 
     $worker->work(
+      on_start => sub {
+        my ($jobhandle) = @_;
+        ...
+      },
+      on_complete => sub {
+        my ($jobhandle, $result) = @_;
+        ...
+      },
+      on_fail => sub {
+        my ($jobhandle, $err) = @_;
+        ..
+      },
       stop_if => sub {
         my ($is_idle, $last_job_time) = @_;
         # stop idle worker
         return $is_idle;
-      }
+      },
     );
 
 
@@ -197,6 +212,7 @@ sub reset_abilities {
 
 Endless loop takes a job and wait for the next one.
 You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
+See L</SYNOPSIS>
 
 =cut
 
