@@ -127,8 +127,8 @@ I<sum> job.
 
 =head1 NOTE
 
-If you intend using UTF-8 data with SSL based connection,
-beware there is no UTF-8 support in underlying L<Net::SSLeay>.
+If you intend to send or receive UTF-8 data over SSL connections,
+beware that there is no UTF-8 support in the underlying L<Net::SSLeay>.
 L<perlunicode/"Forcing-Unicode-in-Perl-(Or-Unforcing-Unicode-in-Perl)"> describes proper workarounds.
 
 =head1 METHODS
@@ -192,7 +192,7 @@ sub new {
 
 =head2 reset_abilities
 
-tell all the jobservers that this worker can't do anything
+This tells all the job servers that this worker can no longer do any tasks.
 
 B<return> true if C<reset_abilities> request successfully transmitted to C<job_servers>
 
@@ -210,7 +210,7 @@ sub reset_abilities {
 
 =head2 work(%opts)
 
-Endless loop takes a job and wait for the next one.
+This endlessly loops. It takes an applicable job, if available, does the job, and then waits for the next one.
 You can pass "stop_if", "on_start", "on_complete" and "on_fail" callbacks in I<%opts>.
 See L</SYNOPSIS>
 
