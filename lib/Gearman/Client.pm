@@ -130,7 +130,7 @@ function.
 
 If you intend using UTF-8 data with SSL based connection,
 beware there is no UTF-8 support in underlying L<Net::SSLeay>.
-L<perlunicode/"Forcing-Unicode-in-Perl-(Or-Unforcing-Unicode-in-Perl)"> describes proper workarounds.
+L<perlunicode/"Forcing Unicode in Perl (Or Unforcing Unicode in Perl)"> describes proper workarounds.
 
 =cut
 
@@ -384,7 +384,7 @@ sub do_task {
 =head2 dispatch_background($task)
 
 Dispatches a C<task> and doesn't wait for the result. Return value
-is an opaque scalar that can be used to refer to the task with L<get_status>.
+is an opaque scalar that can be used to refer to the task with L</get_status>.
 
 B<It is strongly recommended to set> L<Gearman::Task> C<uniq> B<option>
 to insure gearmand does not squash jobs if it store background jobs in a persistence backend.
@@ -443,7 +443,7 @@ sub add_hook {
 =head2 get_status($handle)
 
 The Gearman Server will assign a scalar job handle when you request a
-background job with L<dispatch_background>. Save this scalar, and use it later
+background job with L</dispatch_background>. Save this scalar, and use it later
 in order to request the status of this job.
 
 B<return> L<Gearman::JobStatus> on success
