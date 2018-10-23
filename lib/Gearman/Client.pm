@@ -384,7 +384,10 @@ sub do_task {
 =head2 dispatch_background($task)
 
 Dispatches a C<task> and doesn't wait for the result. Return value
-is an opaque scalar that can be used to refer to the task with L</get_status>.
+is an opaque scalar that can be used to refer to the task with
+L</get_status>. Note that by using C<dispatch_background> one
+relinquishes one's hold on a potential return value from the
+worker.
 
 B<It is strongly recommended to set> L<Gearman::Task> C<uniq> B<option>
 to insure gearmand does not squash jobs if it store background jobs in a persistence backend.
