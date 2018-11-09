@@ -82,7 +82,9 @@ sub _start_server {
 
 sub job_servers {
     my ($self, $count) = @_;
-    $self->bin || return @{ $self->{_servers} };
+    $self->bin
+        || return
+        wantarray ? @{ $self->{_servers} } : @{ $self->{_servers} }[0];
 
     $count ||= 1;
     my @r;
