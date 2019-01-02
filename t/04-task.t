@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Storable;
+use String::CRC32 ();
 use Test::More;
 use Test::Exception;
 
@@ -150,11 +151,11 @@ subtest "taskset", sub {
     my $ts = new_ok("Gearman::Taskset", [$c]);
     ok($t->taskset($ts));
     is($t->taskset(), $ts);
-    is($t->hash(),    $t->hash());
+    is($t->hash(),  (String::CRC32::crc32($t->{uniq}) >> 16) & 0x7fff, "hash for uniq: $t->{uniq}");
 
     $t->{uniq} = '-';
     is($t->taskset(), $ts);
-    is($t->hash(),    $t->hash());
+    is($t->hash(),   (String::CRC32::crc32($arg) >> 16) & 0x7fff, "hash for uniq: -");
 };
 
 subtest "fail", sub {
