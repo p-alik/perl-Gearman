@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use Storable;
+use String::CRC32 ();
 use Test::More;
 use Test::Exception;
 
@@ -132,11 +133,11 @@ subtest "hook", sub {
     plan tests => 4;
 
     my $cb = sub { 2 * shift };
-    ok($t->add_hook($f, $cb));
-    is($t->{hooks}->{$f}, $cb);
+    ok($t->add_hook($f, $cb), "add hook");
+    is($t->{hooks}->{$f}, $cb, "is hooks");
     $t->run_hook($f, 2);
-    ok($t->add_hook($f));
-    is($t->{hooks}->{$f}, undef);
+    ok($t->add_hook($f), "add hook");
+    is($t->{hooks}->{$f}, undef, "no hook");
 };
 
 subtest "taskset", sub {
@@ -148,20 +149,20 @@ subtest "taskset", sub {
 
     my $c = new_ok("Gearman::Client");
     my $ts = new_ok("Gearman::Taskset", [$c]);
-    ok($t->taskset($ts));
-    is($t->taskset(), $ts);
-    is($t->hash(),    $t->hash());
+    ok($t->taskset($ts), "taskset true");
+    is($t->taskset(), $ts, "is taskset");
+    is($t->hash(),  (String::CRC32::crc32($t->{uniq}) >> 16) & 0x7fff, "hash for uniq: $t->{uniq}");
 
     $t->{uniq} = '-';
     is($t->taskset(), $ts);
-    is($t->hash(),    $t->hash());
+    is($t->hash(),   (String::CRC32::crc32($arg) >> 16) & 0x7fff, "hash for uniq: -");
 };
 
 subtest "fail", sub {
     plan tests => 2 * scalar(@h) - 1;
 
     $t->{is_finished} = 1;
-    is($t->fail(), undef);
+    is($t->fail(), undef, "fail returns undef");
 
     $t->{is_finished}  = undef;
     $t->{on_retry}     = sub { is(shift, $t->{retry_count}, "on_retry") };
@@ -173,7 +174,7 @@ subtest "fail", sub {
     $t->{is_finished} = undef;
     $t->{on_fail} = sub { is(shift, $f, "on_fail") };
     $t->final_fail($f);
-    is($t->{is_finished}, $f);
+    is($t->{is_finished}, $f, "is_finished '$f'");
 
     is($t->{$_}, undef, $_) for @h;
 };
@@ -182,17 +183,17 @@ subtest "exception", sub {
     plan tests => 2;
 
     my $exc = Storable::freeze(\$f);
-    $t->{on_exception} = sub { is(shift, $f) };
-    is($t->exception(\$exc), undef);
+    $t->{on_exception} = sub { is(shift, $f, "within on_exception") };
+    is($t->exception(\$exc), undef, "exception returns undef");
 };
 
 subtest "complete", sub {
     plan tests => 2;
 
     $t->{is_finished} = undef;
-    $t->{on_complete} = sub { is(shift, $f) };
+    $t->{on_complete} = sub { is(shift, $f, "within on_complete") };
     $t->complete($f);
-    is($t->{is_finished}, "complete");
+    is($t->{is_finished}, "complete", "is complete");
 };
 
 subtest "status", sub {
@@ -203,7 +204,7 @@ subtest "status", sub {
         is(shift, $f,   "func");
         is(shift, $arg, "arg");
     };
-    ok $t->status($f, $arg), "status";
+    ok $t->status($f, $arg), "status true";
 };
 
 subtest "data", sub {
@@ -211,7 +212,7 @@ subtest "data", sub {
 
     $t->{is_finished} = undef;
     $t->{on_data} = sub { is(shift, $f, "func") };
-    ok $t->data($f), "data";
+    ok $t->data($f), "data true";
 };
 
 subtest "warning", sub {
@@ -219,14 +220,14 @@ subtest "warning", sub {
 
     $t->{is_finished} = undef;
     $t->{on_warning} = sub { is(shift, $f, "func") };
-    ok $t->warning($f), "warning";
+    ok $t->warning($f), "warning true";
 };
 
 subtest "handle", sub {
     plan tests => 2;
 
-    ok($t->handle($f));
-    is($t->{handle}, $f);
+    ok($t->handle($f), "handle true");
+    is($t->{handle}, $f, "is handle '$f'");
 };
 
 subtest "pack_submit_packet", sub {
@@ -235,15 +236,15 @@ subtest "pack_submit_packet", sub {
     my $v = Gearman::Util::pack_req_command($t->mode,
         join("\0", $t->func, $t->{uniq}, ${ $t->{argref} }));
 
-    is $t->pack_submit_packet($c), $v;
-    is $t->pack_submit_packet(), $v;
+    is $t->pack_submit_packet($c), $v, "is pack_submit_packet(\$c) \$v";
+    is $t->pack_submit_packet(), $v, "is pack_submit_packet() \$v";
 
     $v = Gearman::Util::pack_req_command($t->mode,
         join("\0", $t->func, '', ''));
     ${ $t->{argref} } = undef;
     $t->{uniq} = undef;
-    is $t->pack_submit_packet($c), $v;
-    is $t->pack_submit_packet(), $v;
+    is $t->pack_submit_packet($c), $v, "is pack_submit_packet(\$c) \$v";
+    is $t->pack_submit_packet(), $v, "is pack_submit_packet() \$v";
 };
 
 done_testing();

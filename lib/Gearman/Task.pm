@@ -64,6 +64,15 @@ process.
 
 =item
 
+on_exception
+
+A subroutine reference to be invoked when the task fails. The client
+needs to be configured to support exception handling by setting the
+attribute C<exceptions> to a true value. The subroutine will be passed
+the stringified value of the exception.
+
+=item
+
 on_fail
 
 A subroutine reference to be invoked when the task fails (or fails for

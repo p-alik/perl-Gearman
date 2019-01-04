@@ -193,8 +193,8 @@ sub _echo {
     my $len = length($req);
     ok(my $rv = $sock->write($req, $len), "write to socket");
     my $err;
-    ok(my $res = Gearman::Util::read_res_packet($sock, \$err), "read respose");
-    is(ref($res),            "HASH",     "respose is a hash");
+    ok(my $res = Gearman::Util::read_res_packet($sock, \$err), "read response");
+    is(ref($res),            "HASH",     "response is a hash");
     is($res->{type},         "echo_res", "response type");
     is(${ $res->{blobref} }, $msg,       "response blobref");
 } ## end sub _echo
