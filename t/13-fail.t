@@ -25,7 +25,7 @@ my $client = new_ok(
 
 ## Test some failure conditions:
 ## Normal failure (worker returns undef or dies within eval).
-subtest "wokrker process fails", sub {
+subtest "worker process fails", sub {
     plan tests => 7;
     my $func    = "fail";
     my @workers = map(new_worker(
@@ -101,7 +101,7 @@ subtest "worker process dies", sub {
     like(
         $msg,
         qr/test reason/,
-        "the die message is available in the on_fail sub"
+        "the die message is available in the on_exception sub"
     );
 
 };
