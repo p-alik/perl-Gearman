@@ -77,7 +77,8 @@ subtest "worker process fails", sub {
 };
 
 subtest "worker process dies", sub {
-    plan skip_all => "subtest fails with gearman v1.1.12";
+    $ENV{GEARMAN_SUPPORTS_EXCEPTIONS} or
+        plan skip_all => "subtest fails with gearman v1.1.12 (set GEARMAN_SUPPORTS_EXCEPTIONS=1 to run this test)";
 
     my $func   = "fail_die";
     my $worker = new_worker(
