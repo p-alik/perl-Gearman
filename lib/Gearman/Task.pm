@@ -112,9 +112,11 @@ are left up to the client and job to determine.
 
 on_warning
 
-A subroutine reference to be invoked if the task emits status updates.
-Arguments passed to the subref are ($numerator, $denominator), where those
-are left up to the client and job to determine.
+A subroutine reference to be invoked if the task emits a warning notification
+sent by worker. Arguments passed to the subref are ($numerator, $denominator),
+where those are left up to the client and job to determine.
+
+See L<WORK_WARNING|http://gearman.org/protocol/>
 
 =item
 
