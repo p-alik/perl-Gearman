@@ -75,10 +75,12 @@ and job to determine.
 
 on_exception
 
-A subroutine reference to be invoked when the task fails. The client
+A subroutine reference to be invoked if worker sends an exception. The client
 needs to be configured to support exception handling by setting the
 attribute C<exceptions> to a true value. The subroutine will be passed
 the stringified value of the exception.
+
+See L<WORK_EXCEPTION|http://gearman.org/protocol/>
 
 =item
 
