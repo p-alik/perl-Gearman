@@ -64,6 +64,15 @@ process.
 
 =item
 
+on_data
+
+A subroutine reference to be invoked for worker's
+L<WORK_DATA|http://gearman.org/protocol/> requests. Arguments passed to the
+subref are ($numerator, $denominator), where those are left up to the client
+and job to determine.
+
+=item
+
 on_exception
 
 A subroutine reference to be invoked when the task fails. The client
