@@ -30,7 +30,7 @@ my $worker = new_worker(
             sleep 2;
             $job->set_status(100, 100);
             sleep 2;
-            return $job->arg;
+            return 1;
             }
     }
 );
@@ -54,11 +54,8 @@ subtest "dispatch background", sub {
     ok($status->running, 'Job is still running');
     is($status->percent, .5, 'Job is 50 percent complete');
 
-    do {
-        sleep 1;
-        $status = $client->get_status($handle);
-        note $status->percent;
-    } until $status->percent == 1;
+    # wait worker completed the job
+    sleep 3;
 };
 
 done_testing();
