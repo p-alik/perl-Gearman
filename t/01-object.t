@@ -195,7 +195,7 @@ subtest "sock cache", sub {
 };
 
 subtest "js stringify", sub {
-    plan tests => 5;
+    plan tests => 6;
 
     my $c = new_ok($mn);
     my ($h, $p) = ("foo", int(rand(10) + 1000));
@@ -206,6 +206,7 @@ subtest "js stringify", sub {
 
     ok($c->job_servers($js));
     is($c->_js($js_str), $js);
+    is($c->_js("unknown"), undef);
 };
 
 done_testing();
