@@ -19,8 +19,8 @@ use Carp            ();
 use IO::Socket::IP  ();
 use IO::Socket::SSL ();
 use Socket          ();
-use List::MoreUtils qw/
-    first_index
+use List::Util qw/
+    first
     /;
 
 use fields qw/
@@ -284,8 +284,7 @@ sub _js_str {
 sub _js {
     my ($self, $js_str) = @_;
     my @s = $self->job_servers();
-    my $i = first_index { $js_str eq $self->_js_str($_) } @s;
-    return ($i == -1 || $i > $#s) ? undef : $s[$i];
+    return first { $js_str eq $self->_js_str($_) } @s;
 } ## end sub _js
 
 1;
