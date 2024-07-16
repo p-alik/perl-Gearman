@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+    branches: [ "upstream" ]
+  pull_request:
+    branches: [ "upstream" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  DEBUG: 1
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        perl: ["5.28"]
+    name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run integration tests for Perl ${{ matrix.perl }}
+        uses: shogo82148/actions-setup-perl@v1
+        timeout-minutes: 5
+        with:
+          perl-version: ${{ matrix.perl }}
+          install-modules-with: cpanm
+          install-modules-args: --with-develop --with-configure
+      - run: sudo sed --in-place 's/^::1\s\s*localhost\s\(.*\)/::1 \1/' /etc/hosts
+      - run: cat /etc/hosts
+      - run: hostname --ip-address
+      - run: ping -c 1 localhost
+      - run: sudo apt-get update -qq
+      - run: sudo apt-get install -y gearman-job-server
+      - run: systemctl status gearman-job-server
+      - run: perl -V
+      - run: cpanm --quiet --notest Devel::Cover::Report::Coveralls
+      - run: cpanm --quiet --notest --installdeps .
+      - run: perl Makefile.PL
+      - run: make
+      - run: GEARMAND_IP="localhost" AUTHOR_TESTING=1 PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -b -r -s t
+      - run: cover
