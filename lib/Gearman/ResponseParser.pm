@@ -172,7 +172,7 @@ sub parse_sock {
     my ($self, $sock) = @_;
     my $res = Gearman::Util::read_res_packet($sock, \my $err);
     if ($err) {
-        $self->on_error("read_error: ${$err}");
+        $self->on_error("read_error: $err");
         return;
     }
 
