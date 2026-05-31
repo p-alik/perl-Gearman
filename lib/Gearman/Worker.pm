@@ -317,13 +317,24 @@ sub work {
             } ## end if ($res->{type} eq "no_job")
 
             unless ($res->{type} eq "job_assign") {
-                my $msg = "unexpected packet type: $res->{type}";
 
+                # The job server can send an asynchronous "error" packet in
+                # reply to one of the fire-and-forget work_complete/work_fail/
+                # work_status commands we sent for a job it no longer tracks
+                # -- e.g. a job it already timed out server-side, which it
+                # rejects with JOB_NOT_FOUND. That reply only surfaces here, on
+                # the next grab_job read. Dying on it would kill the whole
+                # worker and hang any client waiting on a subsequent job, so
+                # log it and move on to the next job server.
                 if ($res->{type} eq "error") {
-                    $msg .= " [${$res->{blobref}}]\n";
+                    my $msg = "ignoring error packet from job server"
+                        . " [${ $res->{blobref} }]";
                     $msg =~ s/\0/ -- /g;
-                }
-                die $msg;
+                    warn $msg if $self->debug;
+                    next;
+                } ## end if ($res->{type} eq "error")
+
+                die "unexpected packet type: $res->{type}";
             } ## end unless ($res->{type} eq "job_assign")
 
             ${ $res->{blobref} } =~ s/^(.+?)\0(.+?)\0//
