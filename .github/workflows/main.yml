@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  DEBUG: 1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        perl: ["5.40", "5.38", "5.36", "5.34", "5.32", "5.30"]
+    name: Perl ${{ matrix.perl }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Perl ${{ matrix.perl }}
+        uses: shogo82148/actions-setup-perl@v1
+        timeout-minutes: 10
+        with:
+          perl-version: ${{ matrix.perl }}
+          install-modules-with: cpanm
+          install-modules-args: --with-develop --with-configure
+
+      # gearmand listens on localhost; force it to IPv4 so Test::TCP can reach it
+      - name: Make localhost resolve to IPv4 only
+        run: sudo sed --in-place 's/^::1\s\s*localhost\s\(.*\)/::1 \1/' /etc/hosts
+
+      # The test suite starts its own gearmand via Test::TCP; we only need the binary
+      - name: Install gearman-job-server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gearman-job-server
+
+      - run: perl -V
+
+      - name: Install dependencies
+        run: cpanm --quiet --notest --installdeps .
+
+      - name: Build
+        run: |
+          perl Makefile.PL
+          make
+
+      - name: Run tests
+        timeout-minutes: 10
+        env:
+          GEARMAND_IP: localhost
+          AUTHOR_TESTING: 1
+        run: prove -b -r -s t
+
+  coverage:
+    runs-on: ubuntu-latest
+    name: Coverage
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Perl
+        uses: shogo82148/actions-setup-perl@v1
+        timeout-minutes: 10
+        with:
+          perl-version: "5.40"
+          install-modules-with: cpanm
+          install-modules-args: --with-develop --with-configure
+
+      - name: Make localhost resolve to IPv4 only
+        run: sudo sed --in-place 's/^::1\s\s*localhost\s\(.*\)/::1 \1/' /etc/hosts
+
+      - name: Install gearman-job-server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gearman-job-server
+
+      - name: Install dependencies
+        run: |
+          cpanm --quiet --notest Devel::Cover::Report::Coveralls
+          cpanm --quiet --notest --installdeps .
+
+      - name: Build
+        run: |
+          perl Makefile.PL
+          make
+
+      - name: Run tests with coverage
+        timeout-minutes: 20
+        env:
+          GEARMAND_IP: localhost
+          AUTHOR_TESTING: 1
+          PERL5OPT: -MDevel::Cover=-coverage,statement,branch,condition,path,subroutine
+        run: prove -b -r -s t
+
+      # Requires a COVERALLS_REPO_TOKEN secret (from coveralls.io repo settings).
+      # Non-fatal: a missing token or upload hiccup must not fail CI.
+      - name: Report coverage to Coveralls
+        continue-on-error: true
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cover -report coveralls

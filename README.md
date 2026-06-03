@@ -1,7 +1,7 @@
 Gearman
 ===================
 
-| [![CPAN version](https://badge.fury.io/pl/Gearman.png)](https://badge.fury.io/pl/Gearman) | [![Build Status](https://travis-ci.org/p-alik/perl-Gearman.png)](https://travis-ci.org/p-alik/perl-Gearman) | [![Coverage Status](https://coveralls.io/repos/github/p-alik/perl-Gearman/badge.png)](https://coveralls.io/github/p-alik/perl-Gearman) |
+| [![CPAN version](https://badge.fury.io/pl/Gearman.png)](https://badge.fury.io/pl/Gearman) | [![CI](https://github.com/p-alik/perl-Gearman/actions/workflows/main.yml/badge.svg)](https://github.com/p-alik/perl-Gearman/actions/workflows/main.yml) | [![Coverage Status](https://coveralls.io/repos/github/p-alik/perl-Gearman/badge.png)](https://coveralls.io/github/p-alik/perl-Gearman) |
 |---|---|---|
 
 This repository contains perl [Gearman](http://gearman.org) Client/Worker implementation
